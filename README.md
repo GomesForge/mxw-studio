@@ -5,7 +5,7 @@ companion formats used by an early-2000s online game whose servers shut
 down long ago. It opens the files, shows them in 3D, lets you change
 them, and writes working files back out.
 
-**[Open the editor →](https://eastgate8.github.io/mxw-studio/)**
+**[Open the editor →](https://gomesforge.github.io/mxw-studio/)**
 
 Nothing here ships any asset. These are tools; bring your own files.
 
