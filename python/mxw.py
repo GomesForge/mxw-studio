@@ -315,6 +315,16 @@ class MXW:
             p += 4 + size
             self._add(content)
         self.trailing = d[p:]
+        # The signature is not enough on its own: the server's item
+        # index opens with "OK  " as well, and reading it as a mesh
+        # produced a file that wrote back wrong. A container that
+        # yielded no chunks at all is not a mesh.
+        if not self.order:
+            raise MXWError('the signature matches but no chunk could be '
+                           'read -- the chunk count says %d and the first '
+                           'size does not fit. This is another format '
+                           'sharing the signature, such as the item index'
+                           % count)
 
     def _add(self, content):
         """Classify one chunk. Geometry and skeletons share a type

@@ -7,7 +7,9 @@ let current = null;
 let scene, cam, rend, group, axes, ready = false;
 let mesh = null, wireGroup = null, normHelper = null, boneLines = null;
 let texMats = [];
-let spin = true, radius = 4, theta = 0.7, phi = 1.15, targetY = 0;
+/* The camera starts still and facing the model. It used to spin, which
+   meant whatever you were inspecting rotated away from you. */
+let spin = false, radius = 4, theta = Math.PI / 2, phi = 1.5, targetY = 0;
 /* Which texture to show on which material, while previewing. The
    file's own binding is untouched -- this only changes what is drawn.
    A body binds tex0 to the body and tex1 to the head, leaving the eight
@@ -260,6 +262,85 @@ function build(items) {
   radius = 4; targetY = 0;
 }
 
+
+/* Named viewpoints. Back items sit at negative Z in every file measured,
+   so +Z is the front and theta = pi/2 looks at it. The model is
+   normalised to two units tall and centred, which puts the head near
+   y = +0.8. */
+const VIEWS = {
+  face:  { theta: Math.PI / 2,  phi: 1.5,  radius: 1.15, targetY: 0.8 },
+  front: { theta: Math.PI / 2,  phi: 1.45, radius: 3.2,  targetY: 0 },
+  back:  { theta: -Math.PI / 2, phi: 1.45, radius: 3.2,  targetY: 0 },
+  left:  { theta: Math.PI,      phi: 1.45, radius: 3.2,  targetY: 0 },
+  right: { theta: 0,            phi: 1.45, radius: 3.2,  targetY: 0 },
+  top:   { theta: Math.PI / 2,  phi: 0.2,  radius: 3.2,  targetY: 0 },
+  whole: { theta: Math.PI / 2,  phi: 1.45, radius: 4,    targetY: 0 }
+};
+
+function setView(name) {
+  const v = VIEWS[name];
+  if (!v) return;
+  spin = false;
+  $('bSpin').classList.remove('on');
+  theta = v.theta; phi = v.phi; radius = v.radius; targetY = v.targetY;
+  document.querySelectorAll('#viewRow button').forEach(b =>
+    b.classList.toggle('primary', b.dataset.view === name));
+}
+
+/* The head material and the textures no material binds. On a body that
+   is the eight expressions plus the blank head, which is what a person
+   means by "the face" -- so they get their own picker rather than
+   living as unexplained entries in the texture list. */
+function faceOptions() {
+  const c = current;
+  const m = c && c.mxw.meshes[c.meshIndex || 0];
+  if (!m || c.mxw.gifs.length < 3) return null;
+  const head = m.materials.findIndex(x => /head|face/i.test(x.name));
+  if (head < 0) return null;
+  const bound = new Set(m.materials.map(x => x.tex));
+  const own = m.materials[head].tex;
+  const list = [];
+  for (let i = 0; i < c.mxw.gifs.length; i++) {
+    if (i === own || !bound.has(i)) list.push(i);
+  }
+  return list.length > 1 ? { head, own, list } : null;
+}
+
+function renderFaces() {
+  const host = $('faceGrid');
+  const panel = $('facePanel');
+  if (!host || !panel) return;
+  const f = faceOptions();
+  if (!f) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  const c = current;
+  const shown = texPreview && texPreview.mat === f.head
+    ? texPreview.tex : f.own;
+  host.innerHTML = f.list.map(i => {
+    const url = URL.createObjectURL(new Blob([c.mxw.gifs[i]], { type: 'image/gif' }));
+    return '<figure data-f="' + i + '" class="' + (i === shown ? 'sel' : '') + '">' +
+      '<img src="' + url + '" alt="face ' + i + '">' +
+      '<figcaption>' + (i === f.own ? 'plain' : 'tex' + i) + '</figcaption></figure>';
+  }).join('');
+  host.querySelectorAll('figure').forEach(el => el.onclick = () => {
+    const i = +el.dataset.f;
+    texPreview = i === f.own ? null : { mat: f.head, tex: i };
+    selectedTex = i;
+    setView('face');
+    rebuild();
+    renderAll();
+    notify(i === f.own
+      ? 'head back to its own texture'
+      : 'showing tex' + i + ' on ' + c.mxw.meshes[c.meshIndex || 0].materials[f.head].name +
+        ' -- set it under Materials to keep it');
+  });
+  $('faceHint').textContent =
+    'Clicking one shows it on the ' +
+    c.mxw.meshes[c.meshIndex || 0].materials[f.head].name +
+    ' material and jumps the camera to the head. This is a preview: ' +
+    'the file is unchanged until you set it under Materials.';
+}
+
 /* ----------------------------- panels ---------------------------- */
 function esc(s) {
   return String(s).replace(/[&<>"]/g, c =>
@@ -270,6 +351,7 @@ function renderAll() {
   renderList();
   renderHeader();
   renderMesh();
+  renderFaces();
   renderTextures();
   renderSkeleton();
   renderUV();
@@ -587,7 +669,7 @@ async function replaceTexture(file) {
     if (w === target[0] && h === target[1]) {
       c.mxw.replaceGif(selectedTex, buf);
       notify('tex' + selectedTex + ' replaced with your GIF as-is (' + w + 'x' + h + ')');
-      rebuild(); renderAll();
+      showSelectedTexture();
       return;
     }
     notify('that GIF is ' + w + 'x' + h + ' but tex' + selectedTex +
@@ -618,7 +700,7 @@ async function replaceTexture(file) {
     notify('encoding failed: ' + e.message, 1);
     return;
   }
-  rebuild(); renderAll();
+  showSelectedTexture();
 }
 
 /* Paint the selected texture, with the UV layout of the faces that
@@ -661,6 +743,19 @@ function paintTexture() {
   }).catch(() => notify('could not decode that texture', 1));
 }
 
+/* After editing a texture, make sure the result is actually on screen:
+   an unbound one has to be previewed or the model never changes, which
+   reads as the edit having done nothing. */
+function showSelectedTexture() {
+  const c = current;
+  const m = c && c.mxw.meshes[c.meshIndex || 0];
+  if (m && !m.materials.some(x => x.tex === selectedTex)) {
+    texPreview = { mat: defaultPreviewMat(m, selectedTex), tex: selectedTex };
+  }
+  rebuild();
+  renderAll();
+}
+
 function exportUV() {
   const cv = $('uv');
   if (cv.style.display === 'none') { notify('nothing to export yet', 1); return; }
@@ -674,6 +769,51 @@ function exportTexture() {
   if (!c || !c.mxw.gifs.length) { notify('no texture to export', 1); return; }
   saveFile((c.name.replace(/\.[^.]+$/, '') || 'mxw') + '_tex' + selectedTex + '.gif',
            c.mxw.gifs[selectedTex], 'image/gif');
+}
+
+/* Bring geometry back in from a modeller. Importing into a loaded file
+   swaps only the geometry, because an OBJ cannot carry the textures,
+   the material bindings or the skeleton -- losing those silently would
+   be worse than refusing. */
+async function importOBJ(file) {
+  let text;
+  try { text = await file.text(); }
+  catch (e) { notify('could not read ' + file.name, 1); return; }
+  let obj;
+  try { obj = parseOBJ(text); }
+  catch (e) { notify(file.name + ': ' + e.message, 1); return; }
+
+  try {
+    if (current) {
+      const warn = objReplaceGeometry(current.mxw, current.meshIndex || 0, obj);
+      const m = current.mxw.meshes[current.meshIndex || 0];
+      selectedTex = 0;
+      texPreview = null;
+      rebuild();
+      renderAll();
+      notify('replaced the geometry of ' + current.name + ' with ' +
+             m.nv + ' vertices and ' + m.faces.length + ' faces' +
+             (warn.length ? ' -- ' + warn.join('; ') : ''));
+    } else {
+      const res = objToContainer(obj);
+      const entry = { name: file.name.replace(/\.obj$/i, '.bin'),
+                      raw: res.mxw.write(), mxw: res.mxw, meshIndex: 0 };
+      loaded.push(entry);
+      current = entry;
+      selectedTex = 0;
+      texPreview = null;
+      setView('whole');
+      rebuild();
+      renderAll();
+      $('empty').style.display = 'none';
+      notify('imported ' + res.mxw.meshes[0].nv + ' vertices and ' +
+             res.mxw.meshes[0].faces.length + ' faces. It has no texture, ' +
+             'which the game may refuse -- add one before saving' +
+             (res.warnings.length ? '. ' + res.warnings.join('; ') : ''));
+    }
+  } catch (e) {
+    notify(file.name + ': ' + e.message, 1);
+  }
 }
 
 function exportOBJ() {
@@ -723,6 +863,7 @@ function addFile(name, buf) {
     current = entry;
     selectedTex = 0;
     texPreview = null;
+    setView(faceOptions() ? 'face' : 'whole');
     rebuild();
     renderAll();
     $('empty').style.display = 'none';
@@ -730,8 +871,18 @@ function addFile(name, buf) {
       notify(name + ': the header promises ' + entry.mxw.truncated +
              ' more chunk(s) than the file holds -- it is a truncated dump');
   } catch (e) {
-    notify(name + ': ' + e.message, 1);
+    notify(describeRefusal(name, buf, e), 1);
   }
+}
+
+/* A refusal is far more useful when it names the format you actually
+   dropped. Several files share these extensions without sharing the
+   format. */
+function describeRefusal(name, buf, err) {
+  let other = null;
+  try { other = identifyOther(buf); } catch (e) { other = null; }
+  if (other) return name + ' is ' + other.name + '. ' + other.note;
+  return name + ': ' + err.message;
 }
 
 function select(i) {
@@ -761,7 +912,12 @@ function readFiles(files) {
          with byte order, so route by extension */
       if (isSpriteName(f.name)) {
         try { spriteOpen(f.name, r.result); renderList(); }
-        catch (e) { notify(f.name + ': ' + e.message, 1); }
+        catch (e) { notify(describeRefusal(f.name, r.result, e), 1); }
+        return;
+      }
+      if (/\.obj$/i.test(f.name)) {
+        spriteClose();
+        importOBJ(f);
         return;
       }
       spriteClose();
@@ -782,6 +938,8 @@ $('texFile').addEventListener('change', e => {
 });
 $('bTexIn').onclick = () => $('texFile').click();
 $('bPaintTex').onclick = paintTexture;
+document.querySelectorAll('#viewRow button[data-view]').forEach(b =>
+  b.onclick = () => setView(b.dataset.view));
 $('bClear').onclick = clearAll;
 $('bNewSprite').onclick = () => {
   const w = parseInt(prompt('frame width in pixels', '64') || '', 10);
@@ -827,7 +985,7 @@ document.addEventListener('drop', e => {
   /* an image dropped while something is open goes into it: the chosen
      texture in mesh mode, the current frame or a strip in sprite mode */
   const imgs = files.filter(f => /^image\//.test(f.type)
-    && !/\.bin$|\.mxw$|\.gra$|\.spr$|\.eft$/i.test(f.name));
+    && !/\.bin$|\.mxw$|\.gra$|\.spr$|\.eft$|\.obj$/i.test(f.name));
   if (imgs.length === files.length && imgs.length) {
     if (sprite.entry) { spriteImport(imgs[0]); return; }
     if (current) { replaceTexture(imgs[0]); return; }
@@ -861,6 +1019,11 @@ toggle('bAll', on => {
   rebuild();
 });
 $('bObj').onclick = exportOBJ;
+$('bObjIn').onclick = () => $('objFile').click();
+$('objFile').addEventListener('change', e => {
+  if (e.target.files[0]) importOBJ(e.target.files[0]);
+  e.target.value = '';
+});
 $('bUV').onclick = exportUV;
 $('bTexOut').onclick = exportTexture;
 $('bSave').onclick = saveBin;

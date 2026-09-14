@@ -67,6 +67,13 @@
   button.on{background:var(--cyan);border-color:var(--cyan);color:#06121a;font-weight:600}
   button.primary{background:var(--amber);border-color:var(--amber);color:#1a1200;font-weight:700}
 
+  #faceGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:7px}
+  #faceGrid figure{margin:0;cursor:pointer;border:2px solid transparent;
+    border-radius:8px;padding:3px;text-align:center}
+  #faceGrid figure:hover{border-color:var(--edge)}
+  #faceGrid figure.sel{border-color:var(--amber)}
+  #faceGrid img{width:100%;display:block;image-rendering:pixelated;border-radius:4px}
+  #faceGrid figcaption{font-size:9.5px;font-family:var(--mono);color:var(--dim);margin-top:2px}
   #texGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:7px}
   #texGrid figure{margin:0;cursor:pointer;border:2px solid transparent;border-radius:8px;
     padding:3px;text-align:center}
@@ -200,7 +207,7 @@
   <label id="drop" for="file">
     <b>Click to choose files</b>
     &hellip; or drop them anywhere on this page
-    <small>.bin and .MXW meshes, or .gra / .spr / .eft sprites</small>
+    <small>.bin and .MXW meshes, .gra / .spr / .eft sprites, or .obj geometry</small>
   </label>
   <input type="file" id="file" multiple>
   <div id="list"></div>
@@ -301,6 +308,12 @@
     <div id="skelInfo"></div>
   </div>
 
+  <div id="facePanel" style="display:none">
+    <h2>Face</h2>
+    <div id="faceGrid"></div>
+    <p class="hint" id="faceHint"></p>
+  </div>
+
   <div id="texPanel" style="display:none">
     <h2>Textures</h2>
     <div id="texGrid"></div>
@@ -320,6 +333,19 @@
   </div>
 
   <div id="displayPanel">
+  <h2>View</h2>
+  <div class="ctrl" id="viewRow">
+    <button data-view="face" class="primary">Face</button>
+    <button data-view="front">Front</button>
+    <button data-view="back">Back</button>
+    <button data-view="left">Left</button>
+    <button data-view="right">Right</button>
+    <button data-view="top">Top</button>
+    <button data-view="whole">Whole</button>
+  </div>
+  <p class="hint">Back items sit at negative Z in every file, so +Z is
+  the front. Face frames the head, which is where the expressions land.</p>
+
   <h2>Display</h2>
   <div class="ctrl">
     <button id="bTex" class="on">Texture</button>
@@ -327,17 +353,27 @@
     <button id="bNorm">Normals</button>
     <button id="bBone">Skeleton</button>
     <button id="bAxes" class="on">Axes</button>
-    <button id="bSpin" class="on">Spin</button>
+    <button id="bSpin">Spin</button>
     <button id="bAll">Dress-up</button>
   </div>
 
   </div>
 
   <div id="exportPanel">
+  <h2>Geometry</h2>
+  <div class="ctrl">
+    <button id="bObj">Export .OBJ</button>
+    <button id="bObjIn" type="button">Import .OBJ&hellip;</button>
+  </div>
+  <input type="file" id="objFile" accept=".obj,.OBJ">
+  <p class="hint">Export, edit the mesh in any modeller, import it back.
+  An OBJ carries no textures, materials bindings or skeleton, so importing
+  into a loaded file keeps those and swaps only the geometry. Coordinates
+  quantise to 16-bit integers and texture coordinates to whole pixels.</p>
+
   <h2>Export</h2>
   <div class="ctrl">
     <button id="bSave">Save .bin</button>
-    <button id="bObj">Export .OBJ</button>
   </div>
   </div>
 
@@ -428,11 +464,12 @@
   <div id="msg" class="msg"></div>
 </div>
 </div>
-<div id="over">Drop meshes, sprites, or an image to replace the selection</div>
+<div id="over">Drop meshes, sprites, an .obj, or an image to replace the selection</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 <script src="mxw.js"></script>
 <script src="gra.js"></script>
+<script src="obj.js"></script>
 <script src="gifenc.js"></script>
 <script src="paint.js"></script>
 <script src="sprite.js"></script>

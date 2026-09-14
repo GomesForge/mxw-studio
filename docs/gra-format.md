@@ -66,32 +66,85 @@ normally unused, the hues come out wrong.
 
 ## What was verified
 
-Of 1444 distinct files, 1420 have a header that satisfies the size
-rule. Of those:
+`python/test_corpus.py` walks a directory, reads every file, writes it
+back, compares byte for byte, and then checks the invariants the format
+implies — runs inside their frame, frame counts inside a `u8` — before
+simulating edits and re-reading the result.
 
-- **1419 round-trip byte-identical** (99.93%) through the reader and
-  writer in `python/gra.py` and `gra.js`
-- 8057 frames decode with **exactly zero bytes left over**
-- all 641465 runs fall inside their declared frame — none out of bounds
+Over the 1611 distinct files available while this was written:
+
+- **1535 of 1535 sprites round-trip byte-identical**, covering 8732
+  frames and 36.9 million pixels
+- **50 of 50 meshes round-trip byte-identical**
+- every remaining file is classified as another format rather than
+  counted as a failure
+
+Round-tripping only proves the reader and writer agree with each other;
+both could share a wrong assumption. That is what the invariant checks
+and the edit simulations are for, and they are what caught the `0x07`
+field being overwritten with zero.
 
 Frame counts run from 1 to 153. Common frame sizes are 256×256 (970
 files), 80×80 (167), 800×600 (34), 40×38 (30) and 40×40 (25).
 
+## Header fields that are not always zero
+
+The `u32` at `0x07` is zero in 1421 of the 1422 files that satisfy the
+size rule. One sprite carries **71** there. Whatever it means, both
+readers keep it verbatim rather than writing zero — an earlier version
+assumed zero and silently destroyed it, which is exactly the kind of
+bug a round-trip check catches and an eyeball does not.
+
+The `u32` at `0x0F` is zero everywhere seen, and is preserved anyway.
+
+## Trailing bytes are kept
+
+A frame table describing **fewer** bytes than the file holds is accepted
+and the remainder kept verbatim. One hand-edited community sprite has
+202 such bytes: its cumulative table was never updated when the file
+grew, and every frame it does describe is intact. Keeping the remainder
+means the file both opens and writes back unchanged.
+
+A table describing **more** than the file holds is still refused — then
+a frame really is missing.
+
 ## The 24 files this rejects
 
-Rather than guess at them, the reader refuses anything that does not
-satisfy the size rule:
+These are not broken sprites. They are **other formats sharing the
+extension**, and the reader names them rather than reporting the byte
+that failed.
 
-- **18 files** have `00 00` at bytes 2–3 instead of `01 01`
-- **3 files** carry kind bytes `0x09`, `0x49` and `0x99`, outside the
-  `0x00` / `0x03` pair everything else uses, and their frame tables do
-  not satisfy the size rule. These are a different variant and are not
-  decoded yet
-- **2 files** contain a run with a count of zero
-- **1 file** is a community-edited interface sprite whose cumulative
-  table was never updated to match its new length — the frame data
-  after the edit is intact, but the table says 39639 bytes where the
-  file is 39841
+### Effects (`.eft`, 18 files)
+
+Bytes 2–3 are `00 00`. The head is a `u32` frame count, a `u32` width
+and a `u32` height — all plausible: 4 to 13 frames at 80x80, 64x64,
+48x48, 133x197 or 256x256. What follows is a chain of
+`[u32 word count][runs]`, using **the same run encoding a sprite uses**,
+with empty frames written as a count of zero. That first group decodes
+cleanly and the pixels come out right.
+
+What is not known is the section **after** that first group. It is
+large — 4664 of 5126 bytes in the smallest file — and reading it as
+another group of the same shape produces nonsense. Until it is
+identified these are refused rather than opened wrongly, since writing
+one back would destroy whatever that section holds.
+
+### Map layout (`map.spr`, 14 files)
+
+Not an image at all: a grid of tile values, one byte per cell, and the
+head is a single value repeated across a row. This is the first sight
+of a map format in these files — the roadmap had it as not started.
+
+### Map blocks (`block.spr`, 14 files)
+
+Bytes 2–3 are `99 99`. Values look packed two per byte — `0x99` is two
+nines, `0x22` two twos, `0x29` a two then a nine. 588800 bytes. Not an
+image, and not decoded.
+
+### Interface (`UI_userdraw.spr`, 12 files)
+
+High entropy from the first byte, with no readable header. Either
+compressed or encrypted; not decoded.
 
 ## Editing
 

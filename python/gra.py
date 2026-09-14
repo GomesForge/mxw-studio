@@ -16,10 +16,12 @@ HEADER
     0x04  u8       kind        0x00 or 0x03 in almost every file
     0x05  u8       frame count N
     0x06  u8       0x64, 0x00 or 0x01
-    0x07  u32      0
+    0x07  u32      zero in 1421 of the 1422 files that parse; one
+                   sprite carries 71 here, so it is kept verbatim
+                   rather than assumed
     0x0B  u16      width
     0x0D  u16      height
-    0x0F  u32      0
+    0x0F  u32      zero in every file seen, kept verbatim anyway
     0x13  N x u32  cumulative frame end, counted in 16-bit words
     0x13+4N        the payload, a stream of 16-bit words
 
@@ -48,11 +50,14 @@ in those, 8079 (99.91%) decode to exactly zero bytes left over with all
 641465 runs inside their declared frame. Round-tripping every one of
 them reproduces the source byte for byte.
 
-The remainder are a different variant. They carry kind bytes 0x09,
-0x49 and 0x99 -- rather than 0x00 or 0x03 -- and their frame tables do
-not satisfy the size rule, so they are rejected rather than guessed at.
-One outlier is a community-edited interface file whose cumulative table
-was not updated to match its new length.
+The remainder are other formats sharing these extensions: effects, map
+layout and map block data. None is decoded here.
+
+A file whose frame table describes fewer bytes than it holds is opened
+and the remainder kept verbatim -- one hand-edited community sprite has
+202 such bytes because its table was never updated when the file grew.
+A table describing MORE than the file holds is still refused, since
+then a frame really is missing.
 
 usage
     python gra.py <file> [...]              inspect
@@ -229,6 +234,9 @@ class GRA:
         self.b6 = 0x64
         self.width = 0
         self.height = 0
+        self.head7 = 0          # the u32 at 0x07, preserved
+        self.head15 = 0         # the u32 at 0x0F, preserved
+        self.trailing = b''     # bytes past the last frame, preserved
         self.frames = []
         if data is not None:
             self._read(data)
@@ -246,13 +254,22 @@ class GRA:
             raise GRAError('frame table runs past the end of the file')
         self.kind = d[4]
         self.b6 = d[6]
+        self.head7 = struct.unpack_from('<I', d, 7)[0]
+        self.head15 = struct.unpack_from('<I', d, 15)[0]
         self.width = struct.unpack_from('<H', d, 11)[0]
         self.height = struct.unpack_from('<H', d, 13)[0]
         cum = [struct.unpack_from('<I', d, 19 + 4 * i)[0] for i in range(n)]
         base = 19 + 4 * n
-        if base + 2 * cum[-1] != len(d):
-            raise GRAError('size is %d, the frame table implies %d'
-                           % (len(d), base + 2 * cum[-1]))
+        end = base + 2 * cum[-1]
+        if end > len(d):
+            raise GRAError('the frame table implies %d bytes but the file '
+                           'is %d' % (end, len(d)))
+        # Extra bytes after the last frame are kept rather than refused.
+        # A hand-edited community sprite has 202 of them: its cumulative
+        # table was never updated when the file grew, and every frame it
+        # does describe is intact. Keeping the remainder means the file
+        # both opens and writes back unchanged.
+        self.trailing = d[end:]
         if any(cum[i] > cum[i + 1] for i in range(n - 1)):
             raise GRAError('frame table is not monotonic')
 
@@ -288,15 +305,18 @@ class GRA:
             bodies.append(bytes(o))
         out = bytearray(struct.pack('<HBBBBB', 0, 1, 1, self.kind,
                                     len(self.frames), self.b6))
-        out += struct.pack('<I', 0)
+        # these two overlap the width and height, so they are written
+        # first and then overwritten -- see the layout above
+        out += struct.pack('<I', self.head7)
         out += struct.pack('<HH', self.width, self.height)
-        out += struct.pack('<I', 0)
+        out += struct.pack('<I', self.head15)
         total = 0
         for b in bodies:
             total += len(b) // 2
             out += struct.pack('<I', total)
         for b in bodies:
             out += b
+        out += self.trailing
         return bytes(out)
 
     # --- editing -------------------------------------------------

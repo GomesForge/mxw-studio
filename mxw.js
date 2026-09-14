@@ -42,7 +42,18 @@ class Writer {
 /* ---------------------------- geometry --------------------------- */
 
 class Mesh {
+  /* Called with nothing for a mesh being built rather than read, which
+     is how the OBJ importer starts one. */
   constructor(content) {
+    this.kind = 'MXW3DHUD';
+    this.nv = 0;
+    this.verts = new Int16Array(0);
+    this.norms = new Float32Array(0);
+    this.textures = [];
+    this.materials = [];
+    this.faces = [];
+    this.bones = [];
+    if (!content) return;
     const dv = new DataView(content.buffer, content.byteOffset, content.byteLength);
     this.kind = ascii(content, 0, 8);
     if (MXW_TYPES.indexOf(this.kind) < 0) throw new Error('unknown type ' + this.kind);
@@ -209,7 +220,19 @@ function gifSize(u8) {
 /* ---------------------------- container -------------------------- */
 
 class MXW {
+  /* Called with nothing for a container being built rather than read,
+     which is how the OBJ importer starts one. The Python side has
+     always had this guard; the JS side did not, so building one threw
+     on a signature it had never been given. */
   constructor(buf) {
+    this.version = 1;
+    this.meshId = 0;
+    this.meshes = []; this.skeletons = []; this.gifs = []; this.blobs = [];
+    this.order = [];
+    this.truncated = 0;
+    this.trailing = new Uint8Array(0);
+    if (!buf) return;
+
     const u8 = new Uint8Array(buf);
     const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
     if (ascii(u8, 0, 4) !== 'OK  ')
@@ -217,10 +240,6 @@ class MXW {
     this.version = dv.getUint32(4);
     this.meshId  = dv.getUint32(8);
     const count  = dv.getUint32(12);
-
-    this.meshes = []; this.skeletons = []; this.gifs = []; this.blobs = [];
-    this.order = [];
-    this.truncated = 0;
 
     let p = 0x10;
     for (let i = 0; i < count; i++) {
@@ -231,6 +250,15 @@ class MXW {
       p += 4 + size;
     }
     this.trailing = u8.subarray(p);
+    /* The signature is not enough on its own: the server's item index
+       opens with "OK  " too, and reading it as a mesh produced a file
+       that wrote back wrong. A container that yielded no chunks is not
+       a mesh. */
+    if (!this.order.length)
+      throw new Error('the signature matches but no chunk could be read ' +
+        '-- the chunk count says ' + count + ' and the first size does ' +
+        'not fit. This is another format sharing the signature, such as ' +
+        'the item index');
   }
 
   add(content) {

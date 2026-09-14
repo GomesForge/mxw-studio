@@ -11,10 +11,11 @@
      0x04  u8       kind
      0x05  u8       frame count N
      0x06  u8       0x64, 0x00 or 0x01
-     0x07  u32      0
+     0x07  u32      zero in 1421 of 1422 files; one sprite carries 71
+                    here, so it is preserved rather than assumed
      0x0B  u16      width
      0x0D  u16      height
-     0x0F  u32      0
+     0x0F  u32      zero everywhere seen, preserved anyway
      0x13  N x u32  cumulative frame end, in 16-bit words
      then the payload as 16-bit words
 
@@ -25,6 +26,62 @@
 
    Pixels no run covers are transparent. Verified: 1419 of 1420
    accepted files round-trip byte-identical, 8057 frames. */
+
+/* ------------------------- other formats -------------------------
+
+   Several files in the same folders share these extensions without
+   sharing the format. Saying which one you dropped is far more use
+   than reporting the byte that failed, so they are named here.
+
+   Each entry is checked against the head of the file. Nothing below is
+   decoded -- this only produces a better refusal. */
+
+const OTHER_FORMATS = [
+  {
+    /* The server's item index opens with the same "OK  " as a mesh. */
+    test: u8 => u8[0] === 0x4F && u8[1] === 0x4B && u8[2] === 0x20 &&
+                u8[3] === 0x20,
+    name: 'the item index (get_item_list.bin)',
+    note: 'It shares the mesh signature but holds 9-byte records: a type ' +
+          'byte, a u32 item id and a u32 token. python/get_item_list_decoder.py ' +
+          'reads and rebuilds it.'
+  },
+  {
+    /* Effects. A 12-byte u32 header, then frames of [u32 words][runs]
+       using the same run encoding as a sprite -- but what follows the
+       first group is a section nobody has identified, so these are not
+       decoded. */
+    test: u8 => u8[2] === 0x00 && u8[3] === 0x00 && u8[0] > 0 && u8[0] < 64 &&
+                u8[1] === 0x00,
+    name: 'an effect file',
+    note: 'Its first group decodes -- a u32 frame count, width and height, ' +
+          'then frames of [u32 word count][the same runs a sprite uses] -- ' +
+          'but a further section after it is undocumented, so it is not ' +
+          'opened rather than opened wrongly. See docs/gra-format.md.'
+  },
+  {
+    /* Map layout: a grid of tile bytes rather than an image. */
+    test: u8 => u8[0] === u8[1] && u8[1] === u8[2] && u8[2] === u8[3] &&
+                u8[0] !== 0 && u8[0] < 0x20,
+    name: 'map layout data',
+    note: 'It is a grid of tile values, not an image: the head is one byte ' +
+          'repeated across a row. No map format is decoded yet.'
+  },
+  {
+    test: u8 => u8[0] === 0x99 && u8[1] === 0x99,
+    name: 'map block data',
+    note: 'Values look packed two per byte. Not an image, and not decoded yet.'
+  }
+];
+
+function identifyOther(buf) {
+  const u8 = new Uint8Array(buf);
+  if (u8.length < 8) return null;
+  for (const f of OTHER_FORMATS) {
+    try { if (f.test(u8)) return f; } catch (e) { /* keep looking */ }
+  }
+  return null;
+}
 
 function rgb565ToRgb(v) {
   return [((v >> 11) & 31) * 255 / 31 | 0,
@@ -192,6 +249,9 @@ class GRA {
     this.b6 = 0x64;
     this.width = 0;
     this.height = 0;
+    this.head7 = 0;      /* the u32 at 0x07, preserved */
+    this.head15 = 0;     /* the u32 at 0x0F, preserved */
+    this.trailing = new Uint8Array(0);   /* bytes past the last frame */
     this.frames = [];
     if (buf) this.read(buf);
   }
@@ -209,14 +269,23 @@ class GRA {
       throw new Error('frame table runs past the end of the file');
     this.kind = u8[4];
     this.b6 = u8[6];
+    this.head7 = dv.getUint32(7, true);
+    this.head15 = dv.getUint32(15, true);
     this.width = dv.getUint16(11, true);
     this.height = dv.getUint16(13, true);
     const cum = [];
     for (let i = 0; i < n; i++) cum.push(dv.getUint32(19 + 4 * i, true));
     const base = 19 + 4 * n;
-    if (base + 2 * cum[n - 1] !== u8.length)
-      throw new Error('size is ' + u8.length + ', the frame table implies ' +
-                      (base + 2 * cum[n - 1]));
+    const end = base + 2 * cum[n - 1];
+    if (end > u8.length)
+      throw new Error('the frame table implies ' + end +
+                      ' bytes but the file is ' + u8.length);
+    /* Extra bytes after the last frame are kept rather than refused. A
+       hand-edited community sprite has 202 of them: its table was never
+       updated when the file grew, and every frame it describes is
+       intact. Keeping them means the file opens and still writes back
+       unchanged. */
+    this.trailing = u8.subarray(end);
     for (let i = 1; i < n; i++)
       if (cum[i - 1] > cum[i]) throw new Error('frame table is not monotonic');
 
@@ -257,7 +326,8 @@ class GRA {
       return words;
     });
     const total = 19 + 4 * bodies.length +
-                  2 * bodies.reduce((s, b) => s + b.length, 0);
+                  2 * bodies.reduce((s, b) => s + b.length, 0) +
+                  this.trailing.length;
     const out = new Uint8Array(total);
     const dv = new DataView(out.buffer);
     dv.setUint16(0, 0, true);
@@ -265,10 +335,11 @@ class GRA {
     out[4] = this.kind;
     out[5] = this.frames.length;
     out[6] = this.b6;
-    dv.setUint32(7, 0, true);
+    /* 0x07 overlaps the width, so it goes down first */
+    dv.setUint32(7, this.head7, true);
     dv.setUint16(11, this.width, true);
     dv.setUint16(13, this.height, true);
-    dv.setUint32(15, 0, true);
+    dv.setUint32(15, this.head15, true);
     let acc = 0;
     bodies.forEach((b, i) => {
       acc += b.length;
@@ -278,6 +349,7 @@ class GRA {
     for (const b of bodies) {
       for (const v of b) { dv.setUint16(p, v, true); p += 2; }
     }
+    out.set(this.trailing, p);
     return out;
   }
 

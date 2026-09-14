@@ -30,6 +30,16 @@ Ordered by what unblocks the most.
 - **The 64 reserved colours** identified and measured, with a team
   preview and a report of how much of a sheet the game recolours --
   see [character-sprites.md](character-sprites.md)
+- **Wavefront OBJ import**, lossless against this project's own export:
+  every vertex and every texture coordinate comes back identical.
+  Importing into a loaded file keeps the textures, the texture names and
+  the material bindings, and says what an OBJ cannot carry
+- **A corpus test suite** (`python/test_corpus.py`): read, write,
+  compare byte for byte, check the format's invariants, simulate edits
+  and re-read. It found two real bugs — a header field being
+  overwritten with zero, and the item index being accepted as a mesh
+- **Named viewpoints and a face picker**, so an unbound texture can be
+  seen where it belongs instead of appearing to do nothing
 
 ## 1. Sprite editing, the parts still missing
 
@@ -86,8 +96,15 @@ the slot taxonomy read out of the texture names. What it needs:
 
 ## 5. Maps
 
-Not started. No map format has been identified yet. The first task is
-to find which files hold the level layout at all.
+**Found, not decoded.** `Data/map/map.spr` is a grid of tile values,
+one byte per cell — not an image, which is why it was hiding behind a
+sprite extension. `Data/map/block.spr` looks packed two values per
+byte. 14 of each.
+
+Next: work out the grid dimensions (`map.spr` is 16649 bytes, and
+129x129 + 8 is 16649, which is suggestive but unconfirmed), then what
+each tile value means. A tile palette can be read off the block file
+once its packing is settled.
 
 ## 6. Quality of life
 
@@ -113,3 +130,11 @@ Listed so nobody burns time rediscovering them:
   [encrypted-parameter-file.md](encrypted-parameter-file.md) for
   everything already ruled out
 - The encrypted texture cache, which uses a different container
+- The section after the first group in an effect file. The first group
+  decodes -- a `u32` frame count, width and height, then frames of
+  `[u32 word count][the same runs a sprite uses]` -- but what follows
+  is 4664 of 5126 bytes in the smallest file and is not another group
+- What the `u32` at `0x07` of a sprite header means. One file in 1422
+  carries 71 there; the rest are zero
+- `UI_userdraw.spr`: high entropy from the first byte, no readable
+  header. Compressed or encrypted

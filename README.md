@@ -17,7 +17,9 @@ Nothing here ships any asset. These are tools; bring your own files.
 |--------|-------|--------|
 | `.bin` / `.MXW` | 3D meshes, skeletons and textures | read + write |
 | `get_item_list.bin` | the server's index of every item | read + write |
-| `.gra` / `.spr` / `.eft` | 2D sprite frames and animations | read + write |
+| `.gra` / `.spr` | 2D sprite frames and animations | read + write |
+| `.obj` | geometry, in and out of any modeller | read + write |
+| `.eft`, `map.spr`, `block.spr` | effects and maps | identified, not decoded |
 
 ## The editor
 
@@ -38,7 +40,12 @@ Open the link above, or `index.html` locally. No build step, no server.
   garment lands where you mean it to, layers, and undo
 - Edit the mesh id, the texture names, and which texture each material
   draws from
-- Save the edited file, or export Wavefront `.obj`
+- **Import and export Wavefront `.obj`**, so geometry can go through any
+  modeller. The round trip is lossless against this project's own
+  export: every vertex and texture coordinate comes back identical.
+  Importing into a loaded file keeps the textures, texture names and
+  material bindings, and says plainly what an OBJ cannot carry
+- Save the edited file
 
 A badge in the sidebar says whether the file currently writes back
 byte-identical, so you always know if you have changed anything.
@@ -96,17 +103,33 @@ open('out.bin', 'wb').write(m.write())
 
 ## Correctness
 
-`mxw.py --check` writes each file back and compares it to the source
-byte for byte. All 46 mesh files available while this was written
-round-trip identical — 37 accessories, 6 truncated `.MXW` dumps, two
-bodies and a pair of shoes. Chunks the parser does not recognise are
-kept verbatim, so that holds even for structures still undocumented
-here.
+```
+python python/test_corpus.py <a directory of real files>
+```
 
-`gra.py --check` does the same for sprites: of 1444 distinct files,
-1420 satisfy the format's size rule and **1419 of those round-trip
-byte-identical**, covering 8057 frames and 641465 runs. The 24 the
-reader refuses are listed in the format notes rather than guessed at.
+It reads every file, writes it back, compares byte for byte, checks the
+invariants the format implies, then simulates edits and re-reads the
+result. Read-only on the directory.
+
+Over the 1611 distinct files available while this was written:
+
+| | |
+|---|---|
+| meshes read | 50, **all byte-identical** |
+| sprites read | 1535, **all byte-identical** |
+| frames | 8732 |
+| pixels checked | 36.9 million |
+| problems | none |
+
+Everything else in those folders is classified as a different format
+rather than counted as a failure: 18 effect files, 2 map layouts, 2 map
+block files, 1 interface file, the item index and 2 installer files.
+
+Round-tripping on its own only proves the reader and writer agree; both
+could share a wrong assumption. That is what the invariant checks and
+the edit simulations are for — and they are what caught a header field
+being overwritten with zero, and the item index being accepted as a
+mesh and rewritten wrongly.
 
 ## Format notes
 
