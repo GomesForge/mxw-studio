@@ -38,8 +38,9 @@ Ordered by what unblocks the most.
   compare byte for byte, check the format's invariants, simulate edits
   and re-read. It found two real bugs — a header field being
   overwritten with zero, and the item index being accepted as a mesh
-- **Named viewpoints and a face picker**, so an unbound texture can be
-  seen where it belongs instead of appearing to do nothing
+- **Named viewpoints**, and textures classified by the slot the file
+  itself names them in, so an image lands on the right material -- the
+  body skin is never offered as a face -- without the camera moving
 
 ## 1. Sprite editing, the parts still missing
 
@@ -96,15 +97,17 @@ the slot taxonomy read out of the texture names. What it needs:
 
 ## 5. Maps
 
-**Found, not decoded.** `Data/map/map.spr` is a grid of tile values,
-one byte per cell — not an image, which is why it was hiding behind a
-sprite extension. `Data/map/block.spr` looks packed two values per
-byte. 14 of each.
+**Grid decoded.** `map.spr` is one byte per tile, **17 columns by 15
+rows** per arena — a solid border, a destructible ring, and alternating
+interior cells. Four values cover 89% of the file: open floor, the hard
+border and lattice, the destructible ring, and a second block type.
+See [map-format.md](map-format.md).
 
-Next: work out the grid dimensions (`map.spr` is 16649 bytes, and
-129x129 + 8 is 16649, which is suggestive but unconfirmed), then what
-each tile value means. A tile palette can be read off the block file
-once its packing is settled.
+What is left: the grids are not simply concatenated. The first is bytes
+0..254 exactly, then a stretch that is not tiles, then grids resume.
+Find every 255-byte window with a complete border and the interstitials
+become visible. Then `block.spr`, whose values look packed two per byte
+and may be the appearance table to this file's structure.
 
 ## 6. Quality of life
 

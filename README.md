@@ -19,7 +19,8 @@ Nothing here ships any asset. These are tools; bring your own files.
 | `get_item_list.bin` | the server's index of every item | read + write |
 | `.gra` / `.spr` | 2D sprite frames and animations | read + write |
 | `.obj` | geometry, in and out of any modeller | read + write |
-| `.eft`, `map.spr`, `block.spr` | effects and maps | identified, not decoded |
+| `.eft` | effects | first group decoded, not opened |
+| `map.spr`, `block.spr` | map tile grids | grid decoded, not opened |
 
 ## The editor
 
@@ -137,6 +138,9 @@ mesh and rewritten wrongly.
   payload, the skeleton, and the three things that are easy to get wrong
 - [docs/gra-format.md](docs/gra-format.md) — the sprite format, its
   run encoding, and the files that do not fit it
+- [docs/map-format.md](docs/map-format.md) — the map tile grid: 17x15
+  bytes per arena, what the common tile values mean, and the part that
+  is still unknown
 - [docs/character-sprites.md](docs/character-sprites.md) — the 64
   reserved colours the game recolours at run time, the frame size the
   game tolerates, and the animation file naming

@@ -287,71 +287,10 @@ function setView(name) {
     b.classList.toggle('primary', b.dataset.view === name));
 }
 
-/* The head material and the textures no material binds. On a body that
-   is the eight expressions plus the blank head, which is what a person
-   means by "the face" -- so they get their own picker rather than
-   living as unexplained entries in the texture list. */
-function faceOptions() {
-  const c = current;
-  const m = c && c.mxw.meshes[c.meshIndex || 0];
-  if (!m || c.mxw.gifs.length < 3) return null;
-  const head = m.materials.findIndex(x => /head|face/i.test(x.name));
-  if (head < 0) return null;
-  const bound = new Set(m.materials.map(x => x.tex));
-  const own = m.materials[head].tex;
-  const list = [];
-  for (let i = 0; i < c.mxw.gifs.length; i++) {
-    if (i === own || !bound.has(i)) list.push(i);
-  }
-  return list.length > 1 ? { head, own, list } : null;
-}
-
-function renderFaces() {
-  const host = $('faceGrid');
-  const panel = $('facePanel');
-  if (!host || !panel) return;
-  const f = faceOptions();
-  if (!f) { panel.style.display = 'none'; return; }
-  panel.style.display = 'block';
-  const c = current;
-  const shown = texPreview && texPreview.mat === f.head
-    ? texPreview.tex : f.own;
-  host.innerHTML = f.list.map(i => {
-    const url = URL.createObjectURL(new Blob([c.mxw.gifs[i]], { type: 'image/gif' }));
-    return '<figure data-f="' + i + '" class="' + (i === shown ? 'sel' : '') + '">' +
-      '<img src="' + url + '" alt="face ' + i + '">' +
-      '<figcaption>' + (i === f.own ? 'plain' : 'tex' + i) + '</figcaption></figure>';
-  }).join('');
-  host.querySelectorAll('figure').forEach(el => el.onclick = () => {
-    const i = +el.dataset.f;
-    texPreview = i === f.own ? null : { mat: f.head, tex: i };
-    selectedTex = i;
-    setView('face');
-    rebuild();
-    renderAll();
-    notify(i === f.own
-      ? 'head back to its own texture'
-      : 'showing tex' + i + ' on ' + c.mxw.meshes[c.meshIndex || 0].materials[f.head].name +
-        ' -- set it under Materials to keep it');
-  });
-  $('faceHint').textContent =
-    'Clicking one shows it on the ' +
-    c.mxw.meshes[c.meshIndex || 0].materials[f.head].name +
-    ' material and jumps the camera to the head. This is a preview: ' +
-    'the file is unchanged until you set it under Materials.';
-}
-
-/* ----------------------------- panels ---------------------------- */
-function esc(s) {
-  return String(s).replace(/[&<>"]/g, c =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-}
-
 function renderAll() {
   renderList();
   renderHeader();
   renderMesh();
-  renderFaces();
   renderTextures();
   renderSkeleton();
   renderUV();
@@ -461,6 +400,13 @@ function renderHeader() {
   };
 }
 
+/* Texture and material names come out of the file, so they go through
+   this before reaching innerHTML. */
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
 function renderMesh() {
   const c = current;
   const m = c && c.mxw.meshes[c.meshIndex || 0];
@@ -515,12 +461,15 @@ function renderTextures() {
       (c.mxw.truncated ? ' Its texture chunk is missing from the file.' : '') + '</p>';
     return;
   }
+  const m0 = c.mxw.meshes[c.meshIndex || 0];
   $('texGrid').innerHTML = c.mxw.gifs.map((g, i) => {
     const [w, h] = gifSize(g);
     const url = URL.createObjectURL(new Blob([g], { type: 'image/gif' }));
+    const role = textureRole(m0, i);
     return `<figure data-t="${i}" class="${selectedTex === i ? 'sel' : ''}">
       <img src="${url}" alt="texture ${i}">
-      <figcaption>tex${i}<br><span class="dim">${w}&times;${h} &middot; ${
+      <figcaption>tex${i}${role ? '<br><b>' + esc(role) + '</b>' : ''}
+      <br><span class="dim">${w}&times;${h} &middot; ${
         (g.length / 1024).toFixed(1)}K</span></figcaption></figure>`;
   }).join('');
   $('texGrid').querySelectorAll('figure').forEach(f =>
@@ -528,12 +477,27 @@ function renderTextures() {
   renderTexPreview();
 }
 
-/* The material a texture most plausibly belongs to: the one whose own
-   binding is the closest at or below it. On a body that sends tex0 to
-   the body and everything from tex1 up to the head, which is where the
-   expressions belong. */
+/* Which material should draw a given image.
+
+   The mesh names its textures and then carries however many images it
+   likes: a body names two, girl_01 and girl_01_f, and ships ten. So
+   image i belongs to the named slot min(i, names - 1) -- image 0 is the
+   body skin, and every image from 1 up is a variant of the head
+   texture. The material that binds that slot is the one to show it on.
+
+   This matters because it is what stops the body skin being offered as
+   a face: it belongs to slot 0, which the body material binds. */
+function textureSlot(m, tex) {
+  const names = m && m.textures.length ? m.textures.length : 1;
+  return Math.min(tex, names - 1);
+}
+
 function defaultPreviewMat(m, tex) {
   if (!m || !m.materials.length) return 0;
+  const slot = textureSlot(m, tex);
+  const exact = m.materials.findIndex(x => x.tex === slot);
+  if (exact >= 0) return exact;
+  /* no material binds that slot, so fall back to the nearest below */
   let best = 0, bestTex = -1;
   m.materials.forEach((x, i) => {
     if (x.tex <= tex && x.tex > bestTex) { bestTex = x.tex; best = i; }
@@ -541,12 +505,22 @@ function defaultPreviewMat(m, tex) {
   return best;
 }
 
+/* What this image is for, in the file's own terms. */
+function textureRole(m, tex) {
+  if (!m || !m.materials.length) return '';
+  const mi = defaultPreviewMat(m, tex);
+  const name = m.materials[mi] ? m.materials[mi].name : '';
+  const bound = m.materials.some(x => x.tex === tex);
+  return bound ? name : name + ' alt';
+}
+
 function selectTexture(i) {
   const c = current;
   const m = c && c.mxw.meshes[c.meshIndex || 0];
   selectedTex = i;
   /* a texture a material already binds needs no override -- the model
-     is showing it as the file says */
+     is showing it as the file says. Choosing one never moves the
+     camera: you are picking what to look at, not where to look from. */
   const bound = m && m.materials.some(x => x.tex === i);
   texPreview = bound ? null : { mat: defaultPreviewMat(m, i), tex: i };
   rebuild();
@@ -863,7 +837,7 @@ function addFile(name, buf) {
     current = entry;
     selectedTex = 0;
     texPreview = null;
-    setView(faceOptions() ? 'face' : 'whole');
+    setView('whole');
     rebuild();
     renderAll();
     $('empty').style.display = 'none';
