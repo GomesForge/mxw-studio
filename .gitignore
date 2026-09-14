@@ -1,0 +1,28 @@
+# No game assets in this repository -- it ships tools, not content.
+*.bin
+*.MXW
+*.mxw
+*.dat
+*.spr
+*.SPR
+*.gra
+*.GRA
+*.eft
+*.EFT
+*.cab
+*.rar
+*.zip
+*.7z
+*.exe
+
+# Build and editor noise
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local scratch
+samples/
+out/

@@ -1,0 +1,212 @@
+<title>MXW Mesh Editor</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --edge:#dfe3ea; --ink:#1b2130;
+    --dim:#6b7488; --cyan:#0b8fa8; --amber:#a06b00; --red:#c0343a;
+    --ok:#1d7a4c; --view:#0d1524;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b111d; --panel:#111a2a; --edge:#22304a; --ink:#e7ecf5;
+      --dim:#8695ae; --cyan:#3ad4ec; --amber:#ffc93c; --red:#e8464a;
+      --ok:#3fd68a; --view:#0d1524;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b111d; --panel:#111a2a; --edge:#22304a; --ink:#e7ecf5;
+    --dim:#8695ae; --cyan:#3ad4ec; --amber:#ffc93c; --red:#e8464a;
+    --ok:#3fd68a; --view:#0d1524;
+  }
+
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  #app{display:grid;grid-template-columns:340px 1fr;min-height:100vh}
+  @media (max-width:820px){ #app{grid-template-columns:1fr} #view{min-height:56vh} }
+
+  aside{background:var(--panel);border-right:1px solid var(--edge);
+    padding:18px 16px 40px;overflow-y:auto;max-height:100vh}
+  @media (max-width:820px){ aside{max-height:none;border-right:0;border-bottom:1px solid var(--edge)} }
+  h1{font-size:19px;margin:0 0 2px;letter-spacing:-.01em}
+  .sub{color:var(--dim);font-size:12px;margin:0 0 16px;font-family:var(--mono)}
+  h2{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--amber);
+    margin:22px 0 8px;font-weight:700}
+
+  #drop{display:block;border:1.5px dashed var(--edge);border-radius:10px;
+    padding:18px 12px;text-align:center;cursor:pointer;color:var(--dim);font-size:12px}
+  #drop:hover{border-color:var(--cyan);color:var(--ink)}
+  #drop b{display:block;color:var(--ink);font-size:13px;margin-bottom:3px}
+  #drop small{display:block;margin-top:6px;opacity:.75}
+  input[type=file]{display:none}
+
+  #list{margin-top:10px}
+  #list div{padding:6px 9px;border-radius:7px;cursor:pointer;font-family:var(--mono);
+    font-size:12px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  #list div:hover{background:color-mix(in srgb,var(--cyan) 12%,transparent)}
+  #list div.sel{background:color-mix(in srgb,var(--cyan) 22%,transparent);color:var(--ink)}
+  .dim{color:var(--dim);font-size:11px}
+
+  dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:12px}
+  dt{color:var(--dim)}
+  dd{margin:0;font-family:var(--mono);text-align:right;word-break:break-word}
+  dt.bad,dd.bad{color:var(--red)}
+
+  label{display:block;font-size:11px;color:var(--dim);margin:6px 0}
+  input[type=text],input:not([type]),select{width:100%;margin-top:3px;padding:5px 7px;
+    background:var(--bg);color:var(--ink);border:1px solid var(--edge);border-radius:6px;
+    font-family:var(--mono);font-size:12px}
+  input:focus,select:focus{outline:none;border-color:var(--cyan)}
+  .row{display:flex;gap:8px;align-items:center;margin:6px 0;font-size:12px}
+  .row span{flex:0 0 78px;font-family:var(--mono);color:var(--ink);overflow:hidden;text-overflow:ellipsis}
+  .row select{flex:1;margin:0}
+
+  .ctrl{display:flex;flex-wrap:wrap;gap:6px}
+  button{background:var(--bg);color:var(--dim);border:1px solid var(--edge);
+    border-radius:7px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--cyan);color:var(--ink)}
+  button.on{background:var(--cyan);border-color:var(--cyan);color:#06121a;font-weight:600}
+  button.primary{background:var(--amber);border-color:var(--amber);color:#1a1200;font-weight:700}
+
+  #texGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:7px}
+  #texGrid figure{margin:0;cursor:pointer;border:2px solid transparent;border-radius:8px;
+    padding:3px;text-align:center}
+  #texGrid figure:hover{border-color:var(--edge)}
+  #texGrid figure.sel{border-color:var(--cyan)}
+  #texGrid img{width:100%;display:block;image-rendering:pixelated;border-radius:4px;
+    background:repeating-conic-gradient(var(--edge) 0 25%,transparent 0 50%) 0 0/12px 12px}
+  #texGrid figcaption{font-size:10px;font-family:var(--mono);margin-top:3px;line-height:1.3}
+
+  #uv{width:100%;margin-top:9px;border:1px solid var(--edge);border-radius:8px;
+    image-rendering:pixelated;display:none;background:var(--view)}
+  .hint{color:var(--dim);font-size:11px;line-height:1.5;margin:8px 0 0}
+
+  .rt{font-family:var(--mono);font-size:11px;margin:9px 0 0;padding:6px 8px;border-radius:6px}
+  .rt.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
+  .rt.changed{color:var(--amber);background:color-mix(in srgb,var(--amber) 14%,transparent)}
+
+  .fmt{margin-top:24px;padding-top:14px;border-top:1px solid var(--edge);
+    font-family:var(--mono);font-size:10.5px;color:var(--dim);line-height:1.65}
+  .fmt b{color:var(--ink)}
+
+  #view{position:relative;background:var(--view);min-height:100vh}
+  @media (max-width:820px){ #view{min-height:56vh} }
+  #view canvas{display:block}
+  #empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:#5b6b88;font-size:13px;text-align:center;padding:24px;pointer-events:none}
+  #tip{position:absolute;left:14px;bottom:12px;color:#5b6b88;font-family:var(--mono);
+    font-size:11px;pointer-events:none}
+  .msg{position:absolute;left:14px;right:14px;top:14px;padding:9px 12px;border-radius:8px;
+    font-size:12px;display:none;border-left:3px solid var(--amber);
+    background:color-mix(in srgb,var(--amber) 16%,var(--view));color:var(--ink);z-index:5}
+  .msg.err{border-left-color:var(--red);background:color-mix(in srgb,var(--red) 18%,var(--view))}
+  #over{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(11,17,29,.82);color:var(--cyan);font-size:17px;z-index:50;
+    border:3px dashed var(--cyan);pointer-events:none}
+</style>
+
+<div id="app">
+<aside>
+  <h1>MXW Mesh Editor</h1>
+  <p class="sub">MXW3DHUD &amp; MXW3DAVA &middot; Bomberman Online</p>
+
+  <label id="drop" for="file">
+    <b>Click to choose files</b>
+    &hellip; or drop them anywhere on this page
+    <small>item .bin, body .bin or .MXW &mdash; several at once is fine</small>
+  </label>
+  <input type="file" id="file" multiple>
+  <div id="list"></div>
+
+  <h2>Container</h2>
+  <div id="hdr"></div>
+  <p id="rt" class="rt"></p>
+
+  <div id="meshPanel" style="display:none">
+    <h2>Mesh</h2>
+    <div id="meshInfo"></div>
+    <h2>Texture names</h2>
+    <div id="texNames"></div>
+    <h2>Materials</h2>
+    <div id="matList"></div>
+  </div>
+
+  <div id="skelPanel" style="display:none">
+    <h2>Skeleton</h2>
+    <div id="skelInfo"></div>
+  </div>
+
+  <div id="texPanel" style="display:none">
+    <h2>Textures</h2>
+    <div id="texGrid"></div>
+    <div class="ctrl" style="margin-top:9px">
+      <button id="bTexIn" type="button">Replace&hellip;</button>
+      <button id="bTexOut">Save .GIF</button>
+      <button id="bUV">Save UV .PNG</button>
+    </div>
+    <input type="file" id="texFile" accept="image/*">
+    <canvas id="uv"></canvas>
+    <p class="hint">The cyan edges are the UV layout of the faces that use
+    this texture &mdash; paint inside them. Save the UV PNG as a guide,
+    then drop the finished image back on the page to replace the texture.
+    A GIF that already matches the slot size is stored untouched.</p>
+  </div>
+
+  <h2>Display</h2>
+  <div class="ctrl">
+    <button id="bTex" class="on">Texture</button>
+    <button id="bWire">Wireframe</button>
+    <button id="bNorm">Normals</button>
+    <button id="bBone">Skeleton</button>
+    <button id="bAxes" class="on">Axes</button>
+    <button id="bSpin" class="on">Spin</button>
+    <button id="bAll">Dress-up</button>
+  </div>
+
+  <h2>Export</h2>
+  <div class="ctrl">
+    <button id="bSave">Save .bin</button>
+    <button id="bObj">Export .OBJ</button>
+  </div>
+
+  <div class="fmt">
+    <b>Container (big-endian)</b><br>
+    0x00 &nbsp;"OK&nbsp;&nbsp;"<br>
+    0x04 &nbsp;u32 version<br>
+    0x08 &nbsp;u32 mesh id<br>
+    0x0C &nbsp;u32 chunk count<br>
+    0x10 &nbsp;chunks: u32 size + content<br>
+    <br>
+    <b>Chunk kinds</b><br>
+    "MXW3DHUD" items, cards, female body<br>
+    "MXW3DAVA" male body (avatar)<br>
+    &nbsp;&nbsp;&mdash; geometry, or a skeleton<br>
+    "GIF8"&hellip; &nbsp;a texture<br>
+    <br>
+    <b>Mesh payload</b><br>
+    u16 vertex count N<br>
+    N&times;12 i16 x,y,z + i16 nx,ny,nz<br>
+    <b>u8 texture count T</b>, T&times;(u8 len+name)<br>
+    u8 materials, each {len,name,6B}<br>
+    &nbsp;&nbsp;byte 4 of the 6 = texture index<br>
+    u16 faces, each {n, mat,<br>
+    &nbsp;&nbsp;n&times;(u16 idx, u8 u, u8 v)}<br>
+    u8 bones, each {u16 from, u16 to, u8 id}<br>
+    <br>
+    u,v are texture <i>pixels</i>, divided by the<br>
+    size of that material's GIF.
+  </div>
+</aside>
+
+<div id="view">
+  <div id="empty">Drop an item or body <b>.bin</b> here.<br>
+    Load a body plus some clothes and turn on Dress-up.</div>
+  <div id="tip">drag = orbit &middot; wheel = zoom &middot; right-drag = pan</div>
+  <div id="msg" class="msg"></div>
+</div>
+</div>
+<div id="over">Drop .bin / .MXW files, or an image to replace the selected texture</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="mxw.js"></script>
+<script src="gifenc.js"></script>
+<script src="app.js"></script>
