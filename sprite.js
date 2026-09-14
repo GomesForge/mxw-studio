@@ -1,0 +1,376 @@
+/* Sprite mode: frame playback, palette editing that propagates across
+   an animation, and PNG import/export. Depends on gra.js.
+
+   Editing one frame in isolation is usually the wrong unit of work --
+   a character's frames are the same artwork in different poses, so a
+   recolour has to reach every frame at once. These files store direct
+   RGB565 rather than palette indices, so "palette editing" here means
+   remapping the colours that are actually present, which is exactly
+   what propagates cleanly. */
+
+const sprite = {
+  entry: null,          /* {name, raw, gra} */
+  frame: 0,
+  playing: false,
+  fps: 12,
+  zoom: 3,
+  timer: null,
+  selected: null,       /* the rgb565 value picked in the palette */
+  applyAll: true
+};
+
+function isSpriteName(name) {
+  return /\.(gra|spr|eft)$/i.test(name);
+}
+
+function spriteOpen(name, buf) {
+  const raw = new Uint8Array(buf);
+  const gra = new GRA(buf);
+  sprite.entry = { name, raw, gra };
+  sprite.frame = 0;
+  sprite.selected = null;
+  document.body.classList.add('sprite-mode');
+  $('empty').style.display = 'none';
+  spriteRenderAll();
+  spriteDraw();
+}
+
+function spriteClose() {
+  spritePause();
+  sprite.entry = null;
+  document.body.classList.remove('sprite-mode');
+}
+
+/* ------------------------------ drawing -------------------------- */
+function spriteDraw() {
+  const e = sprite.entry;
+  if (!e) return;
+  const cv = $('spriteView');
+  const g = e.gra;
+  const z = sprite.zoom;
+  cv.width = g.width * z;
+  cv.height = g.height * z;
+  const ctx = cv.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, cv.width, cv.height);
+
+  const f = g.frames[sprite.frame];
+  if (!f) return;
+  const tmp = document.createElement('canvas');
+  tmp.width = g.width; tmp.height = g.height;
+  tmp.getContext('2d').putImageData(
+    new ImageData(f.toRGBA(g.width, g.height), g.width, g.height), 0, 0);
+  ctx.drawImage(tmp, 0, 0, cv.width, cv.height);
+
+  const bb = f.bbox();
+  $('spriteStat').textContent = e.name + '  frame ' + (sprite.frame + 1) +
+    '/' + g.frames.length + '  ' + g.width + 'x' + g.height +
+    '  ' + f.runs.length + ' runs  ' + f.pixelCount + ' px' +
+    (bb ? '  bounds x ' + bb[0] + '..' + bb[2] + ' y ' + bb[1] + '..' + bb[3]
+        : '  empty');
+}
+
+/* ----------------------------- playback -------------------------- */
+function spritePlay() {
+  const e = sprite.entry;
+  if (!e || e.gra.frames.length < 2) return;
+  sprite.playing = true;
+  $('bPlay').textContent = 'Pause';
+  $('bPlay').classList.add('on');
+  clearInterval(sprite.timer);
+  sprite.timer = setInterval(() => {
+    sprite.frame = (sprite.frame + 1) % e.gra.frames.length;
+    spriteDraw();
+    spriteMarkStrip();
+  }, 1000 / sprite.fps);
+}
+
+function spritePause() {
+  sprite.playing = false;
+  clearInterval(sprite.timer);
+  sprite.timer = null;
+  const b = $('bPlay');
+  if (b) { b.textContent = 'Play'; b.classList.remove('on'); }
+}
+
+/* ------------------------------ panels --------------------------- */
+function spriteRenderAll() {
+  spriteRenderInfo();
+  spriteRenderStrip();
+  spriteRenderPalette();
+  spriteCheckRoundTrip();
+}
+
+function spriteRenderInfo() {
+  const g = sprite.entry.gra;
+  $('spriteInfo').innerHTML =
+    '<dl><dt>frames</dt><dd>' + g.frames.length + '</dd>' +
+    '<dt>size</dt><dd>' + g.width + ' &times; ' + g.height + '</dd>' +
+    '<dt>kind</dt><dd>0x' + g.kind.toString(16).toUpperCase().padStart(2, '0') +
+    '</dd><dt>colours</dt><dd>' + g.palette().length + '</dd></dl>';
+}
+
+function spriteRenderStrip() {
+  const g = sprite.entry.gra;
+  const host = $('strip');
+  host.innerHTML = '';
+  g.frames.forEach((f, i) => {
+    const c = document.createElement('canvas');
+    const bb = f.bbox() || [0, 0, 1, 1];
+    const w = Math.max(1, bb[2] - bb[0]), h = Math.max(1, bb[3] - bb[1]);
+    c.width = w; c.height = h;
+    const tmp = document.createElement('canvas');
+    tmp.width = g.width; tmp.height = g.height;
+    tmp.getContext('2d').putImageData(
+      new ImageData(f.toRGBA(g.width, g.height), g.width, g.height), 0, 0);
+    c.getContext('2d').drawImage(tmp, -bb[0], -bb[1]);
+    const fig = document.createElement('figure');
+    fig.dataset.i = i;
+    fig.className = i === sprite.frame ? 'sel' : '';
+    const img = document.createElement('img');
+    img.src = c.toDataURL();
+    fig.appendChild(img);
+    const cap = document.createElement('figcaption');
+    cap.textContent = i + 1;
+    fig.appendChild(cap);
+    fig.onclick = () => {
+      spritePause();
+      sprite.frame = i;
+      spriteDraw();
+      spriteMarkStrip();
+    };
+    host.appendChild(fig);
+  });
+}
+
+function spriteMarkStrip() {
+  $('strip').querySelectorAll('figure').forEach(f =>
+    f.classList.toggle('sel', +f.dataset.i === sprite.frame));
+}
+
+function hex565(v) {
+  const c = rgb565ToRgb(v);
+  return '#' + c.map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+function spriteRenderPalette() {
+  const g = sprite.entry.gra;
+  const pal = g.palette();
+  const host = $('palette');
+  const shown = pal.slice(0, 96);
+  host.innerHTML = shown.map(([v, n]) =>
+    `<button class="sw ${sprite.selected === v ? 'sel' : ''}"
+       data-v="${v}" title="0x${v.toString(16).toUpperCase().padStart(4, '0')} -- ${n} px"
+       style="background:${hex565(v)}"></button>`).join('');
+  host.querySelectorAll('button').forEach(b => b.onclick = () => {
+    sprite.selected = +b.dataset.v;
+    $('newColour').value = hex565(sprite.selected);
+    spriteRenderPalette();
+  });
+  $('palCount').textContent = pal.length > shown.length
+    ? shown.length + ' of ' + pal.length + ' colours' : pal.length + ' colours';
+}
+
+function spriteCheckRoundTrip() {
+  const e = sprite.entry;
+  const out = e.gra.write();
+  let same = out.length === e.raw.length;
+  if (same) for (let i = 0; i < out.length; i++) {
+    if (out[i] !== e.raw[i]) { same = false; break; }
+  }
+  const el = $('spriteRt');
+  el.className = 'rt ' + (same ? 'ok' : 'changed');
+  el.textContent = same
+    ? 'unchanged -- writes back byte-identical (' + out.length + ' bytes)'
+    : 'edited -- ' + out.length + ' bytes, was ' + e.raw.length;
+  $('bSpriteSave').classList.toggle('primary', !same);
+}
+
+/* ------------------------------ editing -------------------------- */
+function hexToRgb565(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return rgbToRgb565((n >> 16) & 255, (n >> 8) & 255, n & 255);
+}
+
+function spriteRecolour() {
+  const e = sprite.entry;
+  if (!e) return;
+  if (sprite.selected === null) { notify('pick a colour from the palette first', 1); return; }
+  const to = hexToRgb565($('newColour').value);
+  if (to === null) { notify('that is not a hex colour', 1); return; }
+  const from = sprite.selected;
+  if (to === from) { notify('that is the same colour'); return; }
+  const frames = sprite.applyAll ? null : [sprite.frame];
+  let hit = 0;
+  e.gra.mapColors(v => { if (v === from) { hit++; return to; } return v; }, frames);
+  sprite.selected = to;
+  notify('remapped ' + hit + ' pixels ' +
+         (sprite.applyAll ? 'across all ' + e.gra.frames.length + ' frames'
+                          : 'in frame ' + (sprite.frame + 1)));
+  spriteRenderAll();
+  spriteDraw();
+}
+
+/* A hue and brightness shift over every colour at once. This is the
+   quickest way to recolour a whole character and it lands on every
+   frame by construction. */
+function spriteShift() {
+  const e = sprite.entry;
+  if (!e) return;
+  const dh = (+$('shHue').value || 0) / 360;
+  const ds = (+$('shSat').value || 0) / 100;
+  const dv = (+$('shVal').value || 0) / 100;
+  if (!dh && !ds && !dv) { notify('all three sliders are at zero'); return; }
+  const frames = sprite.applyAll ? null : [sprite.frame];
+  e.gra.mapColors(v => {
+    const c = rgb565ToRgb(v);
+    let [h, s, l] = rgbToHsv(c[0], c[1], c[2]);
+    h = (h + dh + 1) % 1;
+    s = Math.max(0, Math.min(1, s + ds));
+    l = Math.max(0, Math.min(1, l + dv));
+    const o = hsvToRgb(h, s, l);
+    return rgbToRgb565(o[0], o[1], o[2]);
+  }, frames);
+  notify('shifted ' + (sprite.applyAll ? 'all ' + e.gra.frames.length + ' frames'
+                                       : 'frame ' + (sprite.frame + 1)));
+  spriteRenderAll();
+  spriteDraw();
+}
+
+function rgbToHsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) {
+    if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (mx === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  }
+  return [h, mx ? d / mx : 0, mx];
+}
+
+function hsvToRgb(h, s, v) {
+  const i = Math.floor(h * 6), f = h * 6 - i;
+  const p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+  const m = [[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]][i % 6];
+  return m.map(x => Math.round(x * 255));
+}
+
+async function spriteImport(file) {
+  const e = sprite.entry;
+  if (!e) return;
+  let img;
+  try { img = await decodeImage(file); }
+  catch (err) { notify('could not read that image', 1); return; }
+  const g = e.gra;
+  /* a strip whose width is an exact multiple of the frame width is
+     sliced across frames; anything else replaces the current frame */
+  const asStrip = img.w === g.width * g.frames.length && img.h === g.height;
+  const src = document.createElement('canvas');
+  src.width = img.w; src.height = img.h;
+  src.getContext('2d').putImageData(new ImageData(img.rgba, img.w, img.h), 0, 0);
+
+  const take = (sx, sw, sh) => {
+    const c = document.createElement('canvas');
+    c.width = g.width; c.height = g.height;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(src, sx, 0, sw, sh, 0, 0, g.width, g.height);
+    return ctx.getImageData(0, 0, g.width, g.height).data;
+  };
+
+  if (asStrip) {
+    for (let i = 0; i < g.frames.length; i++)
+      g.replaceFrameRGBA(i, take(i * g.width, g.width, g.height));
+    notify('imported a strip of ' + g.frames.length + ' frames');
+  } else {
+    g.replaceFrameRGBA(sprite.frame, take(0, img.w, img.h));
+    notify('replaced frame ' + (sprite.frame + 1) +
+           (img.w !== g.width || img.h !== g.height
+             ? ' (scaled from ' + img.w + 'x' + img.h + ')' : ''));
+  }
+  spriteRenderAll();
+  spriteDraw();
+}
+
+function spriteExportFrame() {
+  const e = sprite.entry;
+  if (!e) return;
+  const g = e.gra, f = g.frames[sprite.frame];
+  const c = document.createElement('canvas');
+  c.width = g.width; c.height = g.height;
+  c.getContext('2d').putImageData(
+    new ImageData(f.toRGBA(g.width, g.height), g.width, g.height), 0, 0);
+  c.toBlob(b => b.arrayBuffer().then(ab => saveFile(
+    e.name.replace(/\.[^.]+$/, '') + '_' +
+    String(sprite.frame + 1).padStart(2, '0') + '.png',
+    new Uint8Array(ab), 'image/png')));
+}
+
+function spriteExportStrip() {
+  const e = sprite.entry;
+  if (!e) return;
+  const g = e.gra;
+  const c = document.createElement('canvas');
+  c.width = g.width * g.frames.length;
+  c.height = g.height;
+  const ctx = c.getContext('2d');
+  g.frames.forEach((f, i) => {
+    const t = document.createElement('canvas');
+    t.width = g.width; t.height = g.height;
+    t.getContext('2d').putImageData(
+      new ImageData(f.toRGBA(g.width, g.height), g.width, g.height), 0, 0);
+    ctx.drawImage(t, i * g.width, 0);
+  });
+  c.toBlob(b => b.arrayBuffer().then(ab => saveFile(
+    e.name.replace(/\.[^.]+$/, '') + '_strip.png',
+    new Uint8Array(ab), 'image/png')));
+  notify('the strip is ' + c.width + 'x' + c.height +
+         ' -- drop it back on the page to import every frame at once');
+}
+
+function spriteSave() {
+  const e = sprite.entry;
+  if (!e) return;
+  saveFile(e.name, e.gra.write(), 'application/octet-stream');
+}
+
+/* ----------------------------- wiring ---------------------------- */
+function spriteWire() {
+  $('bPlay').onclick = () => sprite.playing ? spritePause() : spritePlay();
+  $('bPrev').onclick = () => {
+    spritePause();
+    const n = sprite.entry.gra.frames.length;
+    sprite.frame = (sprite.frame - 1 + n) % n;
+    spriteDraw(); spriteMarkStrip();
+  };
+  $('bNext').onclick = () => {
+    spritePause();
+    const n = sprite.entry.gra.frames.length;
+    sprite.frame = (sprite.frame + 1) % n;
+    spriteDraw(); spriteMarkStrip();
+  };
+  $('fps').oninput = e => {
+    sprite.fps = Math.max(1, Math.min(60, +e.target.value || 12));
+    $('fpsOut').textContent = sprite.fps + ' fps';
+    if (sprite.playing) spritePlay();
+  };
+  $('zoom').oninput = e => {
+    sprite.zoom = Math.max(1, Math.min(10, +e.target.value || 3));
+    $('zoomOut').textContent = sprite.zoom + 'x';
+    spriteDraw();
+  };
+  $('applyAll').onchange = e => { sprite.applyAll = e.target.checked; };
+  $('bRecolour').onclick = spriteRecolour;
+  $('bShift').onclick = spriteShift;
+  $('bSpriteIn').onclick = () => $('spriteFile').click();
+  $('spriteFile').onchange = e => {
+    if (e.target.files[0]) spriteImport(e.target.files[0]);
+    e.target.value = '';
+  };
+  $('bFrameOut').onclick = spriteExportFrame;
+  $('bStripOut').onclick = spriteExportStrip;
+  $('bSpriteSave').onclick = spriteSave;
+}

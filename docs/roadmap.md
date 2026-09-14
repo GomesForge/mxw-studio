@@ -17,37 +17,11 @@ Ordered by what unblocks the most.
 - Texture replacement, with a GIF89a encoder that preserves the
   transparent index
 - The item index format, with a byte-identical rebuild
-
-## 1. Sprite formats — `.gra`, `.spr`, `.eft`
-
-The 2D characters live here and nothing about them is editable yet.
-This is the biggest gap.
-
-What is known so far, from 6871 files:
-
-```
-0x00  u16  0x0000
-0x02  u16  0x0101        in every file
-0x04  u8   kind          0x00 or 0x03
-0x05  u8   frame count
-0x06  u8   0x64 when kind is 0x03, else 0x00
-0x07  u8   0x00
-```
-
-Frame counts run from 1 to at least 0x15 (21). Two header shapes follow
-byte 7, and the payload is compressed — a single 40x40 frame lands in
-about 2.2 KB, and an 18-frame 80x80 sheet in 41 KB, far under the raw
-pixel count.
-
-Next steps, in order:
-
-1. Settle the two header variants and find the frame table
-2. Identify the compression. A palette plus per-row RLE is the obvious
-   first guess for the era
-3. Decode to RGBA and render
-4. Re-encode, and prove a byte-identical round-trip the same way the
-   mesh side does
-5. Then the editing features below become possible
+- **The sprite format**: header, frame table and run encoding decoded;
+  1419 of 1420 accepted files round-trip byte-identical across 8057
+  frames. See [gra-format.md](gra-format.md)
+- **Sprite mode**: frame playback, colour remapping and an HSV shift
+  that reach every frame at once, PNG frame and strip import/export
 
 ## 2. Sprite editing that respects animation
 

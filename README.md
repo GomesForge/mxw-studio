@@ -17,7 +17,7 @@ Nothing here ships any asset. These are tools; bring your own files.
 |--------|-------|--------|
 | `.bin` / `.MXW` | 3D meshes, skeletons and textures | read + write |
 | `get_item_list.bin` | the server's index of every item | read + write |
-| `.gra` / `.spr` / `.eft` | 2D sprite sheets and animations | in progress |
+| `.gra` / `.spr` / `.eft` | 2D sprite frames and animations | read + write |
 
 ## The editor
 
@@ -40,6 +40,30 @@ Open the link above, or `index.html` locally. No build step, no server.
 
 A badge in the sidebar says whether the file currently writes back
 byte-identical, so you always know if you have changed anything.
+
+## Sprites
+
+Drop a `.gra`, `.spr` or `.eft` and the page switches to sprite mode.
+
+- Frame strip with playback, adjustable speed and zoom
+- Every colour in the file as a swatch grid
+- **Remap a colour** or **shift hue, saturation and lightness** across
+  *every frame at once*. A character's frames are the same artwork in
+  different poses, so a recolour belongs to the whole animation rather
+  than one frame; both tools default to all frames and can be narrowed
+  to the current one
+- Export a single frame or a strip of every frame as PNG, edit it
+  anywhere, and drop it back. A strip exactly as wide as all the frames
+  side by side is sliced across them; anything else replaces the
+  current frame, scaled to fit
+- Save the sprite back out
+
+```
+python python/gra.py <file>            inspect
+python python/gra.py --png <file>      a PNG per frame
+python python/gra.py --strip <file>    one PNG of every frame
+python python/gra.py --check <file>    prove the round-trip
+```
 
 ## Python
 
@@ -64,15 +88,23 @@ open('out.bin', 'wb').write(m.write())
 ## Correctness
 
 `mxw.py --check` writes each file back and compares it to the source
-byte for byte. All 46 files available while this was written round-trip
-identical — 37 accessories, 6 truncated `.MXW` dumps, two bodies and a
-pair of shoes. Chunks the parser does not recognise are kept verbatim,
-so that holds even for structures still undocumented here.
+byte for byte. All 46 mesh files available while this was written
+round-trip identical — 37 accessories, 6 truncated `.MXW` dumps, two
+bodies and a pair of shoes. Chunks the parser does not recognise are
+kept verbatim, so that holds even for structures still undocumented
+here.
+
+`gra.py --check` does the same for sprites: of 1444 distinct files,
+1420 satisfy the format's size rule and **1419 of those round-trip
+byte-identical**, covering 8057 frames and 641465 runs. The 24 the
+reader refuses are listed in the format notes rather than guessed at.
 
 ## Format notes
 
 - [docs/mxw-format.md](docs/mxw-format.md) — the container, the mesh
   payload, the skeleton, and the three things that are easy to get wrong
+- [docs/gra-format.md](docs/gra-format.md) — the sprite format, its
+  run encoding, and the files that do not fit it
 - [docs/get-item-list-format.md](docs/get-item-list-format.md) — the
   item index, and how to obtain a copy
 - [docs/encrypted-parameter-file.md](docs/encrypted-parameter-file.md) —
@@ -85,7 +117,8 @@ so that holds even for structures still undocumented here.
 Issues and pull requests are welcome. `main` is protected: changes land
 through a reviewed pull request.
 
-What would help most right now is the sprite side — see the roadmap.
+What would help most right now is the dress room and character export
+— see the roadmap.
 
 ## Credits
 

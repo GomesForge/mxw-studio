@@ -579,7 +579,17 @@ function readFiles(files) {
   for (const f of arr) {
     const r = new FileReader();
     r.onerror = () => notify('could not read ' + f.name, 1);
-    r.onload = () => addFile(f.name, r.result);
+    r.onload = () => {
+      /* sprites and meshes disagree on almost everything, starting
+         with byte order, so route by extension */
+      if (isSpriteName(f.name)) {
+        try { spriteOpen(f.name, r.result); }
+        catch (e) { notify(f.name + ': ' + e.message, 1); }
+        return;
+      }
+      spriteClose();
+      addFile(f.name, r.result);
+    };
     r.readAsArrayBuffer(f);
   }
 }
@@ -621,9 +631,14 @@ document.addEventListener('drop', e => {
     }
   }
   if (!files.length) { notify('nothing usable in the drop', 1); return; }
-  /* an image dropped while a file is open replaces the chosen texture */
-  const imgs = files.filter(f => /^image\//.test(f.type) && !/\.bin$|\.mxw$/i.test(f.name));
-  if (current && imgs.length === files.length) { replaceTexture(imgs[0]); return; }
+  /* an image dropped while something is open goes into it: the chosen
+     texture in mesh mode, the current frame or a strip in sprite mode */
+  const imgs = files.filter(f => /^image\//.test(f.type)
+    && !/\.bin$|\.mxw$|\.gra$|\.spr$|\.eft$/i.test(f.name));
+  if (imgs.length === files.length && imgs.length) {
+    if (sprite.entry) { spriteImport(imgs[0]); return; }
+    if (current) { replaceTexture(imgs[0]); return; }
+  }
   readFiles(files);
 });
 
@@ -657,10 +672,13 @@ $('bUV').onclick = exportUV;
 $('bTexOut').onclick = exportTexture;
 $('bSave').onclick = saveBin;
 
-/* three.js last, and guarded: if it fails the editor and every export
-   must still work, and the page has to say what broke */
+spriteWire();
+
+/* three.js last, and guarded: if it fails, the sprite editor, the
+   inspectors and every export must still work, and the page has to say
+   what broke rather than dying silently */
 try {
   initThree();
 } catch (e) {
-  notify('3D view unavailable: ' + e.message + ' -- inspecting, editing and exporting still work', 1);
+  notify('3D view unavailable: ' + e.message + ' -- sprites, inspecting, editing and exporting still work', 1);
 }
