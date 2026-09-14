@@ -23,23 +23,30 @@ Ordered by what unblocks the most.
 - **Sprite mode**: frame playback, colour remapping and an HSV shift
   that reach every frame at once, PNG frame and strip import/export
 
-## 2. Sprite editing that respects animation
+## 1. Sprite editing, the parts still missing
 
-A character's frames are the same artwork in different poses and
-directions, so editing one frame in isolation is the wrong unit of work.
+Playback, colour remapping and an HSV shift across every frame are
+done. What is left:
 
-- **Frame strip and playback**: scrub, loop, set frame rate, step
-- **Direction groups**: files come in sets per facing; show them
-  side by side rather than one at a time
-- **Propagate an edit**: pick a region on one frame and apply the same
-  change — a recolour, a palette swap, a pasted patch — across the
-  chosen frames. Colour remapping generalises cleanly; pixel patches
-  need an anchor, so offer alignment by the frame's own bounding box
-- **Palette editor**: these are indexed images, so recolouring a whole
-  character is a palette edit, not a repaint. One palette change should
-  be previewable across every frame at once
-- **Import a sheet**: take a PNG strip or a grid, slice it into frames,
-  quantise to the palette and write the file back
+- **Direction groups**: these files come in sets per facing, and the
+  set is only visible in the file names. Detect them and show the
+  facings side by side rather than one file at a time
+- **Propagate a pixel patch**, not just a colour. Pick a region on one
+  frame and paste it into the same place on the others. Colour edits
+  generalise for free; a patch needs an anchor, so align by each
+  frame's own bounding box rather than by absolute coordinates
+- **Onion skinning** while editing a frame, so a change can be judged
+  against its neighbours
+- **Colour count guard**: a photograph imported into a sprite explodes
+  the distinct-colour count and the file with it. Warn, and offer to
+  quantise on import
+- The 3 files carrying kind bytes `0x09`, `0x49` and `0x99`, which are
+  a variant this reader refuses
+
+Worth knowing before touching this: the pixels are **direct RGB565**,
+not palette indices. There is no palette to edit, so a recolour is a
+remap of the colours that happen to be present — which is what makes it
+propagate cleanly across frames.
 
 ## 3. Dress room, improved
 
