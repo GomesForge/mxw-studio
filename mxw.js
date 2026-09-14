@@ -1,4 +1,4 @@
-/* Reader and writer for the MXW mesh format of Bomberman Online.
+/* Reader and writer for the MXW mesh format.
    Mirrors python/mxw.py; see docs/MXW-format.md for the layout.
 
    Everything is BIG-ENDIAN. The container is a chunk list:

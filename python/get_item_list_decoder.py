@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Decoder for get_item_list.bin (Bomberman Online / BMO World).
+"""Decoder for get_item_list.bin, an online game's item index.
 
 The file is the server-side index of every item that exists in the game.
 The client fetched it over HTTP; without an entry here the client never

@@ -1,10 +1,10 @@
 # The MXW mesh format
 
-Every 3D object in Bomberman Online — hair, hats, headbands, jackets,
+Every 3D object in the game — hair, hats, headbands, jackets,
 shoes, back items, the collectible cards, and the two character bodies —
-sits in one container. The client fetched item files over HTTP from
-`bomber-world.com/itemids/<id>.bin`, so the on-disk extension is `.bin`
-for items and `.MXW` for the few loose dumps that circulated.
+sits in one container. The client fetched item files over HTTP from the asset server's
+`/itemids/<id>.bin` path, so the on-disk extension is `.bin` for items
+and `.MXW` for the few loose dumps that circulated.
 
 **All multi-byte integers are big-endian.**
 

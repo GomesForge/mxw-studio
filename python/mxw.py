@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Reader and writer for the MXW mesh format of Bomberman Online.
+"""Reader and writer for the MXW mesh format.
 
-Bomberman Online (MGame / Hudson Soft, 2003) stored every 3D item --
+The game stored every 3D item --
 hair, hats, jackets, shoes, back items, cards and the two character
 bodies -- in one container. This module reads it, writes it back
 byte-for-byte, and lets you change it.

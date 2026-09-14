@@ -1,7 +1,7 @@
-# Data/bomb/Bomber.dat
+# The encrypted parameter file
 
 An encrypted or custom-compressed file that ships in every build of the
-game, from the first Japanese release to the last BMO WORLD client. It
+game, from the first Japanese release to the last community client. It
 is not opened by anything here. This is a record of what is known and
 what has already been ruled out, so nobody repeats it.
 
@@ -11,7 +11,7 @@ what has already been ruled out, so nobody repeats it.
 |-------|-------|--------|
 | 23518 | Japan 2003-02 and 2003-07 | 2, byte-identical to each other |
 | 23420 | Japan 2004 | 1 |
-| 3334 | BMO WORLD beta, 2.1, 3.0, 4.0 | 5, byte-identical to each other |
+| 3334 | the community server beta, 2.1, 3.0, 4.0 | 5, byte-identical to each other |
 
 Three distinct contents across roughly seven years.
 
@@ -23,16 +23,15 @@ Three distinct contents across roughly seven years.
 0x08  ...      the payload
 ```
 
-`57 9A 31 FF` is unchanged from the 2003 Japanese build to the last BMO
-WORLD client. Across 14,987 files checked, **nothing else anywhere has
+`57 9A 31 FF` is unchanged from the 2003 Japanese build to the last
+community client. Across 14,987 files checked, **nothing else anywhere has
 that magic** — including the encrypted `Data/cache/*.dat`, which use a
 different container. So whatever this is, it is specific to this file.
 
 ## What it is likely to hold
 
-It lives in `Data/bomb/` next to plaintext sprite data — `bomb.spr`,
-`bomb.gra`, `bomb_d.spr`, `bomb_s.spr`, `BBOMB.SPR`, `BBOMB_D.SPR`,
-`PBOMB.SPR`, `PBOMB_D.SPR` — and it is the only encrypted file in that
+It lives in the projectile asset folder beside eight plaintext `.spr`
+and `.gra` sprite files — and it is the only encrypted file in that
 folder. That reads like the bomb and character parameter table: blast
 radius, fuse timing, movement speed. The numbers you would not want
 players editing, which is why they are the ones that got encrypted.
@@ -66,14 +65,14 @@ thing.
 
 ## Why it is the best target in the game
 
-At **3334 bytes** the BMO WORLD copy is by far the smallest encrypted
+At **3334 bytes** the the community server copy is by far the smallest encrypted
 file in the game. The `Data/cache/*.dat` textures are much larger and
 there are 39 of them. Three generations of this file exist, two of them
 byte-identical, so a candidate routine can be checked against
 independent samples immediately. If the same cipher protects the cache,
 this is the cheaper door.
 
-The routine is inside `BomberMan.exe`, which ships **ASPack-packed**
+The routine is inside the game executable, which ships **ASPack-packed**
 (an `.adata` section). It is not in `syswin.dll` — that one only does
 hotkeys (`RegisterHotKey`, `GetAsyncKeyState`). There are no Blowfish,
 AES, TEA, MD5 or CRC32 constants anywhere in the binary, so expect

@@ -5,16 +5,15 @@ fetched it over HTTP; an item that is not listed here is one the client
 never requests, so a new `.bin` on the server stays invisible until it
 is also registered in this file.
 
-Broomop, the BMO WORLD admin, said as much in the `t=327` thread in
-April 2010:
+The server admin said as much in a forum thread in April 2010:
 
 > get item list allocates the amount of items there are in the game
 > i broke that format so i can add more and new bins
 
 ## Getting a copy
 
-`bomber-world.com/itemids/` is gone — the path 404s and everything under
-it answers with the HTTP-to-HTTPS redirect page. The Internet Archive
+The asset server's `/itemids/` path is gone — it 404s and everything
+under it answers with the HTTP-to-HTTPS redirect page. The Internet Archive
 has a capture:
 
 ```
