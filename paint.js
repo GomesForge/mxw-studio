@@ -431,6 +431,53 @@ function paintRenderTools() {
   $('bPaintUndo').disabled = !paint.undo.length;
   $('bPaintRedo').disabled = !paint.redo.length;
   $('paintSizeOut').textContent = paint.size + ' px';
+  paintRenderTint();
+}
+
+/* The 64 values the game substitutes at run time, as a strip you can
+   paint from deliberately -- and a warning when the current colour
+   happens to be one of them. */
+function paintRenderTint() {
+  const host = $('tintRamp');
+  if (!host) return;
+  const cur = paintColourAs565();
+  if (host.childElementCount !== TINT_STEPS) {
+    host.innerHTML = '';
+    for (let i = 0; i < TINT_STEPS; i++) {
+      const v = tintColour(i);
+      const c = rgb565ToRgb(v);
+      const b = document.createElement('button');
+      b.dataset.i = i;
+      b.title = 'reserved step ' + i + ' of 63';
+      b.style.background = '#' + c.map(x => x.toString(16).padStart(2, '0')).join('');
+      b.onclick = () => {
+        const cc = rgb565ToRgb(tintColour(+b.dataset.i));
+        paint.colour = '#' + cc.map(x => x.toString(16).padStart(2, '0')).join('');
+        $('paintColour').value = paint.colour;
+        paintRenderTools();
+      };
+      host.appendChild(b);
+    }
+  }
+  const idx = tintIndexOf(cur);
+  host.querySelectorAll('button').forEach(b =>
+    b.classList.toggle('sel', +b.dataset.i === idx));
+  const warn = $('tintWarn');
+  if (!warn) return;
+  if (idx >= 0) {
+    warn.style.display = 'block';
+    warn.textContent = 'The current colour is reserved step ' + idx +
+      '. Anything you paint with it will be recoloured by the game.';
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
+function paintColourAs565() {
+  const m = /^#?([0-9a-f]{6})$/i.exec(paint.colour);
+  if (!m) return -1;
+  const n = parseInt(m[1], 16);
+  return rgbToRgb565((n >> 16) & 255, (n >> 8) & 255, n & 255);
 }
 
 function paintApply() {
@@ -449,7 +496,10 @@ function paintWire() {
 
   document.querySelectorAll('#paintTools button[data-tool]').forEach(b =>
     b.onclick = () => { paint.tool = b.dataset.tool; paintRenderTools(); });
-  $('paintColour').oninput = e => { paint.colour = e.target.value; };
+  $('paintColour').oninput = e => {
+    paint.colour = e.target.value;
+    paintRenderTint();
+  };
   $('paintSize').oninput = e => {
     paint.size = Math.max(1, Math.min(32, +e.target.value || 1));
     paintRenderTools();
