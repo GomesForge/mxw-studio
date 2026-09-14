@@ -8,7 +8,12 @@ let scene, cam, rend, group, axes, ready = false;
 let mesh = null, wireGroup = null, normHelper = null, boneLines = null;
 let texMats = [];
 let spin = true, radius = 4, theta = 0.7, phi = 1.15, targetY = 0;
-let faceOverride = null;      /* head texture override, or null */
+/* Which texture to show on which material, while previewing. The
+   file's own binding is untouched -- this only changes what is drawn.
+   A body binds tex0 to the body and tex1 to the head, leaving the eight
+   expressions in tex2..tex9 bound to nothing, so selecting one has to
+   say where it should appear. */
+let texPreview = null;        /* {mat, tex} or null for the file's own */
 let selectedTex = 0;
 
 const $ = id => document.getElementById(id);
@@ -168,8 +173,7 @@ function meshOf(m, gifs) {
 
   groups.forEach((g, k) => {
     let ti = m.materials[g.mi] ? m.materials[g.mi].tex : 0;
-    if (faceOverride !== null && m.materials[g.mi]
-        && /head|face/i.test(m.materials[g.mi].name)) ti = faceOverride;
+    if (texPreview && texPreview.mat === g.mi) ti = texPreview.tex;
     const src = gifs[ti] || gifs[0];
     if (!src) return;
     const url = URL.createObjectURL(new Blob([src], { type: 'image/gif' }));
@@ -438,7 +442,65 @@ function renderTextures() {
         (g.length / 1024).toFixed(1)}K</span></figcaption></figure>`;
   }).join('');
   $('texGrid').querySelectorAll('figure').forEach(f =>
-    f.onclick = () => { selectedTex = +f.dataset.t; renderTextures(); renderUV(); });
+    f.onclick = () => { selectTexture(+f.dataset.t); });
+  renderTexPreview();
+}
+
+/* The material a texture most plausibly belongs to: the one whose own
+   binding is the closest at or below it. On a body that sends tex0 to
+   the body and everything from tex1 up to the head, which is where the
+   expressions belong. */
+function defaultPreviewMat(m, tex) {
+  if (!m || !m.materials.length) return 0;
+  let best = 0, bestTex = -1;
+  m.materials.forEach((x, i) => {
+    if (x.tex <= tex && x.tex > bestTex) { bestTex = x.tex; best = i; }
+  });
+  return best;
+}
+
+function selectTexture(i) {
+  const c = current;
+  const m = c && c.mxw.meshes[c.meshIndex || 0];
+  selectedTex = i;
+  /* a texture a material already binds needs no override -- the model
+     is showing it as the file says */
+  const bound = m && m.materials.some(x => x.tex === i);
+  texPreview = bound ? null : { mat: defaultPreviewMat(m, i), tex: i };
+  rebuild();
+  renderTextures();
+  renderUV();
+}
+
+function renderTexPreview() {
+  const host = $('texPreview');
+  if (!host) return;
+  const c = current;
+  const m = c && c.mxw.meshes[c.meshIndex || 0];
+  if (!m || !m.materials.length) { host.innerHTML = ''; return; }
+  const bound = m.materials.filter(x => x.tex === selectedTex)
+                           .map(x => x.name);
+  if (bound.length) {
+    host.innerHTML = '<p class="hint">tex' + selectedTex + ' is bound to <b>' +
+      bound.map(esc).join(', ') + '</b>, so the model already shows it.</p>';
+    return;
+  }
+  const opts = m.materials.map((x, i) =>
+    '<option value="' + i + '"' +
+    (texPreview && texPreview.mat === i ? ' selected' : '') + '>' +
+    esc(x.name) + '</option>').join('');
+  host.innerHTML =
+    '<div class="row" style="margin-top:8px"><span>show on</span>' +
+    '<select id="previewMat">' + opts + '</select></div>' +
+    '<p class="hint">No material binds tex' + selectedTex + ', so it is ' +
+    'being previewed. The file is unchanged; to make it permanent, set the ' +
+    'material above in <b>Materials</b>.</p>';
+  const sel = $('previewMat');
+  if (sel) sel.onchange = () => {
+    texPreview = { mat: +sel.value, tex: selectedTex };
+    rebuild();
+    renderTextures();
+  };
 }
 
 /* --------------------------- the UV map -------------------------- */
@@ -660,7 +722,7 @@ function addFile(name, buf) {
     loaded.push(entry);
     current = entry;
     selectedTex = 0;
-    faceOverride = null;
+    texPreview = null;
     rebuild();
     renderAll();
     $('empty').style.display = 'none';
@@ -677,6 +739,7 @@ function select(i) {
   if (!c) return;
   current = c;
   selectedTex = 0;
+  texPreview = null;
   rebuild();
   renderAll();
 }
