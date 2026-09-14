@@ -108,11 +108,13 @@ means the file both opens and writes back unchanged.
 A table describing **more** than the file holds is still refused — then
 a frame really is missing.
 
-## The 24 files this rejects
+## The 23 files this rejects
 
 These are not broken sprites. They are **other formats sharing the
 extension**, and the reader names them rather than reporting the byte
-that failed.
+that failed. Counting by distinct content, the totals below come to 23;
+the file counts in each heading are the totals including duplicates
+across builds.
 
 ### Effects (`.eft`, 18 files)
 
