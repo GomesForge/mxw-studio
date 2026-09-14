@@ -22,6 +22,14 @@ Ordered by what unblocks the most.
   frames. See [gra-format.md](gra-format.md)
 - **Sprite mode**: frame playback, colour remapping and an HSV shift
   that reach every frame at once, PNG frame and strip import/export
+- **A pixel editor with layers**, used for both mesh textures and
+  sprite frames: brush, eraser, fill, eyedropper, line and rectangle,
+  undo and redo, and the UV layout drawn over a texture while painting
+- **Creating a sheet from nothing**, and adding, duplicating or
+  deleting frames
+- **The 64 reserved colours** identified and measured, with a team
+  preview and a report of how much of a sheet the game recolours --
+  see [character-sprites.md](character-sprites.md)
 
 ## 1. Sprite editing, the parts still missing
 

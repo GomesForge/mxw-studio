@@ -273,13 +273,86 @@ function renderAll() {
 }
 
 function renderList() {
-  $('list').innerHTML = loaded.map((c, i) =>
-    `<div data-i="${i}" class="${current === c ? 'sel' : ''}">${esc(c.name)}
-     <span class="dim">${c.mxw.meshes[0] ? c.mxw.meshes[0].nv + 'v' : '-'}
-     ${c.mxw.gifs.length}t${c.mxw.skeletons.length ? ' &middot; skel' : ''}</span></div>`
-  ).join('');
-  $('list').querySelectorAll('div').forEach(d =>
-    d.onclick = () => select(+d.dataset.i));
+  const rows = loaded.map((c, i) =>
+    '<div data-i="' + i + '" class="' + (current === c ? 'sel' : '') + '">' +
+    esc(c.name) + '<span class="dim">' +
+    (c.mxw.meshes[0] ? c.mxw.meshes[0].nv + 'v ' : '- ') +
+    c.mxw.gifs.length + 't' +
+    (c.mxw.skeletons.length ? ' &middot; skel' : '') +
+    ' <button class="rm" data-rm="' + i + '" title="close this file">&times;</button>' +
+    '</span></div>');
+  if (sprite.entry) {
+    rows.push('<div class="sel" data-sprite="1">' + esc(sprite.entry.name) +
+      '<span class="dim">' + sprite.entry.gra.frames.length + 'f' +
+      ' <button class="rm" data-rmsprite="1" title="close this file">&times;</button>' +
+      '</span></div>');
+  }
+  $('list').innerHTML = rows.join('');
+  $('list').querySelectorAll('div').forEach(d => d.onclick = e => {
+    if (e.target.classList.contains('rm')) return;
+    if (d.dataset.sprite) return;
+    spriteClose();
+    select(+d.dataset.i);
+  });
+  $('list').querySelectorAll('.rm').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    if (b.dataset.rmsprite) { closeSprite(); return; }
+    removeFile(+b.dataset.rm);
+  });
+}
+
+/* Closing a file has to clear the viewport too, or the previous one
+   stays on screen underneath the next. */
+function resetPanels() {
+  if (group) group.clear();
+  mesh = wireGroup = normHelper = boneLines = null;
+  texMats = [];
+  $('meshPanel').style.display = 'none';
+  $('texPanel').style.display = 'none';
+  $('skelPanel').style.display = 'none';
+  $('hdr').innerHTML = '';
+  $('rt').textContent = '';
+  $('rt').className = 'rt';
+}
+
+function removeFile(i) {
+  if (i < 0 || i >= loaded.length) return;
+  const wasCurrent = loaded[i] === current;
+  loaded.splice(i, 1);
+  if (!loaded.length) {
+    current = null;
+    resetPanels();
+    if (!sprite.entry) $('empty').style.display = 'flex';
+    renderList();
+    return;
+  }
+  if (wasCurrent) current = loaded[Math.max(0, i - 1)];
+  selectedTex = 0;
+  rebuild();
+  renderAll();
+}
+
+function closeSprite() {
+  spriteClose();
+  if (loaded.length) {
+    current = current || loaded[0];
+    rebuild();
+    renderAll();
+  } else {
+    resetPanels();
+    $('empty').style.display = 'flex';
+    renderList();
+  }
+}
+
+function clearAll() {
+  paintClose();
+  loaded.length = 0;
+  current = null;
+  spriteClose();
+  resetPanels();
+  $('empty').style.display = 'flex';
+  renderList();
 }
 
 function renderHeader() {
@@ -486,6 +559,46 @@ async function replaceTexture(file) {
   rebuild(); renderAll();
 }
 
+/* Paint the selected texture, with the UV layout of the faces that
+   use it drawn on top so a garment lands in the right place. */
+function paintTexture() {
+  const c = current;
+  const m = c && c.mxw.meshes[c.meshIndex || 0];
+  if (!c || !c.mxw.gifs.length) {
+    notify('this file has no texture to paint', 1);
+    return;
+  }
+  const g = c.mxw.gifs[selectedTex];
+  const size = gifSize(g);
+  const w = size[0], h = size[1];
+  const polys = [];
+  if (m) {
+    for (const f of m.faces) {
+      const mt = m.materials[f.mat] ? m.materials[f.mat].tex : 0;
+      if (m.materials.length > 1 && mt !== selectedTex) continue;
+      polys.push(f.vs.map(v => ({ x: v.u, y: v.v })));
+    }
+  }
+  decodeImage(new Blob([g], { type: 'image/gif' })).then(img => {
+    paintOpen({
+      width: w, height: h, base: img.rgba, uv: polys,
+      title: c.name + '  tex' + selectedTex,
+      onApply: rgba => {
+        try {
+          const out = encodeGIF(rgba, w, h, { maxColors: 256 });
+          c.mxw.replaceGif(selectedTex, out);
+          rebuild();
+          renderAll();
+          notify('tex' + selectedTex + ' updated, re-encoded to ' +
+                 (out.length / 1024).toFixed(1) + 'K');
+        } catch (e) {
+          notify('encoding failed: ' + e.message, 1);
+        }
+      }
+    });
+  }).catch(() => notify('could not decode that texture', 1));
+}
+
 function exportUV() {
   const cv = $('uv');
   if (cv.style.display === 'none') { notify('nothing to export yet', 1); return; }
@@ -569,6 +682,7 @@ function select(i) {
 }
 
 function rebuild() {
+  if (!current) { if (group) group.clear(); return; }
   const dress = $('bAll').classList.contains('on') && loaded.length > 1;
   build(dress ? loaded : [current]);
 }
@@ -583,7 +697,7 @@ function readFiles(files) {
       /* sprites and meshes disagree on almost everything, starting
          with byte order, so route by extension */
       if (isSpriteName(f.name)) {
-        try { spriteOpen(f.name, r.result); }
+        try { spriteOpen(f.name, r.result); renderList(); }
         catch (e) { notify(f.name + ': ' + e.message, 1); }
         return;
       }
@@ -604,6 +718,22 @@ $('texFile').addEventListener('change', e => {
   e.target.value = '';
 });
 $('bTexIn').onclick = () => $('texFile').click();
+$('bPaintTex').onclick = paintTexture;
+$('bClear').onclick = clearAll;
+$('bNewSprite').onclick = () => {
+  const w = parseInt(prompt('frame width in pixels', '64') || '', 10);
+  const h = parseInt(prompt('frame height in pixels', '80') || '', 10);
+  const n = parseInt(prompt('how many frames', '4') || '', 10);
+  if (!(w > 0 && h > 0 && n > 0)) { notify('cancelled'); return; }
+  if (w > 4096 || h > 4096 || n > 255) {
+    notify('out of range: width and height up to 4096, frames up to 255', 1);
+    return;
+  }
+  spriteClose();
+  spriteNew(w, h, n, 'new.gra');
+  renderList();
+  notify('empty sheet ' + w + 'x' + h + ', ' + n + ' frame(s) -- press "Edit this frame" to draw');
+};
 
 let dragDepth = 0;
 const showOver = on => { $('over').style.display = on ? 'flex' : 'none'; };
@@ -672,7 +802,13 @@ $('bUV').onclick = exportUV;
 $('bTexOut').onclick = exportTexture;
 $('bSave').onclick = saveBin;
 
-spriteWire();
+/* Each subsystem wires itself independently: one failing must not
+   stop the others, and the page has to say which one broke. */
+for (const [name, fn] of [['sprites', () => spriteWire()],
+                          ['paint editor', () => paintWire()]]) {
+  try { fn(); }
+  catch (e) { notify(name + ' failed to start: ' + e.message, 1); }
+}
 
 /* three.js last, and guarded: if it fails, the sprite editor, the
    inspectors and every export must still work, and the page has to say

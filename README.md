@@ -34,6 +34,8 @@ Open the link above, or `index.html` locally. No build step, no server.
   matches the slot's size is stored untouched; anything else is scaled,
   quantised and encoded to GIF89a — keeping transparency, which 36 of
   the 58 sample textures rely on
+- **Paint the texture in place**, with the UV layout drawn on top so a
+  garment lands where you mean it to, layers, and undo
 - Edit the mesh id, the texture names, and which texture each material
   draws from
 - Save the edited file, or export Wavefront `.obj`
@@ -56,6 +58,13 @@ Drop a `.gra`, `.spr` or `.eft` and the page switches to sprite mode.
   anywhere, and drop it back. A strip exactly as wide as all the frames
   side by side is sliced across them; anything else replaces the
   current frame, scaled to fit
+- **Paint** any frame directly: brush, eraser, flood fill, eyedropper,
+  line and rectangle, with **layers** so you can draw over the original
+  without destroying it, plus undo and redo
+- **Start a sheet from nothing** with New sprite, then add, duplicate
+  or delete frames
+- A **team preview** shows how the game will recolour the sheet, and the
+  panel reports what fraction of it sits in the reserved ramp
 - Save the sprite back out
 
 ```
@@ -105,6 +114,9 @@ reader refuses are listed in the format notes rather than guessed at.
   payload, the skeleton, and the three things that are easy to get wrong
 - [docs/gra-format.md](docs/gra-format.md) — the sprite format, its
   run encoding, and the files that do not fit it
+- [docs/character-sprites.md](docs/character-sprites.md) — the 64
+  reserved colours the game recolours at run time, the frame size the
+  game tolerates, and the animation file naming
 - [docs/get-item-list-format.md](docs/get-item-list-format.md) — the
   item index, and how to obtain a copy
 - [docs/encrypted-parameter-file.md](docs/encrypted-parameter-file.md) —

@@ -16,8 +16,29 @@ const sprite = {
   zoom: 3,
   timer: null,
   selected: null,       /* the rgb565 value picked in the palette */
-  applyAll: true
+  applyAll: true,
+  team: 'none'          /* preview a team palette over the reserved ramp */
 };
+
+/* Render a frame to RGBA, optionally substituting a team palette over
+   the reserved colours so the sheet can be judged the way the game
+   will show it. */
+function spriteFrameRGBA(g, f) {
+  if (sprite.team === 'none') return f.toRGBA(g.width, g.height);
+  const buf = new Uint8ClampedArray(g.width * g.height * 4);
+  for (const r of f.runs) {
+    if (r.y >= g.height) continue;
+    let o = (r.y * g.width + r.x) * 4;
+    for (const v of r.px) {
+      if (o >= 0 && o + 3 < buf.length) {
+        const c = rgb565ToRgb(teamTint(v, sprite.team));
+        buf[o] = c[0]; buf[o + 1] = c[1]; buf[o + 2] = c[2]; buf[o + 3] = 255;
+      }
+      o += 4;
+    }
+  }
+  return buf;
+}
 
 function isSpriteName(name) {
   return /\.(gra|spr|eft)$/i.test(name);
@@ -59,7 +80,7 @@ function spriteDraw() {
   const tmp = document.createElement('canvas');
   tmp.width = g.width; tmp.height = g.height;
   tmp.getContext('2d').putImageData(
-    new ImageData(f.toRGBA(g.width, g.height), g.width, g.height), 0, 0);
+    new ImageData(spriteFrameRGBA(g, f), g.width, g.height), 0, 0);
   ctx.drawImage(tmp, 0, 0, cv.width, cv.height);
 
   const bb = f.bbox();
@@ -98,7 +119,44 @@ function spriteRenderAll() {
   spriteRenderInfo();
   spriteRenderStrip();
   spriteRenderPalette();
+  spriteRenderTint();
   spriteCheckRoundTrip();
+}
+
+/* How much of this sheet the game will recolour, and whether the frame
+   size is within what the game tolerates. */
+function spriteRenderTint() {
+  const g = sprite.entry.gra;
+  let total = 0, tinted = 0;
+  const steps = new Set();
+  for (const f of g.frames) {
+    for (const r of f.runs) {
+      for (const v of r.px) {
+        total++;
+        const i = tintIndexOf(v);
+        if (i >= 0) { tinted++; steps.add(i); }
+      }
+    }
+  }
+  $('tintStat').innerHTML = total
+    ? '<b>' + (100 * tinted / total).toFixed(1) + '%</b> of this sheet is in the '
+      + 'reserved ramp (' + steps.size + ' of 64 steps used), so the game '
+      + 'recolours it. The preview above is an approximation -- the real '
+      + 'substitution tables are not known.'
+    : 'no pixels';
+
+  const warn = $('sizeWarn');
+  const cap = [64, 80];
+  if (g.width > cap[0] || g.height > cap[1]) {
+    warn.style.display = 'block';
+    warn.textContent = "This frame is " + g.width + "x" + g.height +
+      ". The original authoring tool's manual reports the game failing on " +
+      "frames around 60x100, and recommends staying at or under " +
+      cap[0] + "x" + cap[1] + ". Files this size that shipped with the " +
+      "game are fine; newly grown ones may not be.";
+  } else {
+    warn.style.display = 'none';
+  }
 }
 
 function spriteRenderInfo() {
@@ -122,7 +180,7 @@ function spriteRenderStrip() {
     const tmp = document.createElement('canvas');
     tmp.width = g.width; tmp.height = g.height;
     tmp.getContext('2d').putImageData(
-      new ImageData(f.toRGBA(g.width, g.height), g.width, g.height), 0, 0);
+      new ImageData(spriteFrameRGBA(g, f), g.width, g.height), 0, 0);
     c.getContext('2d').drawImage(tmp, -bb[0], -bb[1]);
     const fig = document.createElement('figure');
     fig.dataset.i = i;
@@ -331,6 +389,78 @@ function spriteExportStrip() {
          ' -- drop it back on the page to import every frame at once');
 }
 
+/* Hand the current frame to the paint editor and take back whatever
+   comes out. Layers are flattened on the way in. */
+function spritePaintFrame() {
+  const e = sprite.entry;
+  if (!e) return;
+  spritePause();
+  const g = e.gra;
+  const f = g.frames[sprite.frame];
+  paintOpen({
+    width: g.width, height: g.height,
+    base: f.toRGBA(g.width, g.height),
+    title: e.name + '  frame ' + (sprite.frame + 1) + '/' + g.frames.length,
+    onApply: rgba => {
+      g.replaceFrameRGBA(sprite.frame, rgba);
+      spriteRenderAll();
+      spriteDraw();
+      notify('frame ' + (sprite.frame + 1) + ' updated');
+    }
+  });
+}
+
+function spriteFrameAdd() {
+  const e = sprite.entry;
+  if (!e) return;
+  if (e.gra.frames.length >= 255) { notify('the frame count is a single byte, so 255 is the ceiling', 1); return; }
+  e.gra.frames.splice(sprite.frame + 1, 0, new GraFrame([]));
+  sprite.frame += 1;
+  spriteRenderAll();
+  spriteDraw();
+  notify('inserted an empty frame at ' + (sprite.frame + 1));
+}
+
+function spriteFrameDup() {
+  const e = sprite.entry;
+  if (!e) return;
+  if (e.gra.frames.length >= 255) { notify('255 frames is the ceiling', 1); return; }
+  const src = e.gra.frames[sprite.frame];
+  const copy = new GraFrame(src.runs.map(r => ({ x: r.x, y: r.y, px: r.px.slice() })));
+  e.gra.frames.splice(sprite.frame + 1, 0, copy);
+  sprite.frame += 1;
+  spriteRenderAll();
+  spriteDraw();
+  notify('duplicated to frame ' + (sprite.frame + 1));
+}
+
+function spriteFrameDel() {
+  const e = sprite.entry;
+  if (!e) return;
+  if (e.gra.frames.length < 2) { notify('a sprite needs at least one frame', 1); return; }
+  e.gra.frames.splice(sprite.frame, 1);
+  sprite.frame = Math.min(sprite.frame, e.gra.frames.length - 1);
+  spriteRenderAll();
+  spriteDraw();
+}
+
+/* Start a sheet from nothing. */
+function spriteNew(w, h, frames, name) {
+  const g = new GRA();
+  g.width = w; g.height = h;
+  g.kind = 0x03; g.b6 = 0x64;
+  g.frames = [];
+  for (let i = 0; i < frames; i++) g.frames.push(new GraFrame([]));
+  const raw = g.write();
+  sprite.entry = { name: name || 'new.gra', raw, gra: g };
+  sprite.frame = 0;
+  sprite.selected = null;
+  document.body.classList.add('sprite-mode');
+  $('empty').style.display = 'none';
+  spriteRenderAll();
+  spriteDraw();
+}
+
 function spriteSave() {
   const e = sprite.entry;
   if (!e) return;
@@ -370,6 +500,18 @@ function spriteWire() {
     if (e.target.files[0]) spriteImport(e.target.files[0]);
     e.target.value = '';
   };
+  $('bPaintFrame').onclick = spritePaintFrame;
+  $('bFrameAdd').onclick = spriteFrameAdd;
+  $('bFrameDup').onclick = spriteFrameDup;
+  $('bFrameDel').onclick = spriteFrameDel;
+  document.querySelectorAll('#teamRow button[data-team]').forEach(b =>
+    b.onclick = () => {
+      sprite.team = b.dataset.team;
+      document.querySelectorAll('#teamRow button').forEach(x =>
+        x.classList.toggle('on', x === b));
+      spriteRenderStrip();
+      spriteDraw();
+    });
   $('bFrameOut').onclick = spriteExportFrame;
   $('bStripOut').onclick = spriteExportStrip;
   $('bSpriteSave').onclick = spriteSave;

@@ -92,6 +92,52 @@
   body.sprite-mode #rt,body.sprite-mode #displayPanel,
   body.sprite-mode #exportPanel,body.sprite-mode #containerHead,
   body.sprite-mode #tip{display:none}
+  /* three.js appends its canvas as a direct child of #view, so hide
+     that and not the sprite canvas, which is nested in #spriteWrap.
+     The renderer sets display:block inline on its own canvas, and an
+     inline style beats a rule, so this has to be !important. */
+  body.sprite-mode #view>canvas{display:none!important}
+
+  /* the paint editor takes over the viewport */
+  #paintPanel{display:none;position:absolute;inset:0;z-index:20;
+    background:var(--view);grid-template-rows:auto 1fr;grid-template-columns:1fr 210px}
+  body.paint-mode #paintPanel{display:grid}
+  body.paint-mode #tip,body.paint-mode #spriteStat{display:none}
+  #paintBar{grid-column:1/3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+    padding:8px 12px;border-bottom:1px solid var(--edge);background:var(--panel)}
+  #paintBar .sep{width:1px;height:22px;background:var(--edge);margin:0 3px}
+  #paintTitle{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:auto}
+  #paintStage{overflow:auto;display:flex;align-items:center;justify-content:center;
+    padding:20px;background:
+      repeating-conic-gradient(#182339 0 25%,#121a2c 0 50%) 0 0/20px 20px}
+  #paintCanvas{image-rendering:pixelated;cursor:crosshair;
+    box-shadow:0 0 0 1px var(--edge),0 8px 30px rgba(0,0,0,.4)}
+  #paintSide{border-left:1px solid var(--edge);background:var(--panel);
+    padding:12px 11px;overflow-y:auto}
+  #paintBar input[type=color]{width:34px;height:26px;margin:0;padding:1px}
+  #paintBar input[type=range]{width:86px;margin:0}
+  #paintBar label{margin:0;display:flex;gap:5px;align-items:center;white-space:nowrap}
+
+  .layer{display:flex;gap:7px;align-items:center;padding:4px;border-radius:6px;
+    cursor:pointer;border:1px solid transparent}
+  .layer:hover{background:var(--bg)}
+  .layer.sel{border-color:var(--cyan);background:var(--bg)}
+  .layer canvas{width:28px;height:28px;image-rendering:pixelated;border-radius:3px;
+    background:repeating-conic-gradient(var(--edge) 0 25%,transparent 0 50%) 0 0/8px 8px}
+  .layer .eye{padding:1px 4px;font-size:11px;background:none;border:0;color:var(--cyan)}
+  .layer .lname{flex:1;font-family:var(--mono);font-size:10.5px;overflow:hidden}
+  .layer .lop{width:44px;margin:0}
+
+  #tintRamp{display:flex;flex-wrap:wrap;gap:2px}
+  #tintRamp button{width:15px;height:15px;padding:0;border-radius:3px;
+    border:1px solid rgba(0,0,0,.35);cursor:pointer}
+  #tintRamp button.sel{outline:2px solid var(--amber);outline-offset:1px}
+  .warn{color:var(--amber);font-size:11px;line-height:1.5;margin:7px 0 0;
+    padding:6px 8px;border-radius:6px;
+    background:color-mix(in srgb,var(--amber) 12%,transparent)}
+  .rm{background:none;border:0;color:var(--dim);padding:0 3px;font-size:13px;
+    line-height:1;cursor:pointer}
+  .rm:hover{color:var(--red)}
   #spriteView{image-rendering:pixelated;
     background:repeating-conic-gradient(#1b2740 0 25%,#141d30 0 50%) 0 0/16px 16px;
     border:1px solid var(--edge);border-radius:6px;max-width:100%}
@@ -158,6 +204,10 @@
   </label>
   <input type="file" id="file" multiple>
   <div id="list"></div>
+  <div class="ctrl" style="margin-top:7px">
+    <button id="bNewSprite">New sprite&hellip;</button>
+    <button id="bClear">Close all</button>
+  </div>
 
   <h2 id="containerHead">Container</h2>
   <div id="hdr"></div>
@@ -181,6 +231,27 @@
     <div class="slider"><span>zoom</span>
       <input type="range" id="zoom" min="1" max="10" value="3">
       <b id="zoomOut">3&times;</b></div>
+
+    <h2>Frame</h2>
+    <div class="ctrl">
+      <button id="bPaintFrame" class="primary">Edit this frame&hellip;</button>
+      <button id="bFrameAdd">Add frame</button>
+      <button id="bFrameDel">Delete frame</button>
+      <button id="bFrameDup">Duplicate</button>
+    </div>
+    <p class="warn" id="sizeWarn" style="display:none"></p>
+
+    <h2>Team preview</h2>
+    <div class="ctrl" id="teamRow">
+      <button data-team="none" class="on">off</button>
+      <button data-team="white">white</button>
+      <button data-team="black">black</button>
+      <button data-team="red">red</button>
+      <button data-team="blue">blue</button>
+      <button data-team="green">green</button>
+      <button data-team="yellow">yellow</button>
+    </div>
+    <p class="hint" id="tintStat"></p>
 
     <h2>Colours</h2>
     <div id="palette"></div>
@@ -234,6 +305,7 @@
     <h2>Textures</h2>
     <div id="texGrid"></div>
     <div class="ctrl" style="margin-top:9px">
+      <button id="bPaintTex" class="primary" type="button">Edit texture&hellip;</button>
       <button id="bTexIn" type="button">Replace&hellip;</button>
       <button id="bTexOut">Save .GIF</button>
       <button id="bUV">Save UV .PNG</button>
@@ -304,6 +376,54 @@
   <div id="spriteWrap"><canvas id="spriteView"></canvas></div>
   <div id="spriteStat"></div>
   <div id="tip">drag = orbit &middot; wheel = zoom &middot; right-drag = pan</div>
+
+  <div id="paintPanel">
+    <div id="paintBar">
+      <span id="paintTools" class="ctrl">
+        <button data-tool="brush" class="on" title="brush (B)">Brush</button>
+        <button data-tool="eraser" title="eraser (E)">Eraser</button>
+        <button data-tool="fill" title="flood fill (G)">Fill</button>
+        <button data-tool="picker" title="pick a colour (I)">Pick</button>
+        <button data-tool="line" title="line (L)">Line</button>
+        <button data-tool="rect" title="rectangle (R)">Rect</button>
+        <button data-tool="rectfill" title="filled rectangle (F)">Solid</button>
+      </span>
+      <span class="sep"></span>
+      <input type="color" id="paintColour" value="#e8464a" title="colour">
+      <label>size <input type="range" id="paintSize" min="1" max="16" value="1">
+        <b id="paintSizeOut" style="font-family:var(--mono);font-size:10.5px">1 px</b></label>
+      <label>zoom <input type="range" id="paintZoom" min="1" max="16" value="6">
+        <b id="paintZoomOut" style="font-family:var(--mono);font-size:10.5px">6x</b></label>
+      <span class="sep"></span>
+      <button id="bPaintUndo" title="ctrl+Z">Undo</button>
+      <button id="bPaintRedo" title="ctrl+shift+Z">Redo</button>
+      <button id="bPaintUV" class="on">UV</button>
+      <button id="bPaintGrid" class="on">Grid</button>
+      <span class="sep"></span>
+      <button id="bPaintApply" class="primary">Apply</button>
+      <button id="bPaintCancel">Cancel</button>
+      <span id="paintTitle"></span>
+    </div>
+    <div id="paintStage"><canvas id="paintCanvas"></canvas></div>
+    <div id="paintSide">
+      <h2>Layers</h2>
+      <div class="ctrl" style="margin-bottom:7px">
+        <button id="bLayerAdd">Add</button>
+        <button id="bLayerMerge">Merge down</button>
+        <button id="bLayerDel">Delete</button>
+      </div>
+      <div id="layerList"></div>
+      <p class="hint" id="layerCount"></p>
+      <h2>Reserved colours</h2>
+      <div id="tintRamp"></div>
+      <p class="hint">These 64 values are substituted by the game at run
+      time, which is how one sheet serves every team colour. Click one to
+      paint with it deliberately; <b>anything you paint in one of these
+      will change colour in play.</b></p>
+      <p class="warn" id="tintWarn" style="display:none"></p>
+    </div>
+  </div>
+
   <div id="msg" class="msg"></div>
 </div>
 </div>
@@ -313,5 +433,6 @@
 <script src="mxw.js"></script>
 <script src="gra.js"></script>
 <script src="gifenc.js"></script>
+<script src="paint.js"></script>
 <script src="sprite.js"></script>
 <script src="app.js"></script>

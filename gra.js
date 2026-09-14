@@ -32,6 +32,80 @@ function rgb565ToRgb(v) {
           (v & 31) * 255 / 31 | 0];
 }
 
+/* ---------------------------- tint colours -----------------------
+
+   64 of the 65536 RGB565 values are reserved. Left alone they read as
+   a neutral ramp from black through grey to white in 64 steps, and the
+   game substitutes a palette over them at run time -- which is how one
+   character sheet serves every team colour.
+
+   The original authoring tool's manual states the reservation and that
+   it makes character work difficult, without naming the values. They
+   are the neutral ramp: green carries 6 bits and red and blue 5, so
+   step i is (i>>1, i, i>>1).
+
+   Confirmed against 974 character sprite files: all 64 appear, they
+   take ranking positions 1 through 20-plus among every colour used,
+   and 56.5% of all character pixels are one of them -- 81.9% in the
+   non-character graphics.
+
+   The practical consequence: more than half of a character is recoloured
+   by the game. Paint with one of these by accident and the result looks
+   right in an editor and wrong in play. */
+
+const TINT_STEPS = 64;
+
+function tintColour(i) {
+  i = Math.max(0, Math.min(63, i | 0));
+  return ((i >> 1) << 11) | (i << 5) | (i >> 1);
+}
+
+const TINT_SET = (() => {
+  const m = new Map();
+  for (let i = 0; i < TINT_STEPS; i++) m.set(tintColour(i), i);
+  return m;
+})();
+
+/* the tint step this colour is, or -1 */
+function tintIndexOf(v) {
+  const i = TINT_SET.get(v);
+  return i === undefined ? -1 : i;
+}
+
+/* The nearest non-reserved colour, for when a paint or import lands on
+   a tint value unintentionally. Green is nudged because it has the
+   spare bit. */
+function avoidTint(v) {
+  if (tintIndexOf(v) < 0) return v;
+  const g = (v >> 5) & 63;
+  return (v & ~(63 << 5)) | ((g < 63 ? g + 1 : g - 1) << 5);
+}
+
+/* An approximate preview of how a team palette lands on the ramp.
+   The real substitution tables are not known -- the manual lists the
+   sets (white, black, red, blue, green, yellow and several per
+   character) without their values -- so this tints the ramp's own
+   luminance and is labelled as a guess wherever it is shown. */
+const TEAM_PREVIEWS = {
+  none:   null,
+  white:  [1.00, 1.00, 1.00],
+  black:  [0.45, 0.45, 0.50],
+  red:    [1.00, 0.35, 0.35],
+  blue:   [0.40, 0.55, 1.00],
+  green:  [0.40, 0.95, 0.45],
+  yellow: [1.00, 0.90, 0.35]
+};
+
+function teamTint(v, team) {
+  const i = tintIndexOf(v);
+  const k = TEAM_PREVIEWS[team];
+  if (i < 0 || !k) return v;
+  const l = i / 63;
+  return rgbToRgb565(Math.min(255, 255 * l * k[0]),
+                     Math.min(255, 255 * l * k[1]),
+                     Math.min(255, 255 * l * k[2]));
+}
+
 function rgbToRgb565(r, g, b) {
   return (((r * 31 + 127) / 255 | 0) << 11)
        | (((g * 63 + 127) / 255 | 0) << 5)
@@ -155,9 +229,13 @@ class GRA {
         const y = dv.getUint16(p + 2, true);
         const c = dv.getUint16(p + 4, true);
         p += 6;
-        if (!c || p + 2 * c > end)
+        if (p + 2 * c > end)
           throw new Error('frame ' + i + ' has a run of ' + c +
                           ' pixels that does not fit');
+        /* A zero-length run carries no pixels and draws nothing.
+           Hand-edited community files contain them, so they are kept
+           rather than rejected -- keeping them also means the file
+           still writes back byte-identical. */
         const px = new Array(c);
         for (let k = 0; k < c; k++) px[k] = dv.getUint16(p + 2 * k, true);
         p += 2 * c;

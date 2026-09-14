@@ -83,6 +83,76 @@ def rgb_to_rgb565(r, g, b):
         | ((b * 31 + 127) // 255)
 
 
+# --- tint colours ----------------------------------------------------
+#
+# 64 of the 65536 RGB565 values are reserved. Left alone they read as a
+# neutral ramp from black through grey to white in 64 steps, and the
+# game substitutes a palette over them at run time -- which is how one
+# character sheet serves every team colour.
+#
+# The original authoring tool's manual states the reservation, and that
+# it makes character work difficult, without naming the values. They are
+# the neutral ramp: green carries 6 bits and red and blue 5, so step i
+# is (i>>1, i, i>>1).
+#
+# Confirmed against 974 character sprite files: all 64 appear, they take
+# ranking positions 1 through 20-plus among every colour used, and 56.5%
+# of all character pixels are one of them -- 81.9% in the non-character
+# graphics.
+#
+# The practical consequence: more than half of a character is recoloured
+# by the game, so painting over one of these by accident gives a result
+# that looks right in an editor and wrong in play.
+
+TINT_STEPS = 64
+
+
+def tint_colour(i):
+    i = max(0, min(63, int(i)))
+    return ((i >> 1) << 11) | (i << 5) | (i >> 1)
+
+
+TINT_INDEX = {tint_colour(i): i for i in range(TINT_STEPS)}
+
+
+def tint_index_of(v):
+    """The tint step this colour is, or -1."""
+    return TINT_INDEX.get(v, -1)
+
+
+def avoid_tint(v):
+    """The nearest non-reserved colour. Green is nudged because it has
+    the spare bit."""
+    if v not in TINT_INDEX:
+        return v
+    g = (v >> 5) & 63
+    return (v & ~(63 << 5)) | ((g + 1 if g < 63 else g - 1) << 5)
+
+
+# The authoring tool truncated when converting 24-bit to 16-bit
+# (r>>3, g>>2, b>>3) where this module rounds. Rounding is closer to the
+# source colour but lands on a different value at the boundaries, so the
+# original behaviour is available for matching existing work.
+def rgb_to_rgb565_truncate(r, g, b):
+    return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
+
+
+# The game rejects frames whose pixel data is too large -- the manual
+# reports failures around 60x100 and recommends staying at or under
+# 64x80.
+SAFE_FRAME = (64, 80)
+
+
+def frame_warnings(width, height):
+    out = []
+    if width > SAFE_FRAME[0] or height > SAFE_FRAME[1]:
+        out.append('frame is %dx%d; the game has been reported to fail '
+                   'on frames around 60x100, and %dx%d is the '
+                   'recommended ceiling'
+                   % (width, height, SAFE_FRAME[0], SAFE_FRAME[1]))
+    return out
+
+
 class Frame:
     """One frame: a list of (x, y, pixels) horizontal runs."""
 
@@ -193,10 +263,15 @@ class GRA:
             while p + 6 <= end:
                 x, y, c = struct.unpack_from('<HHH', d, p)
                 p += 6
-                if c == 0 or p + 2 * c > end:
+                if p + 2 * c > end:
                     raise GRAError('frame %d has a run of %d pixels that '
                                    'does not fit' % (i, c))
-                runs.append((x, y, struct.unpack_from('<%dH' % c, d, p)))
+                # A zero-length run carries no pixels and draws nothing.
+                # Hand-edited community files contain them, so they are
+                # kept rather than rejected -- keeping them also means
+                # the file still writes back byte-identical.
+                runs.append((x, y, struct.unpack_from('<%dH' % c, d, p)
+                             if c else ()))
                 p += 2 * c
             if p != end:
                 raise GRAError('frame %d leaves %d bytes unread'
