@@ -60,6 +60,11 @@ function spriteClose() {
   spritePause();
   sprite.entry = null;
   document.body.classList.remove('sprite-mode');
+  /* the status bar is shared, so its sprite half has to be cleared or
+     it keeps describing a file that is no longer open */
+  const st = $('spriteStat'), rt = $('spriteRt');
+  if (st) st.textContent = '';
+  if (rt) { rt.textContent = ''; rt.className = 'rt'; }
 }
 
 /* ------------------------------ drawing -------------------------- */
@@ -144,6 +149,16 @@ function spriteRenderTint() {
       + 'recolours it. The preview above is an approximation -- the real '
       + 'substitution tables are not known.'
     : 'no pixels';
+
+  /* the same health notes the mesh side gets */
+  let rep = null;
+  try { rep = spriteReport(g); } catch (e) { rep = null; }
+  if (rep) {
+    const extra = rep.notes.map(n =>
+      '<p class="note ' + n.level + '">' + n.text.replace(/[&<>]/g, ch =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch])) + '</p>').join('');
+    $('tintStat').innerHTML += extra;
+  }
 
   const warn = $('sizeWarn');
   const cap = [64, 80];

@@ -31,7 +31,14 @@ const paint = {
   anchor: null,
   panning: false,
   panStart: null,
-  scrollStart: null
+  scrollStart: null,
+  /* a rectangular selection, in image pixels, or null for the whole
+     layer -- every action below falls back to the whole layer so the
+     tools are useful before you have selected anything */
+  sel: null,
+  selDrag: null,
+  moveFrom: null,
+  moveData: null
 };
 
 const PAINT_UNDO_CAP = 40;
@@ -54,6 +61,7 @@ function paintOpen(opts) {
   paint.active = 0;
   paint.undo = [];
   paint.redo = [];
+  paint.sel = null;
 
   const base = paintLayer('base', paint.w, paint.h);
   if (opts.base) {
@@ -81,14 +89,26 @@ function paintClose() {
   document.body.classList.remove('paint-mode');
 }
 
-/* pick a zoom that makes the image fill a good part of the panel */
-function paintFit() {
-  const host = $('paintStage');
-  const box = host.getBoundingClientRect();
-  const fit = Math.min((box.width - 40) / paint.w, (box.height - 40) / paint.h);
-  paint.zoom = Math.max(1, Math.min(16, Math.floor(fit) || 1));
+/* Pick a zoom that makes the image fill a good part of the stage.
+
+   The stage goes from display:none to flex in the same frame this runs
+   in, so its box can still measure as nothing -- which gave 1x on a
+   128 pixel texture, unusable. When the measurement is not believable
+   we size from the image instead and re-fit on the next frame, once
+   layout has settled. */
+function paintFit(again) {
+  const box = $('paintStage').getBoundingClientRect();
+  const usable = box.width > 80 && box.height > 80;
+  const z = usable
+    ? Math.floor(Math.min((box.width - 40) / paint.w,
+                          (box.height - 40) / paint.h))
+    : Math.floor(512 / Math.max(paint.w, paint.h));
+  paint.zoom = Math.max(1, Math.min(16, z || 1));
   $('paintZoom').value = paint.zoom;
   $('paintZoomOut').textContent = paint.zoom + 'x';
+  if (!usable && !again) {
+    requestAnimationFrame(() => { paintFit(true); paintDraw(); });
+  }
 }
 
 /* ------------------------------ display -------------------------- */
@@ -131,6 +151,21 @@ function paintDraw() {
       ctx.closePath();
       ctx.stroke();
     }
+  }
+  /* the selection, drawn as a two-tone dashed outline so it reads on
+     both light and dark artwork */
+  if (paint.sel) {
+    const r = paintSelRect();
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(0,0,0,.85)';
+    ctx.strokeRect(r.x * z + .5, r.y * z + .5, r.w * z - 1, r.h * z - 1);
+    ctx.setLineDash([4, 4]);
+    ctx.lineDashOffset = 4;
+    ctx.strokeStyle = 'rgba(255,255,255,.9)';
+    ctx.strokeRect(r.x * z + .5, r.y * z + .5, r.w * z - 1, r.h * z - 1);
+    ctx.restore();
   }
   if (paint.showGrid && z >= 6) {
     ctx.strokeStyle = 'rgba(255,255,255,.07)';
@@ -286,6 +321,107 @@ function paintPick(pt) {
   paintRenderTools();
 }
 
+/* ---------------------------- selection -------------------------- */
+/* Normalised, clamped to the image, and never zero-sized. */
+function paintSelRect() {
+  const s = paint.sel;
+  if (!s) return { x: 0, y: 0, w: paint.w, h: paint.h };
+  const x0 = Math.max(0, Math.min(s.x0, s.x1));
+  const y0 = Math.max(0, Math.min(s.y0, s.y1));
+  const x1 = Math.min(paint.w - 1, Math.max(s.x0, s.x1));
+  const y1 = Math.min(paint.h - 1, Math.max(s.y0, s.y1));
+  return { x: x0, y: y0, w: Math.max(1, x1 - x0 + 1), h: Math.max(1, y1 - y0 + 1) };
+}
+
+function paintHasSel() {
+  if (!paint.sel) return false;
+  const r = paintSelRect();
+  return r.w > 1 || r.h > 1;
+}
+
+function paintClearSelection() {
+  paint.sel = null;
+  paintDraw();
+  paintRenderTools();
+}
+
+/* Erase inside the selection, or the whole layer when there is none. */
+function paintEraseSel() {
+  const L = paint.layers[paint.active];
+  if (!L) return;
+  paintPush();
+  const r = paintSelRect();
+  L.ctx.clearRect(r.x, r.y, r.w, r.h);
+  paintDraw();
+  paintRenderLayers();
+  notify(paintHasSel() ? 'erased the selection'
+                       : 'erased the whole layer -- ctrl+Z puts it back');
+}
+
+/* Mirror the selection in place. Flipping a whole character sheet is
+   the common case, so no selection means the whole layer. */
+function paintFlip(axis) {
+  const L = paint.layers[paint.active];
+  if (!L) return;
+  paintPush();
+  const r = paintSelRect();
+  const cut = L.ctx.getImageData(r.x, r.y, r.w, r.h);
+  const out = L.ctx.createImageData(r.w, r.h);
+  for (let y = 0; y < r.h; y++) {
+    for (let x = 0; x < r.w; x++) {
+      const sx = axis === 'h' ? r.w - 1 - x : x;
+      const sy = axis === 'v' ? r.h - 1 - y : y;
+      const a = (y * r.w + x) * 4, b = (sy * r.w + sx) * 4;
+      out.data[a] = cut.data[b];
+      out.data[a + 1] = cut.data[b + 1];
+      out.data[a + 2] = cut.data[b + 2];
+      out.data[a + 3] = cut.data[b + 3];
+    }
+  }
+  L.ctx.putImageData(out, r.x, r.y);
+  paintDraw();
+  paintRenderLayers();
+  notify('flipped ' + (axis === 'h' ? 'horizontally' : 'vertically'));
+}
+
+/* The bounding box of what is actually drawn on a layer. */
+function paintContentBox(L) {
+  const d = L.ctx.getImageData(0, 0, paint.w, paint.h).data;
+  let x0 = paint.w, y0 = paint.h, x1 = -1, y1 = -1;
+  for (let y = 0; y < paint.h; y++) {
+    for (let x = 0; x < paint.w; x++) {
+      if (d[(y * paint.w + x) * 4 + 3] > 8) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+}
+
+/* Centre the layer's drawn content on the given axis. Sprite frames are
+   positioned by their runs, so a piece of art sitting off to one side
+   is a real thing to want to fix. */
+function paintCentre(axis) {
+  const L = paint.layers[paint.active];
+  if (!L) return;
+  const box = paintContentBox(L);
+  if (!box) { notify('this layer is empty', 1); return; }
+  const dx = axis === 'h' ? Math.round((paint.w - box.w) / 2) - box.x : 0;
+  const dy = axis === 'v' ? Math.round((paint.h - box.h) / 2) - box.y : 0;
+  if (!dx && !dy) { notify('already centred'); return; }
+  paintPush();
+  const cut = L.ctx.getImageData(box.x, box.y, box.w, box.h);
+  L.ctx.clearRect(0, 0, paint.w, paint.h);
+  L.ctx.putImageData(cut, box.x + dx, box.y + dy);
+  paintDraw();
+  paintRenderLayers();
+  notify('centred ' + (axis === 'h' ? 'horizontally' : 'vertically') +
+         ' by ' + (dx || dy) + ' px');
+}
+
 /* ------------------------------ pointer -------------------------- */
 function paintDown(ev) {
   if (!paint.open) return;
@@ -304,6 +440,27 @@ function paintDown(ev) {
   if (pt.x < 0 || pt.y < 0 || pt.x >= paint.w || pt.y >= paint.h) return;
 
   if (paint.tool === 'picker') { paintPick(pt); return; }
+
+  if (paint.tool === 'select') {
+    paint.selDrag = pt;
+    paint.sel = { x0: pt.x, y0: pt.y, x1: pt.x, y1: pt.y };
+    paint.drawing = true;
+    paintDraw();
+    return;
+  }
+
+  if (paint.tool === 'move') {
+    /* lift the selected pixels once, then follow the cursor with them */
+    const r = paintSelRect();
+    paintPush();
+    paint.moveFrom = pt;
+    paint.moveData = L.ctx.getImageData(r.x, r.y, r.w, r.h);
+    paint.moveRect = r;
+    L.ctx.clearRect(r.x, r.y, r.w, r.h);
+    paint.drawing = true;
+    paintDraw();
+    return;
+  }
 
   paintPush();
   paint.drawing = true;
@@ -325,6 +482,29 @@ function paintMove(ev) {
   if (!paint.drawing) return;
   const L = paint.layers[paint.active];
   const pt = paintPixelAt(ev);
+
+  if (paint.tool === 'select') {
+    paint.sel.x1 = Math.max(0, Math.min(paint.w - 1, pt.x));
+    paint.sel.y1 = Math.max(0, Math.min(paint.h - 1, pt.y));
+    paintDraw();
+    return;
+  }
+
+  if (paint.tool === 'move' && paint.moveData) {
+    const snap = paint.undo[paint.undo.length - 1];
+    if (snap && snap.layer === paint.active) L.ctx.putImageData(snap.data, 0, 0);
+    const r = paint.moveRect;
+    L.ctx.clearRect(r.x, r.y, r.w, r.h);
+    const dx = pt.x - paint.moveFrom.x, dy = pt.y - paint.moveFrom.y;
+    L.ctx.putImageData(paint.moveData, r.x + dx, r.y + dy);
+    if (paint.sel) {
+      paint.sel = { x0: r.x + dx, y0: r.y + dy,
+                    x1: r.x + dx + r.w - 1, y1: r.y + dy + r.h - 1 };
+    }
+    paintDraw();
+    return;
+  }
+
   const erase = paint.tool === 'eraser';
   if (paint.tool === 'brush' || erase) {
     paintLine(L.ctx, paint.last, pt, erase);
@@ -345,7 +525,14 @@ function paintUp() {
   paint.panning = false;
   if (!paint.drawing) return;
   paint.drawing = false;
+  if (paint.tool === 'select') {
+    paint.selDrag = null;
+    if (!paintHasSel()) paint.sel = null;   /* a click clears it */
+    paintDraw();
+  }
+  if (paint.tool === 'move') { paint.moveData = null; paint.moveFrom = null; }
   paintRenderLayers();
+  paintRenderTools();
 }
 
 /* ------------------------------ layers --------------------------- */
@@ -387,7 +574,7 @@ function paintRenderLayers() {
   }
   $('layerCount').textContent = paint.layers.length +
     (paint.layers.length === 1 ? ' layer' : ' layers') +
-    ' — flattened when you apply';
+    ' -- flattened when you apply';
 }
 
 function paintAddLayer() {
@@ -431,6 +618,15 @@ function paintRenderTools() {
   $('bPaintUndo').disabled = !paint.undo.length;
   $('bPaintRedo').disabled = !paint.redo.length;
   $('paintSizeOut').textContent = paint.size + ' px';
+  const move = document.querySelector('#paintTools button[data-tool="move"]');
+  if (move) move.disabled = !paintHasSel();
+  const t = $('paintTitle');
+  if (t && paint.open) {
+    const r = paintSelRect();
+    t.textContent = paint.title + '  ' + paint.w + 'x' + paint.h +
+      (paintHasSel() ? '  selection ' + r.w + 'x' + r.h + ' at ' + r.x + ',' + r.y
+                     : '  no selection: actions apply to the whole layer');
+  }
   paintRenderTint();
 }
 
@@ -524,6 +720,11 @@ function paintWire() {
     $('bPaintGrid').classList.toggle('on', paint.showGrid);
     paintDraw();
   };
+  $('bFlipH').onclick = () => paintFlip('h');
+  $('bFlipV').onclick = () => paintFlip('v');
+  $('bCentreH').onclick = () => paintCentre('h');
+  $('bCentreV').onclick = () => paintCentre('v');
+  $('bClearSel').onclick = paintEraseSel;
   $('bPaintApply').onclick = paintApply;
   $('bPaintCancel').onclick = () => {
     paintClose();
@@ -539,10 +740,15 @@ function paintWire() {
     } else if (mod && e.key.toLowerCase() === 'y') {
       e.preventDefault(); paintRedo();
     } else if (e.key === 'Escape') {
+      if (paint.sel) { paintClearSelection(); return; }
       paintClose();
     } else if (!mod) {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault(); paintEraseSel(); return;
+      }
       const k = { b: 'brush', e: 'eraser', g: 'fill', i: 'picker',
-                  l: 'line', r: 'rect', f: 'rectfill' }[e.key.toLowerCase()];
+                  l: 'line', r: 'rect', f: 'rectfill', m: 'select',
+                  v: 'move' }[e.key.toLowerCase()];
       if (k) { paint.tool = k; paintRenderTools(); }
     }
   });

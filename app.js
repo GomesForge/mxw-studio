@@ -78,6 +78,9 @@ function initThree() {
   scene.add(fill);
 
   axes = new THREE.AxesHelper(1.4);
+  /* An axis cross floating over an empty viewport reads as a broken
+     render. It appears once there is something to measure against. */
+  axes.visible = false;
   scene.add(axes);
   group = new THREE.Group();
   scene.add(group);
@@ -224,6 +227,7 @@ function build(items) {
   stage.scale.setScalar(s);
   group.add(stage);
   mesh = built[0].obj;
+  if (axes) axes.visible = $('bAxes').classList.contains('on');
 
   wireGroup = new THREE.Group();
   for (const b of built) {
@@ -287,12 +291,60 @@ function setView(name) {
     b.classList.toggle('primary', b.dataset.view === name));
 }
 
+/* The readers enforce what the format needs to parse. This surfaces
+   what parses fine and is still worth knowing before you save. */
+/* The status bar carries what used to be scattered across panel
+   headers: what is open and how big it is. */
+function renderStatus() {
+  const el = $('statMesh');
+  if (!el) return;
+  const c = current;
+  if (!c) { el.textContent = ''; return; }
+  const m = c.mxw.meshes[c.meshIndex || 0];
+  const bits = [c.name];
+  if (m) bits.push(m.kind, m.nv + ' vert', m.faces.length + ' faces');
+  if (c.mxw.skeletons.length)
+    bits.push(c.mxw.skeletons[0].bones.length + ' bones');
+  bits.push(c.mxw.gifs.length + ' tex');
+  el.textContent = bits.join('  ');
+}
+
+function renderHealth() {
+  const panel = $('healthPanel');
+  const c = current;
+  if (!c || !c.mxw.meshes.length) { panel.style.display = 'none'; return; }
+  let rep = null;
+  try { rep = meshReport(c.mxw, c.meshIndex || 0); }
+  catch (e) { panel.style.display = 'none'; return; }
+  if (!rep) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  const s = rep.stats;
+  const wind = s.winding === null ? '-' : s.winding.toFixed(3);
+  $('healthStats').innerHTML =
+    '<dl><dt>quads</dt><dd>' + s.quads + ' of ' + s.faces + '</dd>' +
+    '<dt>duplicate positions</dt><dd>' + s.duplicateVertices + '</dd>' +
+    '<dt>winding</dt><dd>' + wind + '</dd></dl>' +
+    '<p class="hint">Winding is how closely each face agrees with the ' +
+    'normals stored at its own vertices: near 1 is consistent, negative ' +
+    'means inverted.</p>';
+
+  $('healthNotes').innerHTML = rep.notes.length
+    ? rep.notes.map(n => '<p class="note ' + n.level + '">' + esc(n.text) +
+        '</p>').join('')
+    : '<p class="note good">Nothing to flag: no faces without area, no ' +
+      'texture corners outside their texture, the bone table covers ' +
+      'every vertex, and every count is inside its field.</p>';
+}
+
 function renderAll() {
   renderList();
   renderHeader();
   renderMesh();
   renderTextures();
   renderSkeleton();
+  renderHealth();
+  renderStatus();
   renderUV();
   checkRoundTrip();
 }
@@ -330,6 +382,8 @@ function renderList() {
    stays on screen underneath the next. */
 function resetPanels() {
   if (group) group.clear();
+  if (axes) axes.visible = false;
+  $('healthPanel').style.display = 'none';
   mesh = wireGroup = normHelper = boneLines = null;
   texMats = [];
   $('meshPanel').style.display = 'none';
@@ -338,6 +392,7 @@ function resetPanels() {
   $('hdr').innerHTML = '';
   $('rt').textContent = '';
   $('rt').className = 'rt';
+  if ($('statMesh')) $('statMesh').textContent = '';
 }
 
 function removeFile(i) {
