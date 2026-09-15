@@ -166,6 +166,14 @@ mesh and rewritten wrongly.
   out on it
 - [docs/roadmap.md](docs/roadmap.md) — where this is going
 
+## One thing to remember when changing a script
+
+`index.html` loads each script as `name.js?v=N`. The page and the
+scripts are separate cache entries, so without that token a browser can
+pair a fresh page with yesterday's script &mdash; which is exactly how
+"no file open" once ended up sitting beside an open file. **Bump `N` on
+every script change**, in all the tags at the bottom of `index.html`.
+
 ## Contributing
 
 Issues and pull requests are welcome. `main` is protected: changes land

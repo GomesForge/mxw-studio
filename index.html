@@ -92,6 +92,11 @@
   .rm:hover{color:var(--red)}
   #tabsHint{align-self:center;padding:0 10px;color:var(--dim);
     font-size:11px;white-space:nowrap}
+  /* It states a fact about the tab list, so let the tab list decide:
+     #list is empty exactly when nothing is open. Leaving this to a
+     script meant a stale script could sit there claiming "no file open"
+     beside an open file. */
+  #list:not(:empty)+#tabsHint{display:none}
 
   /* ------------------------------- rail ------------------------------ */
   #rail{grid-area:rail;background:var(--rail);border-right:1px solid var(--edge);
@@ -735,11 +740,11 @@
 <div id="over">Drop meshes, sprites, an .obj, or an image to replace the selection</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="mxw.js"></script>
-<script src="gra.js"></script>
-<script src="obj.js"></script>
-<script src="checks.js"></script>
-<script src="gifenc.js"></script>
-<script src="paint.js"></script>
-<script src="sprite.js"></script>
-<script src="app.js"></script>
+<script src="mxw.js?v=2"></script>
+<script src="gra.js?v=2"></script>
+<script src="obj.js?v=2"></script>
+<script src="checks.js?v=2"></script>
+<script src="gifenc.js?v=2"></script>
+<script src="paint.js?v=2"></script>
+<script src="sprite.js?v=2"></script>
+<script src="app.js?v=2"></script>

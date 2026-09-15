@@ -411,8 +411,8 @@ function enableActions() {
   off('bClear', hasFile || !!sprite.entry);
   const head = $('containerHead');
   if (head) head.style.display = hasFile ? '' : 'none';
-  const hint = $('tabsHint');
-  if (hint) hint.style.display = (loaded.length || sprite.entry) ? 'none' : '';
+  /* the "no file open" hint is handled by a rule on #list:not(:empty),
+     so nothing here needs to remember to hide it */
 }
 
 /* Closing a file has to clear the viewport too, or the previous one
