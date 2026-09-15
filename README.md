@@ -101,18 +101,30 @@ land where a skeleton should have them.
 - **Pose any bone**, by name, with a slider per axis. For an arm, swing
   moves it forward and lift raises it; for a leg, swing steps and lift
   spreads. Which axis does what was measured on the rig
-- **Play a motion**: stand, breathe, wave, nod, walk, run, sit, cheer.
-  Scrub the frame, set the speed, loop or not
+- **Play a motion.** The eight actions the game itself has come first,
+  under its own names and frame counts &mdash; `ST` stand, `WA` walk,
+  `MO` carrying, `PA` hit, `PU` push, `TH` throw, `DD` down, `WI` win
+  &mdash; then run, sit, wave, nod and the rest. Scrub the frame, set
+  the speed, loop or not
+- **Every motion is checked**, not eyeballed:
+  `python/check_motion.py` measures the torso angle, the feet against
+  the floor, the angle at each knee, the hands' clearance from the
+  torso and the head's height, frame by frame, against that body's own
+  bind pose
 - **Items follow the body.** Their bone tables index the body's
   skeleton, so hair follows the head bone and a jacket follows the
   hips, spine, arms and wrists &mdash; Dress-up plus a motion is a
   dressed character in movement
 - **Save a pose** as a small JSON, and load one back
 
-**The motions shipped here are ours, not the game's.** Nobody has
-published one of the game's motion files; when someone does it plays
-through the same player, because it is the same thing &mdash; a rotation
-per bone per frame. The format page says what to check first.
+**The action set is the game's; the joint angles are ours.** The
+archive has no motion file for the 3D avatars &mdash; the meshes carry
+no keyframes and no such file exists in it. What it does have is the
+battle characters' 2D sprites, which are the game's own animation, and
+those gave the vocabulary and the timing. They could not give the
+angles: a different character, one projection, a few dozen pixels tall.
+When a real motion file turns up it plays through the same player,
+because it is the same thing &mdash; a rotation per bone per frame.
 
 ## Sprites
 

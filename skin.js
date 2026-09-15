@@ -81,6 +81,13 @@ function rigMatrices(rig, pose, out) {
   const extra = new THREE.Quaternion();
   const one = new THREE.Vector3(1, 1, 1);
   const D = Math.PI / 180;
+  /* Rotations alone cannot lower a character to the floor, so a motion
+     may move the root as well. It is the one translation in the format
+     and it applies to the whole body. */
+  const root = pose && pose.root;
+  const rootShift = root
+    ? new THREE.Matrix4().makeTranslation(root[0] || 0, root[1] || 0, root[2] || 0)
+    : null;
   for (const i of rig.order) {
     const b = rig.bones[i];
     q.setFromEuler(b.rest);
@@ -95,6 +102,7 @@ function rigMatrices(rig, pose, out) {
     }
     local.compose(b.offset, q, one);
     if (b.parent >= 0) m[i].multiplyMatrices(m[b.parent], local);
+    else if (rootShift) m[i].multiplyMatrices(rootShift, local);
     else m[i].copy(local);
   }
   return m;
@@ -198,12 +206,35 @@ function motionLength(motion) {
     const t = motion.tracks[k];
     if (t.length) last = Math.max(last, t[t.length - 1][0]);
   }
+  if (motion.root && motion.root.length) {
+    last = Math.max(last, motion.root[motion.root.length - 1][0]);
+  }
   return last;
 }
 
 /* The pose a motion holds at a given frame. */
+/* One [frame, x, y, z] track, sampled. */
+function sampleTrack(t, frame) {
+  if (!t || !t.length) return null;
+  let a = t[0], b = t[t.length - 1];
+  if (frame <= a[0]) return [a[1], a[2], a[3]];
+  if (frame >= b[0]) return [b[1], b[2], b[3]];
+  for (let i = 0; i < t.length - 1; i++) {
+    if (frame >= t[i][0] && frame <= t[i + 1][0]) { a = t[i]; b = t[i + 1]; break; }
+  }
+  const span = b[0] - a[0];
+  const u = span > 0 ? (frame - a[0]) / span : 0;
+  return [a[1] + (b[1] - a[1]) * u,
+          a[2] + (b[2] - a[2]) * u,
+          a[3] + (b[3] - a[3]) * u];
+}
+
 function motionPose(motion, frame) {
   const pose = {};
+  if (motion.root) {
+    const r = sampleTrack(motion.root, frame);
+    if (r) pose.root = r;
+  }
   for (const k in motion.tracks) {
     const t = motion.tracks[k];
     if (!t.length) continue;
@@ -225,11 +256,16 @@ function motionPose(motion, frame) {
 /* A pose, as a motion of one frame. */
 function poseToMotion(name, pose) {
   const tracks = {};
+  let root = null;
   for (const k in pose) {
     const p = pose[k];
-    if (p && (p[0] || p[1] || p[2])) tracks[k] = [[0, p[0], p[1], p[2]]];
+    if (!p || !(p[0] || p[1] || p[2])) continue;
+    if (k === 'root') root = [[0, p[0], p[1], p[2]]];
+    else tracks[k] = [[0, p[0], p[1], p[2]]];
   }
-  return { name: name || 'pose', fps: 12, loop: false, tracks: tracks };
+  const out = { name: name || 'pose', fps: 12, loop: false, tracks: tracks };
+  if (root) out.root = root;
+  return out;
 }
 
 /* Reject anything that is not this format, with a reason, rather than
@@ -254,8 +290,19 @@ function parseMotion(text) {
       return [+r[0], +r[1], +r[2], +r[3]];
     }).sort((a, b2) => a[0] - b2[0]);
   }
+  let root = null;
+  if (j.root) {
+    if (!Array.isArray(j.root)) throw new Error('"root" is not a list of keys');
+    root = j.root.map(r => {
+      if (!Array.isArray(r) || r.length < 4) {
+        throw new Error('a root key is not [frame, x, y, z]');
+      }
+      return [+r[0], +r[1], +r[2], +r[3]];
+    }).sort((a, b) => a[0] - b[0]);
+  }
   return { name: String(j.name || 'motion'),
            fps: Math.max(1, Math.min(60, +j.fps || 12)),
            loop: j.loop !== false,
+           root: root,
            tracks: tracks };
 }

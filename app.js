@@ -1115,9 +1115,23 @@ function renderPosePanel() {
   if (!has) return;
 
   if (!$('motionList').childElementCount) {
-    $('motionList').innerHTML = BUILT_IN_MOTIONS.map((m, i) =>
+    /* The game's own action set first, named as the game names it --
+       the eight actions every battle character carries, with their
+       frame counts. Then everything else. */
+    const chip = (m, i) =>
       '<button data-mo="' + i + '" title="' + esc(m.note || '') + '">' +
-      esc(m.name) + '</button>').join('');
+      esc(m.name) + (m.game ? ' <span class="dim">' + m.game + '</span>' : '') +
+      '</button>';
+    const game = [], extra = [];
+    BUILT_IN_MOTIONS.forEach((m, i) => (m.game ? game : extra).push(chip(m, i)));
+    $('motionList').innerHTML =
+      '<div class="moGroup">' + game.join('') + '</div>' +
+      '<p class="hint">Those eight are the actions the game itself has, ' +
+      'with its names and frame counts. The joint angles are ours: the ' +
+      'archive holds no motion file for the 3D avatars, only the 2D ' +
+      'battle sprites, which are a different character in a different ' +
+      'projection and cannot be read back into a skeleton.</p>' +
+      '<div class="moGroup">' + extra.join('') + '</div>';
     $('motionList').querySelectorAll('button').forEach(b =>
       b.onclick = () => playMotion(BUILT_IN_MOTIONS[+b.dataset.mo]));
   }

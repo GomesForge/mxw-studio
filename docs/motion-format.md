@@ -42,17 +42,52 @@ in code.
 
 ## Which axis moves what
 
-Also measured rather than guessed — rotate one bone by 30 degrees and
-see where the limb it drives ends up:
+Measured rather than guessed — and **not the same for every part**,
+which is the mistake the first set of motions made:
 
 | part | x | y | z |
 |------|---|---|---|
-| arms | swings forward | lifts, **mirrored**: +y raises the right arm, &minus;y the left | twists in place |
-| legs | swings forward, same sign both sides | spreads sideways | twists |
-| spine, hips | bends forward | twists | — |
+| hips, spine, chest | bends **sideways** | leans forward (negative) or back | twists about the spine |
 | neck | nods | turns | — |
+| upper arm | swings forward and back | raises sideways, **mirrored**: +y on the right, &minus;y on the left | twists in place |
+| forearm | **bends the elbow** | drags the hand across the chest | — |
+| thigh | steps forward, same sign both sides | spreads sideways | — |
+| shin | extends the knee, so flexion is negative | — | — |
+| ankle | points the toe | — | — |
 
-`z` is each bone's own axis in every case, which is why it only twists.
+`z` is each bone's own axis, which is why it only ever twists.
+
+Two of those rows cost a rewrite. A run cycle was authored with the
+trunk leaning on `x`, which bends the body **sideways**, and with the
+elbows bending on `y`, which with the arm at the side drags the hand
+straight into the chest. Both look wrong immediately in motion and
+neither is obvious from a single still.
+
+The other trap: **these are local axes, so a child's axes move with its
+parent.** Measuring the forearm from the bind pose, with the arms
+straight out, gives a different answer from measuring it with the arms
+down — which is the pose every motion actually starts from. Measure in
+the pose you will use.
+
+## Checking a motion
+
+`python/check_motion.py` judges a motion against the body it drives,
+frame by frame:
+
+```
+python check_motion.py 210001.bin walk.json
+```
+
+It measures the torso angle, the lowest foot against the floor, the
+angle at each knee and which way it leads, the hands' distance from the
+torso, and the head's height above the hips — all from joint positions,
+and all compared against that body's own bind pose. A motion can opt
+out of two of them: `"air": true` for a run, which genuinely leaves the
+ground, and `"grounded": true` for one that ends lying down.
+
+Every motion shipped in `motions.js` passes it, on both bodies. It is
+also what found the run cycle: arms 143 units from the torso line where
+the bind pose has 2151.
 
 ## Skinning
 
@@ -65,6 +100,40 @@ the same list. Hair carries one range on bone 18, the head; a jacket
 carries nine to eleven on the hips, spine, chest, upper arms, forearms
 and wrists. So posing a body moves everything worn on it, and Dress-up
 plus a motion is a dressed character in movement.
+
+## What the game has, and what it does not
+
+The 3D avatars and the battle characters are **two different systems**,
+which is why "the bomber's motions" and "the human's motions" are not
+the same kind of thing:
+
+- the **3D avatars** — the boy and the girl — have the 74- and 75-bone
+  skeleton this page is about. No motion data for them is in the
+  archive;
+- the **battle characters** are 2D sprites, and their animation *is*
+  the `.GRA` frames, which the sprite editor already plays. Measured
+  across all eight of them:
+
+| action | frames | what |
+|--------|--------|------|
+| `ST` | 3 | stand |
+| `WA` | 13–18 | walk |
+| `MO` | 8 | carrying |
+| `PA` | 8 | hit |
+| `PU` | 5 | push |
+| `TH` | 7–9 | throw |
+| `DD` | 15–21 | down |
+| `WI` | 9–23 | win |
+
+plus `RUI_ST` 3, `RUI_MO` 8, `RUI_RI` 8 and `RUI_JU` 4 for riding a
+Louie, and `MSB_CH` at one frame.
+
+The motions shipped here take that vocabulary — the names, the order
+and the frame counts — and reconstruct each action on the 3D rig. The
+joint angles are ours. They could not be read out of the sprites: those
+are a different character, drawn in one projection, a few dozen pixels
+tall, with the legs mostly hidden. Deriving a skeleton pose from them
+would be invention wearing the costume of measurement.
 
 ## The motion file
 
@@ -82,6 +151,9 @@ plus a motion is a dressed character in movement.
 
 - `tracks` is keyed by **bone index**, as a string, into the skeleton
   chunk — so 19 is the right upper arm on both bodies.
+- an optional `root` track, shaped the same way, moves the whole body.
+  It is the one translation in the format, and motions that end on the
+  floor need it: rotations alone cannot lower a character.
 - each key is `[frame, x, y, z]`, the rotation in **degrees added to
   that bone's rest pose**. A bone with no track keeps its rest pose;
   a track with one key is a constant offset, which is how a still pose
