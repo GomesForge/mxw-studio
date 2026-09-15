@@ -44,7 +44,11 @@ right; and one status line along the bottom.
   quantised and encoded to GIF89a — keeping transparency, which 36 of
   the 58 sample textures rely on
 - **Paint the texture in place**, with the UV layout drawn on top so a
-  garment lands where you mean it to, layers, and undo
+  garment lands where you mean it to, layers, and undo. The texture
+  opens as a tab *inside* that file's group, beside a `model` tab, so
+  the file does not go away while you edit it &mdash; move between the
+  two as often as you like, and nothing is discarded until you apply or
+  close the edit. A dot on the tab means the edit is still unapplied
 - Edit the mesh id, the texture names, and which texture each material
   draws from
 - **Import and export Wavefront `.obj`**, so geometry can go through any

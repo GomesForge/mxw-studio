@@ -11,7 +11,16 @@
    paintOpen({width, height, base, uv, title, onApply}) */
 
 const paint = {
+  /* open  = a session exists, with its layers and its undo history
+     shown = its canvas is the thing on screen right now
+     The two are separate because a texture belongs to the file it came
+     from: opening one adds a tab inside that file's group and you move
+     between the model and the texture freely, rather than the editor
+     taking over the window until you apply. */
   open: false,
+  shown: false,
+  owner: null,       /* {kind:'texture'|'frame', entry, tex|frame} */
+  label: '',         /* what the tab says: 'tex3', 'frame 2' */
   w: 0, h: 0,
   layers: [],        /* [{name, visible, opacity, cv, ctx}] */
   active: 0,
@@ -26,6 +35,7 @@ const paint = {
   title: '',
   undo: [],
   redo: [],
+  _dot: false,      /* what the tab's unapplied-edit dot currently shows */
   drawing: false,
   last: null,
   anchor: null,
@@ -57,10 +67,13 @@ function paintOpen(opts) {
   paint.uv = opts.uv || null;
   paint.onApply = opts.onApply;
   paint.title = opts.title || '';
+  paint.owner = opts.owner || null;
+  paint.label = opts.label || 'edit';
   paint.layers = [];
   paint.active = 0;
   paint.undo = [];
   paint.redo = [];
+  paint._dot = false;
   paint.sel = null;
 
   const base = paintLayer('base', paint.w, paint.h);
@@ -72,6 +85,7 @@ function paintOpen(opts) {
   paint.layers.push(base);
 
   paint.open = true;
+  paint.shown = true;
   document.body.classList.add('paint-mode');
   $('paintTitle').textContent = paint.title +
     '   ' + paint.w + 'x' + paint.h;
@@ -79,14 +93,46 @@ function paintOpen(opts) {
   paintRenderLayers();
   paintRenderTools();
   paintDraw();
+  if (typeof renderList === 'function') renderList();
+}
+
+/* Step off the canvas without ending the session: the layers, the
+   selection and the whole undo history stay exactly as they are, so
+   going back to the model and returning costs nothing. */
+function paintSuspend() {
+  if (!paint.open) return;
+  paint.shown = false;
+  document.body.classList.remove('paint-mode');
+  if (typeof renderList === 'function') renderList();
+}
+
+function paintResume() {
+  if (!paint.open) return;
+  paint.shown = true;
+  document.body.classList.add('paint-mode');
+  paintFit();
+  paintRenderLayers();
+  paintRenderTools();
+  paintDraw();
+  if (typeof renderList === 'function') renderList();
+}
+
+/* Is there work in this session that has not been applied? */
+function paintDirty() {
+  return paint.open && paint.undo.length > 0;
 }
 
 function paintClose() {
   paint.open = false;
+  paint.shown = false;
+  paint.owner = null;
+  paint.label = '';
   paint.layers = [];
   paint.undo = [];
   paint.redo = [];
+  paint._dot = false;
   document.body.classList.remove('paint-mode');
+  if (typeof renderList === 'function') renderList();
 }
 
 /* Pick a zoom that makes the image fill a good part of the stage.
@@ -424,7 +470,7 @@ function paintCentre(axis) {
 
 /* ------------------------------ pointer -------------------------- */
 function paintDown(ev) {
-  if (!paint.open) return;
+  if (!paint.open || !paint.shown) return;
   if (ev.button === 1 || ev.shiftKey) {       /* pan */
     paint.panning = true;
     const host = $('paintStage');
@@ -628,6 +674,14 @@ function paintRenderTools() {
                      : '  no selection: actions apply to the whole layer');
   }
   paintRenderTint();
+  /* the tab carries a dot while this edit has not been applied. It
+     changes state once, on the first stroke, so the tab strip is
+     rebuilt then rather than on every stroke. */
+  const dirty = paintDirty();
+  if (dirty !== paint._dot) {
+    paint._dot = dirty;
+    if (typeof renderList === 'function') renderList();
+  }
 }
 
 /* The 64 values the game substitutes at run time, as a strip you can
@@ -732,7 +786,7 @@ function paintWire() {
   };
 
   addEventListener('keydown', e => {
-    if (!paint.open) return;
+    if (!paint.open || !paint.shown) return;
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.key.toLowerCase() === 'z') {
       e.preventDefault();

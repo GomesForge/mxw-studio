@@ -466,12 +466,25 @@ function spritePaintFrame() {
   const e = sprite.entry;
   if (!e) return;
   spritePause();
+  /* the frame already being edited is the one to go back to */
+  if (paint.open) {
+    const o = paint.owner;
+    if (o && o.kind === 'frame' && o.entry === e && o.frame === sprite.frame) {
+      paintResume();
+      return;
+    }
+    if (paintDirty() && !confirm('An unapplied edit of ' + paint.label +
+        ' is open. Discard it and edit frame ' + (sprite.frame + 1) + '?')) return;
+    paintClose();
+  }
   const g = e.gra;
   const f = g.frames[sprite.frame];
   paintOpen({
     width: g.width, height: g.height,
     base: f.toRGBA(g.width, g.height),
     title: e.name + '  frame ' + (sprite.frame + 1) + '/' + g.frames.length,
+    owner: { kind: 'frame', entry: e, frame: sprite.frame },
+    label: 'frame ' + (sprite.frame + 1),
     onApply: rgba => {
       g.replaceFrameRGBA(sprite.frame, rgba);
       spriteRenderAll();

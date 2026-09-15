@@ -85,12 +85,21 @@ function initThree() {
   group = new THREE.Group();
   scene.add(group);
 
-  addEventListener('resize', () => {
-    if (!rend) return;
+  /* The viewport changes width for more reasons than the window
+     resizing -- the tool rail appears with the pixel editor and leaves
+     with it -- so watch the element, not the window. Sizing only on
+     window resize left the 3D view stretched after an edit. */
+  const fit = () => {
+    if (!rend || !host.clientWidth || !host.clientHeight) return;
     cam.aspect = host.clientWidth / host.clientHeight;
     cam.updateProjectionMatrix();
     rend.setSize(host.clientWidth, host.clientHeight);
-  });
+  };
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(fit).observe(host);
+  } else {
+    addEventListener('resize', fit);
+  }
   bindOrbit();
   ready = true;
   (function loop() {
@@ -363,33 +372,85 @@ function renderAll() {
   checkRoundTrip();
 }
 
+/* One tab per open file, and -- while a texture or a frame is being
+   edited -- two tabs inside that file's own group, so the edit reads as
+   part of the file rather than as something that replaced it. You move
+   between the model and the texture as often as you like; nothing is
+   discarded until you apply or close the edit. */
 function renderList() {
+  const own = paint.open ? paint.owner : null;
+
+  const subs = hostLabel =>
+    '<div class="subs">' +
+    '<div class="sub' + (paint.shown ? '' : ' sel') + '" data-show="host"' +
+    ' title="back to the file -- the edit stays open">' + hostLabel + '</div>' +
+    '<div class="sub' + (paint.shown ? ' sel' : '') + '" data-show="paint"' +
+    ' title="the pixel editor">' + esc(paint.label) +
+    (paintDirty() ? '<span class="dot" title="not applied yet"></span>' : '') +
+    '<button class="rm" data-rmpaint="1" title="discard this edit">&times;</button>' +
+    '</div></div>';
+
   const rows = loaded.map((c, i) =>
-    '<div data-i="' + i + '" class="' + (current === c ? 'sel' : '') + '">' +
+    '<div class="tabGroup">' +
+    '<div class="tab ' + (current === c ? 'sel' : '') + '" data-i="' + i + '">' +
     esc(c.name) + '<span class="dim">' +
     (c.mxw.meshes[0] ? c.mxw.meshes[0].nv + 'v ' : '- ') +
     c.mxw.gifs.length + 't' +
     (c.mxw.skeletons.length ? ' &middot; skel' : '') +
     ' <button class="rm" data-rm="' + i + '" title="close this file">&times;</button>' +
-    '</span></div>');
+    '</span></div>' +
+    (own && own.kind === 'texture' && own.entry === c ? subs('model') : '') +
+    '</div>');
+
   if (sprite.entry) {
-    rows.push('<div class="sel" data-sprite="1">' + esc(sprite.entry.name) +
+    rows.push('<div class="tabGroup">' +
+      '<div class="tab sel" data-sprite="1">' + esc(sprite.entry.name) +
       '<span class="dim">' + sprite.entry.gra.frames.length + 'f' +
       ' <button class="rm" data-rmsprite="1" title="close this file">&times;</button>' +
-      '</span></div>');
+      '</span></div>' +
+      (own && own.kind === 'frame' ? subs('frames') : '') +
+      '</div>');
   }
   $('list').innerHTML = rows.join('');
-  $('list').querySelectorAll('div').forEach(d => d.onclick = e => {
+
+  $('list').querySelectorAll('.tab').forEach(d => d.onclick = e => {
     if (e.target.classList.contains('rm')) return;
-    if (d.dataset.sprite) return;
+    if (d.dataset.sprite) { paintSuspend(); return; }
+    paintSuspend();
     spriteClose();
     select(+d.dataset.i);
   });
-  $('list').querySelectorAll('.rm').forEach(b => b.onclick = e => {
-    e.stopPropagation();
-    if (b.dataset.rmsprite) { closeSprite(); return; }
-    removeFile(+b.dataset.rm);
+
+  $('list').querySelectorAll('.sub').forEach(d => d.onclick = e => {
+    if (e.target.classList.contains('rm')) return;
+    if (d.dataset.show === 'host') { paintSuspend(); return; }
+    /* the edit belongs to one file, so bring that file forward with it */
+    const o = paint.owner;
+    if (o && o.kind === 'texture' && o.entry !== current) {
+      current = o.entry;
+      selectedTex = o.tex;
+      texPreview = null;
+      rebuild();
+      renderAll();
+    }
+    paintResume();
   });
+
+  $('list').querySelectorAll('.rm:not([data-rmpaint])').forEach(b =>
+    b.onclick = e => {
+      e.stopPropagation();
+      if (b.dataset.rmsprite) { closeSprite(); return; }
+      removeFile(+b.dataset.rm);
+    });
+
+  $('list').querySelectorAll('[data-rmpaint]').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    if (paintDirty() &&
+        !confirm('Discard the unapplied changes to ' + paint.label + '?')) return;
+    paintClose();
+    notify('closed the edit without applying');
+  });
+
   enableActions();
 }
 
@@ -434,6 +495,11 @@ function resetPanels() {
 
 function removeFile(i) {
   if (i < 0 || i >= loaded.length) return;
+  if (paint.open && paint.owner && paint.owner.entry === loaded[i]) {
+    if (paintDirty() && !confirm('Closing ' + loaded[i].name +
+        ' discards the unapplied changes to ' + paint.label + '. Close it?')) return;
+    paintClose();
+  }
   const wasCurrent = loaded[i] === current;
   loaded.splice(i, 1);
   if (!loaded.length) {
@@ -450,6 +516,11 @@ function removeFile(i) {
 }
 
 function closeSprite() {
+  if (paint.open && paint.owner && paint.owner.kind === 'frame') {
+    if (paintDirty() && !confirm('Closing this sprite discards the ' +
+        'unapplied changes to ' + paint.label + '. Close it?')) return;
+    paintClose();
+  }
   spriteClose();
   if (loaded.length) {
     current = current || loaded[0];
@@ -463,6 +534,8 @@ function closeSprite() {
 }
 
 function clearAll() {
+  if (paintDirty() && !confirm('There are unapplied changes to ' +
+      paint.label + '. Close everything anyway?')) return;
   paintClose();
   loaded.length = 0;
   current = null;
@@ -778,6 +851,18 @@ function paintTexture() {
     notify('this file has no texture to paint', 1);
     return;
   }
+  /* an edit already open on this same texture is the one to go back to,
+     not a second one that would throw the first away */
+  if (paint.open) {
+    const o = paint.owner;
+    if (o && o.kind === 'texture' && o.entry === c && o.tex === selectedTex) {
+      paintResume();
+      return;
+    }
+    if (paintDirty() && !confirm('An unapplied edit of ' + paint.label +
+        ' is open. Discard it and edit tex' + selectedTex + '?')) return;
+    paintClose();
+  }
   const g = c.mxw.gifs[selectedTex];
   const size = gifSize(g);
   const w = size[0], h = size[1];
@@ -793,6 +878,8 @@ function paintTexture() {
     paintOpen({
       width: w, height: h, base: img.rgba, uv: polys,
       title: c.name + '  tex' + selectedTex,
+      owner: { kind: 'texture', entry: c, tex: selectedTex },
+      label: 'tex' + selectedTex,
       onApply: rgba => {
         try {
           const out = encodeGIF(rgba, w, h, { maxColors: 256 });

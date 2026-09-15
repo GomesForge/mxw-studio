@@ -46,13 +46,19 @@
      top, a tool rail down the left, docked panels on the right, and a
      status line along the bottom. Panels are docked rather than stacked
      in one column so the canvas keeps the middle. ---- */
-  #app{display:grid;height:100vh;
-    grid-template-columns:44px 1fr 296px;
+  #app{display:grid;height:100vh;--railW:52px;
+    grid-template-columns:var(--railW) 1fr 296px;
     grid-template-rows:38px 28px 1fr 24px;
     grid-template-areas:"act act act" "tabs tabs tabs"
                         "rail view side" "status status status"}
+  /* Every tool on the rail acts on the pixel canvas, so outside the
+     pixel editor there is nothing for it to do -- it leaves, and the
+     viewport takes the space. Greying it out still left a column of
+     dead buttons on screen. */
+  body:not(.paint-mode) #app{--railW:0px}
+  body:not(.paint-mode) #rail{display:none}
   @media (max-width:900px){
-    #app{grid-template-columns:44px 1fr;
+    #app{grid-template-columns:var(--railW) 1fr;
       grid-template-areas:"act act" "tabs tabs" "rail view" "side side"
                           "status status";
       grid-template-rows:auto 28px 52vh auto 24px;height:auto;min-height:100vh}
@@ -80,12 +86,27 @@
   #tabs{grid-area:tabs;display:flex;align-items:stretch;gap:0;
     background:var(--bg);border-bottom:1px solid var(--edge);overflow-x:auto}
   #list{display:flex;align-items:stretch}
-  #list div{display:flex;gap:7px;align-items:center;padding:0 10px;
+  .tabGroup{display:flex;align-items:stretch;
+    border-right:1px solid var(--edge)}
+  .tab{display:flex;gap:7px;align-items:center;padding:0 10px;
     cursor:pointer;font-family:var(--mono);font-size:11px;
-    border-right:1px solid var(--edge);color:var(--dim);white-space:nowrap}
-  #list div:hover{background:var(--btnHover);color:var(--ink)}
-  #list div.sel{background:var(--panel);color:var(--ink);
+    color:var(--dim);white-space:nowrap}
+  .tab:hover{background:var(--btnHover);color:var(--ink)}
+  .tab.sel{background:var(--panel);color:var(--ink);
     box-shadow:inset 0 -2px 0 var(--cyan)}
+  /* A texture opened for editing belongs to the file it came from, so
+     it becomes a tab inside that file's group. Editing used to take the
+     window over, which made the file look as though it had closed. */
+  .subs{display:flex;align-items:center;gap:3px;padding:0 8px 0 3px;
+    background:var(--panel)}
+  .sub{display:flex;gap:5px;align-items:center;height:19px;padding:0 4px 0 7px;
+    border:1px solid transparent;border-radius:3px;cursor:pointer;
+    font-family:var(--mono);font-size:10px;color:var(--dim);white-space:nowrap}
+  .sub:hover{background:var(--btnHover);color:var(--ink)}
+  .sub.sel{background:var(--btnOn);border-color:var(--edgeStrong);
+    color:var(--ink)}
+  .sub .dot{width:5px;height:5px;border-radius:50%;background:var(--amber);
+    flex:0 0 auto}
   .dim{color:var(--dim);font-size:10px}
   .rm{background:none;border:0;color:var(--dim);padding:0 2px;font-size:13px;
     line-height:1;cursor:pointer}
@@ -103,7 +124,7 @@
     display:flex;flex-direction:column;align-items:center;gap:2px;
     padding:6px 0;overflow-y:auto}
   #rail #paintTools{display:flex;flex-direction:column;align-items:center;gap:2px}
-  #rail button{width:34px;height:32px;padding:0;border-radius:4px;
+  #rail button{width:40px;height:38px;padding:0;border-radius:5px;
     border:1px solid transparent;background:none;color:var(--dim);
     cursor:pointer;display:grid;place-items:center}
   #rail button:hover{background:var(--btnHover);color:var(--ink)}
@@ -112,12 +133,11 @@
   #rail button.on{background:var(--btnOn);color:var(--ink);
     border-color:var(--edgeStrong);box-shadow:inset 2px 0 0 var(--cyan)}
   #rail button:disabled{opacity:.3;cursor:default}
-  body:not(.paint-mode) #rail button{opacity:.26;pointer-events:none}
   #rail button:disabled:hover{background:none;color:var(--dim)}
-  #rail .railRule{width:20px;height:1px;background:var(--edge);margin:6px 0}
+  #rail .railRule{width:24px;height:1px;background:var(--edge);margin:6px 0}
 
   /* One grid, one stroke weight, sized in one place. */
-  .ico{width:19px;height:19px;display:block;fill:none;stroke:currentColor;
+  .ico{width:22px;height:22px;display:block;fill:none;stroke:currentColor;
     stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 
   /* ----------------------------- viewport ---------------------------- */
@@ -740,11 +760,11 @@
 <div id="over">Drop meshes, sprites, an .obj, or an image to replace the selection</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="mxw.js?v=2"></script>
-<script src="gra.js?v=2"></script>
-<script src="obj.js?v=2"></script>
-<script src="checks.js?v=2"></script>
-<script src="gifenc.js?v=2"></script>
-<script src="paint.js?v=2"></script>
-<script src="sprite.js?v=2"></script>
-<script src="app.js?v=2"></script>
+<script src="mxw.js?v=3"></script>
+<script src="gra.js?v=3"></script>
+<script src="obj.js?v=3"></script>
+<script src="checks.js?v=3"></script>
+<script src="gifenc.js?v=3"></script>
+<script src="paint.js?v=3"></script>
+<script src="sprite.js?v=3"></script>
+<script src="app.js?v=3"></script>
