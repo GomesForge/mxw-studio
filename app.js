@@ -435,7 +435,9 @@ function renderList() {
 
   const rows = loaded.map((c, i) =>
     '<div class="tabGroup">' +
-    '<div class="tab ' + (current === c ? 'sel' : '') + '" data-i="' + i + '">' +
+    '<div class="tab ' + (current === c ? 'sel' : '') + '" data-i="' + i +
+    '" title="' + esc(c.name + (slotOfId(c.name) && slotOfId(c.name).name
+      ? '  --  ' + slotOfId(c.name).name : '')) + '">' +
     esc(c.name) + '<span class="dim">' +
     (c.mxw.meshes[0] ? c.mxw.meshes[0].nv + 'v ' : '- ') +
     c.mxw.gifs.length + 't' +
@@ -672,6 +674,37 @@ function esc(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
+/* What slot a file belongs to, from its own id.
+
+   An item id is [class][4 digits], and the female counterpart of a
+   class is that class plus 100 -- jackets are 6xxxx on the boy and
+   106xxxx on the girl. The classes were settled by looking at the shop
+   thumbnails in the 4.x client's items.dat, one per class, rather than
+   by reading the texture name: the name carries a global asset counter
+   that only agrees with the id by accident. See
+   docs/items-dat-format.md. */
+const SLOTS = {
+  1: 'hair', 2: 'hat or headband', 4: 'face', 5: 'glasses', 6: 'jacket',
+  7: 'shirt', 8: 'trousers', 9: 'shoes', 10: 'back item', 21: 'body'
+};
+
+function slotOfId(name) {
+  const m = /(\d{5,8})(?:\.[a-z]+)?$/i.exec(String(name || ''));
+  if (!m) return null;
+  const digits = m[1];
+  const cls = parseInt(digits.slice(0, -4), 10);
+  const number = parseInt(digits.slice(-4), 10);
+  if (!cls) return null;
+  const female = cls > 100 && SLOTS[cls - 100] !== undefined;
+  const slot = female ? cls - 100 : cls;
+  const what = SLOTS[slot];
+  /* class + 100 means female only for a class we can name. 221 and 222
+     are neither, so claiming a sex for them would be inventing one. */
+  if (!what) return { cls: cls, number: number, female: null, name: null };
+  return { cls: cls, slot: slot, number: number, female: female,
+           name: (slot === 21 ? (female ? 'girl ' : 'boy ') : '') + what };
+}
+
 function renderMesh() {
   const c = current;
   const m = c && c.mxw.meshes[c.meshIndex || 0];
@@ -679,12 +712,18 @@ function renderMesh() {
   $('meshPanel').style.display = 'block';
   const bb = m.bbox();
   const dim = bb ? bb[1].map((v, k) => v - bb[0][k]).join(' &times; ') : '-';
+  const slot = slotOfId(c.name);
   $('meshInfo').innerHTML = `
-    <dl><dt>type</dt><dd>${m.kind}</dd>
+    <dl>${slot ? `<dt>slot</dt><dd>${esc(slot.name ||
+          ('class ' + slot.cls + ', unidentified'))}</dd>` : ''}
+        <dt>type</dt><dd>${m.kind}</dd>
         <dt>vertices</dt><dd>${m.nv}</dd>
         <dt>faces</dt><dd>${m.faces.length}</dd>
         <dt>bone ranges</dt><dd>${m.bones.length}</dd>
-        <dt>size</dt><dd>${dim}</dd></dl>`;
+        <dt>size</dt><dd>${dim}</dd></dl>` +
+    (slot && slot.name ? '' : '<p class="hint">The file name carries no ' +
+      'id this recognises, so the slot is unknown. Ids are ' +
+      '[class][4 digits], female = class + 100.</p>');
 
   $('texNames').innerHTML = m.textures.map((t, i) =>
     `<label>tex${i} <input data-t="${i}" value="${esc(t)}" maxlength="255"></label>`
@@ -1146,8 +1185,30 @@ function mvSet(on) {
   if (!on && inPanel) $('view').appendChild(rend.domElement);
   pop.hidden = !on;
   if ($('bMV')) $('bMV').classList.toggle('on', mvWanted);
-  if (on) $('mvTitle').textContent = current ? current.name : 'Model';
+  if (on) {
+    $('mvTitle').textContent = current ? current.name : 'Model';
+    mvClamp();
+  }
   requestAnimationFrame(fitRenderer);
+}
+
+/* Keep the panel on screen. Its resting place is measured from the
+   right edge to clear the docked panels, which on a narrow window puts
+   it off the left edge instead. */
+function mvClamp() {
+  const pop = $('mv');
+  if (!pop || pop.hidden) return;
+  const r = pop.getBoundingClientRect();
+  if (r.left >= 0 && r.top >= 0 &&
+      r.right <= innerWidth && r.bottom <= innerHeight) return;
+  const w = Math.min(r.width || 300, innerWidth - 16);
+  const h = Math.min(r.height || 330, innerHeight - 16);
+  pop.style.right = 'auto';
+  pop.style.bottom = 'auto';
+  pop.style.width = w + 'px';
+  pop.style.height = h + 'px';
+  pop.style.left = Math.max(8, innerWidth - w - 8) + 'px';
+  pop.style.top = Math.max(8, innerHeight - h - 40) + 'px';
 }
 
 function mvWire() {

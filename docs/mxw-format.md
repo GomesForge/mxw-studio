@@ -67,16 +67,51 @@ vertex count. That is the skinning: each span follows one bone.
 
 ```
 u8        bone count B
-B x       i16 a, b, c, i16 d, e, f, u8 parent
+B x       i16 0, i16 offset y, i16 offset z,
+          i16 rot x, i16 rot y, i16 rot z, u8 parent
 ```
 
 `parent` is `0xFF` for a root. The female body has 75 bones with one
 root, the male 74 with one root. The bone ids in a mesh's bone table
 index this list.
 
-The meaning of the six i16 per bone is not settled. The first three read
-as a position in the same units as the vertices; the last three are
-likely a rotation or a pivot.
+### The six i16 are an offset and a rotation
+
+- **Field 0 is always zero** in both bodies, all 149 bones.
+- **Field 1 is zero everywhere but one bone**, where it is 3083 — the
+  height of the root above the floor.
+- **Field 2 is the bone's length**, along its parent's axis, in the same
+  units as the vertices. Non-zero in 73 of the girl's 75.
+- **Fields 3, 4 and 5 are a rotation**, as a signed 12-bit angle where
+  **±2047 is half a turn**. Nothing exceeds that magnitude in either
+  body, and every value divides cleanly: −1023 is exactly −90°,
+  −2047 exactly −180°, 1023 exactly 90°. The odd-looking
+  2047-rather-than-2048 is just `0x7FF` standing in for 180°.
+
+So a bone is "go this far along the parent, then turn by this much",
+which is an ordinary rest pose — and the reason a motion file can be
+nothing but a rotation per bone per frame.
+
+### The hierarchy
+
+Bones 0–37 are the same tree in both bodies; from 38 up the hands
+differ, which is where the girl's extra bone is. Reading the vertex
+ranges back onto the tree names most of it:
+
+```
+0-2  root chain          9  chest            18  head
+3    hips               12  neck             19/20  upper arm R/L
+4    spine              13/14  shoulder R/L  23/24  forearm R/L
+5    pelvis             15/16  shin R/L      30/31  wrist R/L
+6    spine 2            17  chest branch     36/37  hand R/L
+7/8  leg root R/L       21/22  ankle R/L     39-74  five digits per hand
+10/11  thigh R/L        25/26  foot R/L      32/33  toe R/L
+```
+
+Those names are read off the vertices each bone owns, not out of the
+file — nothing in the format carries a bone name. The toes settle the
+facing question from a second direction: bones 32 and 33 own vertices at
+z −560..−80, pointing the same way the model faces.
 
 ## Three things that are easy to get wrong
 
@@ -151,14 +186,54 @@ model's own right.
 
 ## Item ids encode the slot
 
-Read off the texture name inside each file:
+An id is `[class][4 digits]`, and the female counterpart of a class is
+that class plus 100 — jackets are `6xxxx` on the boy and `106xxxx` on
+the girl. The bodies are class 21.
 
-| id range | texture prefix | slot |
-|----------|----------------|------|
-| `10002`–`10007` | `Hair00NN_00` | hair |
-| `20031`–`20038` | `Katyusha00NN_00` | headband (Jp. *katyusha*) |
-| `100020`–`100025` | `Back0020_00` … | the six card backs |
-| `1060057`–`1060062` | `Jacket00NN_10` | jacket |
-| `1100039`–`1100056` | `Back00NN_00` | back |
-| `210001`, `1210001` | `boy_01`, `girl_01` | the bodies |
-| `2210001` | `Shoes0026_00` | shoes |
+The class list is not guesswork: the BMOWorld 4.x client ships
+`items.dat`, an archive of 1116 shop thumbnails keyed by id (see
+[items-dat-format.md](items-dat-format.md)), so each class can simply be
+looked at.
+
+| class | slot | male ids | female ids |
+|-------|------|----------|------------|
+| 1 | hair | `1NNNN` | `101NNNN` |
+| 2 | hat or headband (Jp. *katyusha*) | `2NNNN` | `102NNNN` |
+| 4 | **face** — eyes, brows, expression | `4NNNN` | `104NNNN` |
+| 5 | glasses | `5NNNN` | `105NNNN` |
+| 6 | jacket | `6NNNN` | `106NNNN` |
+| 7 | shirt | `7NNNN` | `107NNNN` |
+| 8 | trousers | `8NNNN` | `108NNNN` |
+| 9 | shoes | `9NNNN` | `109NNNN` |
+| 10 | back item | `10NNNN` | `110NNNN` |
+| 11 | not in `items.dat`; 23 male and 25 female exist in the index | `11NNNN` | `111NNNN` |
+| 21 | the body | `210001` | `1210001` |
+
+The texture name inside each file carries a *different* number: one
+global asset counter, not a per-slot one. Hair is 0002–0007, shoes 0026,
+katyusha 0031–0038, back 0039–0056, jacket 0057–0062 — one unbroken
+run across the slots. For most files the id's last four digits happen to
+equal it, because each slot was authored in one batch.
+
+### Two ids that do not fit
+
+| id | what is inside | why it is odd |
+|----|----------------|---------------|
+| `100020`–`100025` | `Back0020_00` … | read as class 10 these are back items, and they were once called "the six card backs" here; that reading was wrong |
+| `2210001` | `Shoes0026_00`, no skeleton | shoes are class 9. Either the file was renamed by whoever dumped it, or class 221 is something else |
+
+Class 222 exists in the item index too — 21 entries, no male/female
+pair. Both `221` and `222` are open.
+
+## The meshes carry no animation
+
+Worth stating because it is the first thing anyone asks. Both bodies
+parse to exactly one mesh, one skeleton and ten GIFs, with **no leftover
+bytes**: nothing is being skipped. The skeleton chunk is the hierarchy
+and the bind pose only — `u8 count`, then `count × (6 × int16 + u8
+parent)`, `0xFF` marking the root — 74 bones on the boy and 75 on the
+girl. There are no keyframes anywhere in the file.
+
+So whatever plays a motion reads it from a file class no dump in this
+archive contains, or the client holds it. The mesh gives you the bones
+and which vertices follow them; it does not give you what they do.

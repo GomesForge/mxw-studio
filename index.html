@@ -46,7 +46,7 @@
      top, a tool rail down the left, docked panels on the right, and a
      status line along the bottom. Panels are docked rather than stacked
      in one column so the canvas keeps the middle. ---- */
-  #app{display:grid;height:100vh;--railW:52px;
+  #app{display:grid;height:100vh;--railW:max-content;
     grid-template-columns:var(--railW) 1fr 296px;
     grid-template-rows:38px 28px 1fr 24px;
     grid-template-areas:"act act act" "tabs tabs tabs"
@@ -120,11 +120,20 @@
   #list:not(:empty)+#tabsHint{display:none}
 
   /* ------------------------------- rail ------------------------------ */
+  /* Bigger buttons stopped fitting in one column on a laptop, and a
+     tool rail that scrolls is a tool rail that hides tools. So it takes
+     a second column on a short window, the way a tool palette does --
+     but only a second: left to wrap freely it reached three columns and
+     ate a third of the viewport. */
   #rail{grid-area:rail;background:var(--rail);border-right:1px solid var(--edge);
-    display:flex;flex-direction:column;align-items:center;gap:2px;
-    padding:6px 0;overflow-y:auto}
-  #rail #paintTools{display:flex;flex-direction:column;align-items:center;gap:2px}
-  #rail button{width:40px;height:38px;padding:0;border-radius:5px;
+    display:grid;grid-template-columns:48px;justify-content:center;
+    align-content:start;gap:2px;padding:6px 4px;overflow-y:auto}
+  @media (max-height:920px){
+    #rail{grid-template-columns:48px 48px}
+  }
+  #rail #paintTools{display:contents}
+  #rail .railRule{grid-column:1/-1;justify-self:center}
+  #rail button{width:48px;height:44px;padding:0;border-radius:6px;
     border:1px solid transparent;background:none;color:var(--dim);
     cursor:pointer;display:grid;place-items:center}
   #rail button:hover{background:var(--btnHover);color:var(--ink)}
@@ -134,11 +143,11 @@
     border-color:var(--edgeStrong);box-shadow:inset 2px 0 0 var(--cyan)}
   #rail button:disabled{opacity:.3;cursor:default}
   #rail button:disabled:hover{background:none;color:var(--dim)}
-  #rail .railRule{width:24px;height:1px;background:var(--edge);margin:6px 0}
+  #rail .railRule{width:30px;height:1px;background:var(--edge);margin:7px 0}
 
   /* One grid, one stroke weight, sized in one place. */
-  .ico{width:22px;height:22px;display:block;fill:none;stroke:currentColor;
-    stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .ico{width:27px;height:27px;display:block;fill:none;stroke:currentColor;
+    stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
 
   /* ----------------------------- viewport ---------------------------- */
   #view{grid-area:view;position:relative;background:var(--view);overflow:hidden}
@@ -380,12 +389,15 @@
      the orbit handlers are already bound to that canvas, so dragging
      and the wheel work inside the panel for free. It is fixed to the
      window, not to the viewport, so it can be dragged anywhere. */
+  /* clear of the docked panels on a wide window; on a narrow one they
+     are stacked underneath, so the panel can sit at the edge */
   #mv{position:fixed;right:322px;bottom:44px;width:300px;height:330px;
     min-width:180px;min-height:180px;z-index:40;display:flex;
     flex-direction:column;background:var(--panel);border-radius:8px;
     border:1px solid var(--edgeStrong);overflow:hidden;resize:both;
     box-shadow:0 12px 34px rgba(0,0,0,.45)}
   #mv[hidden]{display:none!important}
+  @media (max-width:900px){ #mv{right:10px;bottom:10px} }
   #mvBar{display:flex;align-items:center;gap:4px;padding:0 4px 0 9px;
     height:26px;background:var(--panel);cursor:move;user-select:none;
     border-bottom:1px solid var(--edge);flex:0 0 auto}
@@ -816,11 +828,11 @@
 <div id="menu"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="mxw.js?v=4"></script>
-<script src="gra.js?v=4"></script>
-<script src="obj.js?v=4"></script>
-<script src="checks.js?v=4"></script>
-<script src="gifenc.js?v=4"></script>
-<script src="paint.js?v=4"></script>
-<script src="sprite.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="mxw.js?v=6"></script>
+<script src="gra.js?v=6"></script>
+<script src="obj.js?v=6"></script>
+<script src="checks.js?v=6"></script>
+<script src="gifenc.js?v=6"></script>
+<script src="paint.js?v=6"></script>
+<script src="sprite.js?v=6"></script>
+<script src="app.js?v=6"></script>

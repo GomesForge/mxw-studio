@@ -70,10 +70,23 @@ propagate cleanly across frames.
 ## 3. Dress room, improved
 
 The pieces are already there — dress-up, the shared coordinate space,
-the slot taxonomy read out of the texture names. What it needs:
+and the slot taxonomy, which is no longer guesswork: the id's class
+names the slot, and the client's `items.dat` shows what each class looks
+like (see [items-dat-format.md](items-dat-format.md)).
 
-- Named slots with one item each: `body`, `head`, `hair`, `katyusha`,
-  `glass`, `shirt`, `jacket`, `pants`, `gloss`, `shoes`, `back`, `face`
+| class | slot | | class | slot |
+|-------|------|-|-------|------|
+| 1 | hair | | 8 | trousers |
+| 2 | hat / headband | | 9 | shoes |
+| 4 | face | | 10 | back item |
+| 5 | glasses | | 11 | unidentified |
+| 6 | jacket | | 21 | body |
+| 7 | shirt | | | |
+
+Female is the class plus 100. What it needs:
+
+- One item per slot, driven by the id rather than by reading the
+  texture name, which only agrees by accident
 - Load a folder or archive once, then browse by slot with search
 - Face picker: a body carries the body skin, a blank head, then the
   facial expressions

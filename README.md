@@ -81,6 +81,12 @@ The characters face &minus;Z, measured rather than assumed &mdash; see
 [docs/mxw-format.md](docs/mxw-format.md). Front, Face and Whole look
 from that side, so the model faces you.
 
+The meshes carry a skeleton &mdash; 74 bones on the boy, 75 on the girl,
+with a vertex range per bone &mdash; but **no animation**. Both bodies
+parse with no leftover bytes at all, so nothing is being skipped: the
+file holds the hierarchy and the bind pose and stops there. Whatever
+plays a motion reads it from somewhere else.
+
 ## Sprites
 
 Drop a `.gra`, `.spr` or `.eft` and the page switches to sprite mode.
@@ -121,6 +127,7 @@ python python/gra.py --check <file>    prove the round-trip
 
 ```
 python python/mxw.py <file> [...]          inspect
+python python/dump_skeleton.py <file>      the bone tree, and what each bone moves
 python python/mxw.py --obj <file>          write .obj per mesh chunk
 python python/mxw.py --gif <file>          write every texture
 python python/mxw.py --check <file> [...]  prove the round-trip
@@ -180,7 +187,10 @@ mesh and rewritten wrongly.
   reserved colours the game recolours at run time, the frame size the
   game tolerates, and the animation file naming
 - [docs/get-item-list-format.md](docs/get-item-list-format.md) — the
-  item index, and how to obtain a copy
+  item index, what the type byte means, and how to obtain a copy
+- [docs/items-dat-format.md](docs/items-dat-format.md) — the client's
+  archive of shop thumbnails, which is what settled the slot of every
+  id class
 - [docs/encrypted-parameter-file.md](docs/encrypted-parameter-file.md) —
   one encrypted table nobody has opened, and everything already ruled
   out on it

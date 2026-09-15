@@ -52,10 +52,36 @@ bits are the type byte and the token.
 | type | records | id ranges | what |
 |------|---------|-----------|------|
 | 01 | 4 | 1, 2, 210001, 1210001 | the two bodies |
-| 02 | 36 | 1–7, 14–21, 2220001–2220021 | unidentified |
-| 03 | 36 | 1, 2, 7, 40001–40019, 1040001–1040014 | unidentified |
+| 02 | 36 | 1–7, 14–21, 2220001–2220021 | class 222 — open, see below |
+| 03 | 36 | 1, 2, 7, 40001–40019, 1040001–1040014 | **faces** — class 4 |
 | 04 | 1252 | see below | every wearable |
-| 05 | 89 | 1–24, 55–64, 103–124, 110001–110023, 1110001–1110025 | unidentified |
+| 05 | 89 | 1–24, 55–64, 103–124, 110001–110023, 1110001–1110025 | class 11 — open |
+
+The type byte is the item's class, not a separate taxonomy: type 03's
+`40001–40019` and `1040001–1040014` are class 4 and class 104, which the
+client's `items.dat` shows are the purchasable faces — eyes, eyebrows
+and expression on a bald head. Type 05 is class 11 and 111, which has no
+thumbnails in `items.dat` at all, so it is a class the shop did not
+preview.
+
+### Type 02 and its four-token cycle
+
+Type 02 is the one that looks like it could be motions: class 222 is
+genderless, which no wearable is, and 21 entries is about the right
+number for an emote set. The tokens argue against it. Ids 2, 3, 4, 5
+carry four tokens that then repeat exactly at 14–17 and again at 18–21,
+and the same four appear inside the class-222 range at 2220002–2220005,
+2220014–2220017 and 2220018–2220021:
+
+```
+id 2  9A819A13   id 14  9A819A13   id 18  9A819A13   2220002  9A819A13
+id 3  87F281D0   id 15  87F281D0   id 19  87F281D0   2220003  87F281D0
+id 4  0507A8F1   id 16  0507A8F1   id 20  0507A8F1   2220004  0507A8F1
+id 5  EAB11534   id 17  EAB11534   id 21  EAB11534   2220005  EAB11534
+```
+
+Four resources reused three times over reads like a set that comes in
+four directions, not like 21 distinct animations.
 
 Type 04 holds the bulk of the shop, grouped by slot:
 
