@@ -18,6 +18,29 @@ let spin = false, radius = 4, theta = -Math.PI / 2, phi = 1.5, targetY = 0;
 let texPreview = null;        /* {mat, tex} or null for the file's own */
 let selectedTex = 0;
 
+/* Textures being edited right now.
+
+   While an edit is open the model draws the editor's own canvas instead
+   of the stored GIF, so a stroke lands on the character as you make it
+   -- no encoding, no apply, no rebuild. Each entry keeps one canvas and
+   one THREE.CanvasTexture for the life of the edit; a stroke only sets
+   needsUpdate, which is a texture upload and nothing more. */
+const live = [];             /* [{id, entry, tex, cv, ctex}] */
+
+/* What a material should draw while edits are open.
+
+   `bound` is the named slot the material binds -- 0 the body skin, 1
+   the head. An edit of any texture in that slot is what the model
+   should show there, which is what makes a face edit visible on the
+   head even while the texture list has the body selected. Two edits in
+   different slots therefore both show at once. */
+function liveFor(entry, tex, bound) {
+  if (!entry) return null;
+  return live.find(x => x.entry === entry && x.tex === tex) ||
+         (bound === undefined ? null
+           : live.find(x => x.entry === entry && x.slot === bound)) || null;
+}
+
 const $ = id => document.getElementById(id);
 
 /* ----------------------------- notices --------------------------- */
@@ -58,6 +81,16 @@ async function saveFile(name, data, mime) {
 }
 
 /* ------------------------------ three ---------------------------- */
+/* Size the renderer to whatever element currently holds its canvas. */
+function fitRenderer() {
+  if (!rend) return;
+  const box = rend.domElement.parentElement;
+  if (!box || !box.clientWidth || !box.clientHeight) return;
+  cam.aspect = box.clientWidth / box.clientHeight;
+  cam.updateProjectionMatrix();
+  rend.setSize(box.clientWidth, box.clientHeight);
+}
+
 function initThree() {
   if (typeof THREE === 'undefined') throw new Error('three.js did not load');
   const host = $('view');
@@ -85,20 +118,17 @@ function initThree() {
   group = new THREE.Group();
   scene.add(group);
 
-  /* The viewport changes width for more reasons than the window
-     resizing -- the tool rail appears with the pixel editor and leaves
-     with it -- so watch the element, not the window. Sizing only on
-     window resize left the 3D view stretched after an edit. */
-  const fit = () => {
-    if (!rend || !host.clientWidth || !host.clientHeight) return;
-    cam.aspect = host.clientWidth / host.clientHeight;
-    cam.updateProjectionMatrix();
-    rend.setSize(host.clientWidth, host.clientHeight);
-  };
+  /* The canvas is sized from whichever box it is sitting in, because it
+     moves: the viewport normally, the model panel while you paint. And
+     the viewport changes width for more reasons than the window
+     resizing -- the tool rail comes and goes with the pixel editor --
+     so watch the elements, not the window. */
   if (typeof ResizeObserver === 'function') {
-    new ResizeObserver(fit).observe(host);
+    const ro = new ResizeObserver(fitRenderer);
+    ro.observe(host);
+    ro.observe($('mvBody'));
   } else {
-    addEventListener('resize', fit);
+    addEventListener('resize', fitRenderer);
   }
   bindOrbit();
   ready = true;
@@ -144,7 +174,7 @@ function bindOrbit() {
    positive Z -- so drawing several in raw coordinates lines them up
    with no fitting. That is what Dress-up does. */
 
-function meshOf(m, gifs) {
+function meshOf(m, gifs, entry) {
   const pos = [], nor = [], uv = [], groups = [];
   const push = (vi, u, v, su, sv) => {
     pos.push(m.verts[vi * 3], m.verts[vi * 3 + 1], m.verts[vi * 3 + 2]);
@@ -186,8 +216,19 @@ function meshOf(m, gifs) {
   }));
 
   groups.forEach((g, k) => {
-    let ti = m.materials[g.mi] ? m.materials[g.mi].tex : 0;
+    const bound = m.materials[g.mi] ? m.materials[g.mi].tex : 0;
+    let ti = bound;
     if (texPreview && texPreview.mat === g.mi) ti = texPreview.tex;
+    /* an open edit wins over what the file holds */
+    const lv = liveFor(entry, ti, bound);
+    if (lv) {
+      mats[k].userData.map = lv.ctex;
+      if ($('bTex').classList.contains('on')) {
+        mats[k].map = lv.ctex;
+        mats[k].needsUpdate = true;
+      }
+      return;
+    }
     const src = gifs[ti] || gifs[0];
     if (!src) return;
     const url = URL.createObjectURL(new Blob([src], { type: 'image/gif' }));
@@ -217,7 +258,7 @@ function build(items) {
   for (const it of items) {
     const m = it.mxw.meshes[it.meshIndex || 0];
     if (!m || !m.faces.length) continue;
-    const b = meshOf(m, it.mxw.gifs);
+    const b = meshOf(m, it.mxw.gifs, it);
     built.push(b);
     texMats = texMats.concat(b.mats);
     stage.add(b.obj);
@@ -378,17 +419,19 @@ function renderAll() {
    between the model and the texture as often as you like; nothing is
    discarded until you apply or close the edit. */
 function renderList() {
-  const own = paint.open ? paint.owner : null;
 
-  const subs = hostLabel =>
+  const subs = (hostLabel, list) => !list.length ? '' :
     '<div class="subs">' +
     '<div class="sub' + (paint.shown ? '' : ' sel') + '" data-show="host"' +
-    ' title="back to the file -- the edit stays open">' + hostLabel + '</div>' +
-    '<div class="sub' + (paint.shown ? ' sel' : '') + '" data-show="paint"' +
-    ' title="the pixel editor">' + esc(paint.label) +
-    (paintDirty() ? '<span class="dot" title="not applied yet"></span>' : '') +
-    '<button class="rm" data-rmpaint="1" title="discard this edit">&times;</button>' +
-    '</div></div>';
+    ' title="back to the file -- the edits stay open">' + hostLabel + '</div>' +
+    list.map(x =>
+      '<div class="sub' + (paint.shown && x.id === paint.id ? ' sel' : '') +
+      '" data-sid="' + x.id + '" title="the pixel editor for ' +
+      esc(x.label) + '">' + esc(x.label) +
+      (sessionDirty(x) ? '<span class="dot" title="not applied yet"></span>' : '') +
+      '<button class="rm" data-rmpaint="' + x.id +
+      '" title="discard this edit">&times;</button></div>').join('') +
+    '</div>';
 
   const rows = loaded.map((c, i) =>
     '<div class="tabGroup">' +
@@ -399,7 +442,8 @@ function renderList() {
     (c.mxw.skeletons.length ? ' &middot; skel' : '') +
     ' <button class="rm" data-rm="' + i + '" title="close this file">&times;</button>' +
     '</span></div>' +
-    (own && own.kind === 'texture' && own.entry === c ? subs('model') : '') +
+    subs('model', paint.sessions.filter(x => x.owner &&
+      x.owner.kind === 'texture' && x.owner.entry === c)) +
     '</div>');
 
   if (sprite.entry) {
@@ -408,32 +452,58 @@ function renderList() {
       '<span class="dim">' + sprite.entry.gra.frames.length + 'f' +
       ' <button class="rm" data-rmsprite="1" title="close this file">&times;</button>' +
       '</span></div>' +
-      (own && own.kind === 'frame' ? subs('frames') : '') +
+      subs('frames', paint.sessions.filter(x => x.owner &&
+        x.owner.kind === 'frame')) +
       '</div>');
   }
   $('list').innerHTML = rows.join('');
 
-  $('list').querySelectorAll('.tab').forEach(d => d.onclick = e => {
-    if (e.target.classList.contains('rm')) return;
-    if (d.dataset.sprite) { paintSuspend(); return; }
-    paintSuspend();
-    spriteClose();
-    select(+d.dataset.i);
+  $('list').querySelectorAll('.tab').forEach(d => {
+    d.onclick = e => {
+      if (e.target.classList.contains('rm')) return;
+      if (d.dataset.sprite) { paintSuspend(); return; }
+      paintSuspend();
+      spriteClose();
+      select(+d.dataset.i);
+    };
+    d.oncontextmenu = e => {
+      if (d.dataset.sprite) {
+        menuAt(e, sprite.entry.name, [
+          { label: 'Save the sprite', run: spriteSave },
+          { label: 'Edit the current frame', run: spritePaintFrame },
+          { label: 'Save the animation as .GIF', run: spriteExportGIF },
+          '-',
+          { label: 'Close this sprite', run: closeSprite },
+          { label: 'Close every file', run: clearAll }
+        ]);
+        return;
+      }
+      tabMenu(e, +d.dataset.i);
+    };
   });
 
-  $('list').querySelectorAll('.sub').forEach(d => d.onclick = e => {
-    if (e.target.classList.contains('rm')) return;
-    if (d.dataset.show === 'host') { paintSuspend(); return; }
-    /* the edit belongs to one file, so bring that file forward with it */
-    const o = paint.owner;
-    if (o && o.kind === 'texture' && o.entry !== current) {
-      current = o.entry;
-      selectedTex = o.tex;
-      texPreview = null;
-      rebuild();
-      renderAll();
-    }
-    paintResume();
+  $('list').querySelectorAll('.sub').forEach(d => {
+    d.onclick = e => {
+      if (e.target.classList.contains('rm')) return;
+      if (d.dataset.show === 'host') { paintSuspend(); return; }
+      goToEdit(+d.dataset.sid);
+    };
+    d.oncontextmenu = e => {
+      if (d.dataset.show === 'host') {
+        menuAt(e, 'the file itself', [
+          { label: 'Show it', run: paintSuspend }]);
+        return;
+      }
+      const id = +d.dataset.sid;
+      const sess = paint.sessions.find(x => x.id === id);
+      if (!sess) return;
+      menuAt(e, sess.title || sess.label, [
+        { label: 'Open this edit', run: () => goToEdit(id) },
+        { label: 'Apply it', run: () => { goToEdit(id); paintApply(); } },
+        '-',
+        { label: 'Discard it', run: () => dropEdit(id) }
+      ]);
+    };
   });
 
   $('list').querySelectorAll('.rm:not([data-rmpaint])').forEach(b =>
@@ -445,13 +515,35 @@ function renderList() {
 
   $('list').querySelectorAll('[data-rmpaint]').forEach(b => b.onclick = e => {
     e.stopPropagation();
-    if (paintDirty() &&
-        !confirm('Discard the unapplied changes to ' + paint.label + '?')) return;
-    paintClose();
-    notify('closed the edit without applying');
+    dropEdit(+b.dataset.rmpaint);
   });
 
   enableActions();
+}
+
+/* Go to one open edit, bringing its file forward with it -- the edit
+   belongs to a file, and applying it writes to that file. */
+function goToEdit(id) {
+  const sess = paint.sessions.find(x => x.id === id);
+  if (!sess) return;
+  const o = sess.owner;
+  if (o && o.kind === 'texture' && (o.entry !== current || o.tex !== selectedTex)) {
+    /* the edit's own file and its own texture, so every panel agrees
+       with what is on the canvas */
+    if (o.entry !== current) { current = o.entry; }
+    selectTexture(o.tex);
+    renderAll();
+  }
+  paintSelect(id);
+}
+
+function dropEdit(id) {
+  const sess = paint.sessions.find(x => x.id === id);
+  if (!sess) return;
+  if (sessionDirty(sess) &&
+      !confirm('Discard the unapplied changes to ' + sess.label + '?')) return;
+  paintCloseSession(id);
+  notify('closed the edit without applying');
 }
 
 /* The action bar is always on screen, so anything that cannot apply
@@ -495,10 +587,13 @@ function resetPanels() {
 
 function removeFile(i) {
   if (i < 0 || i >= loaded.length) return;
-  if (paint.open && paint.owner && paint.owner.entry === loaded[i]) {
-    if (paintDirty() && !confirm('Closing ' + loaded[i].name +
-        ' discards the unapplied changes to ' + paint.label + '. Close it?')) return;
-    paintClose();
+  const mine = paint.sessions.filter(x => x.owner && x.owner.entry === loaded[i]);
+  if (mine.length) {
+    const dirty = mine.filter(sessionDirty);
+    if (dirty.length && !confirm('Closing ' + loaded[i].name +
+        ' discards the unapplied changes to ' +
+        dirty.map(x => x.label).join(', ') + '. Close it?')) return;
+    for (const x of mine) paintCloseSession(x.id);
   }
   const wasCurrent = loaded[i] === current;
   loaded.splice(i, 1);
@@ -516,10 +611,13 @@ function removeFile(i) {
 }
 
 function closeSprite() {
-  if (paint.open && paint.owner && paint.owner.kind === 'frame') {
-    if (paintDirty() && !confirm('Closing this sprite discards the ' +
-        'unapplied changes to ' + paint.label + '. Close it?')) return;
-    paintClose();
+  const frames = paint.sessions.filter(x => x.owner && x.owner.kind === 'frame');
+  if (frames.length) {
+    const dirty = frames.filter(sessionDirty);
+    if (dirty.length && !confirm('Closing this sprite discards the ' +
+        'unapplied changes to ' + dirty.map(x => x.label).join(', ') +
+        '. Close it?')) return;
+    for (const x of frames) paintCloseSession(x.id);
   }
   spriteClose();
   if (loaded.length) {
@@ -534,8 +632,10 @@ function closeSprite() {
 }
 
 function clearAll() {
-  if (paintDirty() && !confirm('There are unapplied changes to ' +
-      paint.label + '. Close everything anyway?')) return;
+  const dirty = paint.sessions.filter(sessionDirty);
+  if (dirty.length && !confirm('There are unapplied changes to ' +
+      dirty.map(x => x.label).join(', ') +
+      '. Close everything anyway?')) return;
   paintClose();
   loaded.length = 0;
   current = null;
@@ -637,8 +737,10 @@ function renderTextures() {
       <br><span class="dim">${w}&times;${h} &middot; ${
         (g.length / 1024).toFixed(1)}K</span></figcaption></figure>`;
   }).join('');
-  $('texGrid').querySelectorAll('figure').forEach(f =>
-    f.onclick = () => { selectTexture(+f.dataset.t); });
+  $('texGrid').querySelectorAll('figure').forEach(f => {
+    f.onclick = () => { selectTexture(+f.dataset.t); };
+    f.oncontextmenu = e => textureMenu(e, +f.dataset.t);
+  });
   renderTexPreview();
 }
 
@@ -844,6 +946,245 @@ async function replaceTexture(file) {
 
 /* Paint the selected texture, with the UV layout of the faces that
    use it drawn on top so a garment lands in the right place. */
+/* ---------------------------- context menu ----------------------- */
+/* One menu, filled by whatever was right-clicked. Items are
+   {label, run, disabled} or the string '-' for a rule; a leading
+   {head} labels what the menu is acting on, which matters when the
+   thing under the cursor is one thumbnail among twenty. */
+function menuAt(ev, head, items) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  const el = $('menu');
+  if (!el) return;
+  const live = items.filter(Boolean);
+  el.innerHTML = (head ? '<div class="mHead">' + esc(head) + '</div>' : '') +
+    live.map((it, i) => it === '-' ? '<hr>' :
+      '<button data-k="' + i + '"' + (it.disabled ? ' disabled' : '') +
+      (it.title ? ' title="' + esc(it.title) + '"' : '') + '>' +
+      esc(it.label) + '</button>').join('');
+  el.querySelectorAll('button').forEach(b => b.onclick = () => {
+    const it = live[+b.dataset.k];
+    menuClose();
+    if (it && it.run) it.run();
+  });
+  /* placed so it always fits, which means flipping it near an edge */
+  el.classList.add('on');
+  const r = el.getBoundingClientRect();
+  el.style.left = Math.max(4, Math.min(innerWidth - r.width - 4, ev.clientX)) + 'px';
+  el.style.top = Math.max(4, Math.min(innerHeight - r.height - 4, ev.clientY)) + 'px';
+}
+
+function menuClose() {
+  const el = $('menu');
+  if (el) el.classList.remove('on');
+}
+
+function menuWire() {
+  addEventListener('mousedown', e => {
+    if (!$('menu').contains(e.target)) menuClose();
+  }, true);
+  addEventListener('keydown', e => { if (e.key === 'Escape') menuClose(); });
+  addEventListener('blur', menuClose);
+  addEventListener('wheel', menuClose, { passive: true });
+}
+
+/* What right-clicking a texture thumbnail offers. */
+function textureMenu(ev, i) {
+  const c = current;
+  const m = c && c.mxw.meshes[c.meshIndex || 0];
+  if (!c) return;
+  const sess = paintFind(x => x.owner && x.owner.kind === 'texture' &&
+    x.owner.entry === c && x.owner.tex === i);
+  const bound = m && m.materials.some(x => x.tex === i);
+  const role = textureRole(m, i);
+  menuAt(ev, 'tex' + i + (role ? '  ' + role : ''), [
+    sess
+      ? { label: 'Go back to this edit', run: () => goToEdit(sess.id) }
+      : { label: 'Edit this texture', run: () => { selectTexture(i); paintTexture(); } },
+    sess && { label: 'Discard this edit', run: () => dropEdit(sess.id) },
+    '-',
+    { label: bound ? 'Already on the model' : 'Show it on the model',
+      disabled: !!bound || selectedTex === i,
+      run: () => selectTexture(i) },
+    { label: 'Replace from an image\u2026',
+      run: () => { selectTexture(i); $('texFile').click(); } },
+    '-',
+    { label: 'Save as .GIF', run: () => { selectTexture(i); exportTexture(); } },
+    { label: 'Save its UV layout as .PNG',
+      disabled: !m, run: () => { selectTexture(i); exportUV(); } }
+  ]);
+}
+
+/* What right-clicking a file tab offers. */
+function tabMenu(ev, i) {
+  const c = loaded[i];
+  if (!c) return;
+  const mine = paint.sessions.filter(x => x.owner && x.owner.entry === c);
+  menuAt(ev, c.name, [
+    { label: 'Save .bin', run: () => { select(i); saveBin(); } },
+    { label: 'Export .OBJ', disabled: !c.mxw.meshes.length,
+      run: () => { select(i); exportOBJ(); } },
+    { label: 'Import .OBJ\u2026', run: () => { select(i); $('objFile').click(); } },
+    '-',
+    { label: 'Edit the selected texture', disabled: !c.mxw.gifs.length,
+      run: () => { select(i); paintTexture(); } },
+    mine.length && { label: 'Discard every open edit of this file',
+      run: () => { for (const x of mine.slice()) dropEdit(x.id); } },
+    '-',
+    { label: 'Close this file', run: () => removeFile(i) },
+    { label: 'Close every file', run: clearAll }
+  ]);
+}
+
+/* What right-clicking inside the 3D view offers. */
+function viewMenu(ev) {
+  if (!current) return;
+  const on = id => $(id).classList.contains('on');
+  menuAt(ev, current.name, [
+    { label: 'Face', run: () => setView('face') },
+    { label: 'Front', run: () => setView('front') },
+    { label: 'Back', run: () => setView('back') },
+    { label: 'Whole model', run: () => setView('whole') },
+    '-',
+    { label: (on('bWire') ? 'Hide' : 'Show') + ' the wireframe',
+      run: () => $('bWire').click() },
+    { label: (on('bBone') ? 'Hide' : 'Show') + ' the skeleton',
+      disabled: !current.mxw.skeletons.length,
+      run: () => $('bBone').click() },
+    { label: (on('bAxes') ? 'Hide' : 'Show') + ' the axes',
+      run: () => $('bAxes').click() },
+    { label: (on('bSpin') ? 'Stop spinning' : 'Spin'),
+      run: () => $('bSpin').click() },
+    { label: (on('bAll') ? 'Turn off Dress-up' : 'Dress-up: draw every file'),
+      disabled: loaded.length < 2, run: () => $('bAll').click() },
+    '-',
+    { label: 'Edit the selected texture', disabled: !current.mxw.gifs.length,
+      run: paintTexture },
+    { label: 'Save UV .PNG', disabled: !current.mxw.gifs.length, run: exportUV }
+  ]);
+}
+
+/* What right-clicking the pixel canvas offers. */
+function canvasMenu(ev) {
+  if (!paint.open || !paint.shown) return;
+  const sel = paintHasSel();
+  menuAt(ev, paint.title, [
+    { label: 'Undo', disabled: !paint.undo.length, run: paintUndo },
+    { label: 'Redo', disabled: !paint.redo.length, run: paintRedo },
+    '-',
+    { label: 'Erase the selection', disabled: !sel, run: paintEraseSel },
+    { label: 'Clear the selection', disabled: !sel, run: paintClearSelection },
+    '-',
+    { label: 'Flip horizontally', run: () => paintFlip('h') },
+    { label: 'Flip vertically', run: () => paintFlip('v') },
+    { label: 'Centre horizontally', run: () => paintCentre('h') },
+    { label: 'Centre vertically', run: () => paintCentre('v') },
+    '-',
+    { label: 'Add a layer', run: paintAddLayer },
+    { label: 'Merge down', disabled: paint.active === 0, run: paintMergeDown },
+    '-',
+    { label: 'Apply and close', run: paintApply },
+    { label: 'Back to the model, keeping this edit', run: paintSuspend },
+    { label: 'Discard this edit', run: () => dropEdit(paint.id) }
+  ]);
+}
+
+/* --------------------- the editor's hooks back ------------------- */
+/* A texture edit opens: give it a canvas the model can draw from. */
+function onPaintSessionStart(sess) {
+  if (!sess.owner || sess.owner.kind !== 'texture') return;
+  const cv = document.createElement('canvas');
+  cv.width = sess.w; cv.height = sess.h;
+  const ctex = new THREE.CanvasTexture(cv);
+  ctex.magFilter = THREE.NearestFilter;
+  ctex.minFilter = THREE.LinearMipmapLinearFilter;
+  ctex.flipY = true;
+  const owner = sess.owner.entry;
+  const om = owner.mxw.meshes[owner.meshIndex || 0];
+  live.push({ id: sess.id, entry: owner, tex: sess.owner.tex,
+              slot: textureSlot(om, sess.owner.tex), cv, ctex });
+  paintCompositeInto(cv, sess);
+  ctex.needsUpdate = true;
+  rebuild();
+}
+
+/* It ends: the model goes back to what the file holds. */
+function onPaintSessionEnd(sess) {
+  const i = live.findIndex(x => x.id === sess.id);
+  if (i < 0) return;
+  live[i].ctex.dispose();
+  live.splice(i, 1);
+  rebuild();
+}
+
+/* The pixels changed. Only the canvas and one texture upload -- no
+   encode, no rebuild, so it keeps up with the brush. */
+function onPaintPixels() {
+  const lv = live.find(x => x.id === paint.id);
+  if (!lv) return;
+  paintCompositeInto(lv.cv);
+  lv.ctex.needsUpdate = true;
+}
+
+/* The canvas came or went: the model panel follows it. */
+function onPaintShown(on) {
+  mvSet(on && mvWanted);
+  requestAnimationFrame(fitRenderer);
+}
+
+/* ------------------------- the model panel ----------------------- */
+/* The renderer's own canvas moves in and out of this panel, so there
+   is one GL context and one copy of each texture, and the orbit
+   handlers -- already bound to that canvas -- keep working inside it. */
+let mvWanted = true;
+
+function mvSet(on) {
+  const pop = $('mv');
+  if (!pop || !rend) return;
+  const inPanel = rend.domElement.parentElement === $('mvBody');
+  if (on && !inPanel) $('mvBody').appendChild(rend.domElement);
+  if (!on && inPanel) $('view').appendChild(rend.domElement);
+  pop.hidden = !on;
+  if ($('bMV')) $('bMV').classList.toggle('on', mvWanted);
+  if (on) $('mvTitle').textContent = current ? current.name : 'Model';
+  requestAnimationFrame(fitRenderer);
+}
+
+function mvWire() {
+  const pop = $('mv'), bar = $('mvBar');
+  if (!pop || !bar) return;
+
+  /* dragged by its bar, anywhere in the window, and kept on screen */
+  let from = null;
+  bar.addEventListener('mousedown', e => {
+    if (e.target.tagName === 'BUTTON') return;
+    const r = pop.getBoundingClientRect();
+    from = { dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, h: r.height };
+    pop.style.right = 'auto';
+    pop.style.bottom = 'auto';
+    e.preventDefault();
+  });
+  addEventListener('mousemove', e => {
+    if (!from) return;
+    const x = Math.max(0, Math.min(innerWidth - from.w, e.clientX - from.dx));
+    const y = Math.max(0, Math.min(innerHeight - from.h, e.clientY - from.dy));
+    pop.style.left = x + 'px';
+    pop.style.top = y + 'px';
+  });
+  addEventListener('mouseup', () => { from = null; });
+
+  /* zoom is the camera's distance, the same thing the wheel moves */
+  const zoomBy = f => { radius = Math.max(0.15, Math.min(40, radius * f)); };
+  $('bMVIn').onclick = () => zoomBy(1 / 1.3);
+  $('bMVOut').onclick = () => zoomBy(1.3);
+  $('bMVFit').onclick = () => setView('whole');
+  $('bMVClose').onclick = () => { mvWanted = false; mvSet(false); };
+  $('bMV').onclick = () => {
+    mvWanted = !mvWanted;
+    mvSet(mvWanted && paint.open && paint.shown);
+  };
+}
+
 function paintTexture() {
   const c = current;
   const m = c && c.mxw.meshes[c.meshIndex || 0];
@@ -851,17 +1192,25 @@ function paintTexture() {
     notify('this file has no texture to paint', 1);
     return;
   }
-  /* an edit already open on this same texture is the one to go back to,
-     not a second one that would throw the first away */
-  if (paint.open) {
-    const o = paint.owner;
-    if (o && o.kind === 'texture' && o.entry === c && o.tex === selectedTex) {
-      paintResume();
-      return;
-    }
-    if (paintDirty() && !confirm('An unapplied edit of ' + paint.label +
-        ' is open. Discard it and edit tex' + selectedTex + '?')) return;
-    paintClose();
+  /* Several edits can be open at once, but only one per slot: a face
+     and a body together make sense, two faces do not -- the model can
+     only wear one of them, and both would fight over the same
+     material. So the same texture reopens its own edit, and a
+     different texture in the same slot replaces it. */
+  const slot = 'tex:' + textureSlot(m, selectedTex);
+  const same = paintFind(x => x.owner && x.owner.kind === 'texture' &&
+    x.owner.entry === c && x.owner.tex === selectedTex);
+  if (same) { paintSelect(same.id); return; }
+  const rival = paintFind(x => x.owner && x.owner.kind === 'texture' &&
+    x.owner.entry === c && x.slot === slot);
+  if (rival) {
+    const name = m && m.textures[textureSlot(m, selectedTex)];
+    if (sessionDirty(rival) && !confirm('An unapplied edit of ' +
+        rival.label + ' is open, and only one ' +
+        (name ? name : 'texture of that slot') +
+        ' can be edited at a time. Discard it and edit tex' +
+        selectedTex + '?')) return;
+    paintCloseSession(rival.id);
   }
   const g = c.mxw.gifs[selectedTex];
   const size = gifSize(g);
@@ -870,23 +1219,32 @@ function paintTexture() {
   if (m) {
     for (const f of m.faces) {
       const mt = m.materials[f.mat] ? m.materials[f.mat].tex : 0;
-      if (m.materials.length > 1 && mt !== selectedTex) continue;
+      if (m.materials.length > 1 && mt !== textureSlot(m, selectedTex)) continue;
       polys.push(f.vs.map(v => ({ x: v.u, y: v.v })));
     }
   }
+  /* Which texture this edit is of, fixed now.
+
+     It used to read selectedTex when the edit was applied, which is a
+     different thing: with two edits open, or after clicking another
+     thumbnail, Apply wrote the face over whatever happened to be
+     selected. */
+  const tex = selectedTex;
+
   decodeImage(new Blob([g], { type: 'image/gif' })).then(img => {
     paintOpen({
       width: w, height: h, base: img.rgba, uv: polys,
-      title: c.name + '  tex' + selectedTex,
-      owner: { kind: 'texture', entry: c, tex: selectedTex },
-      label: 'tex' + selectedTex,
+      title: c.name + '  tex' + tex,
+      owner: { kind: 'texture', entry: c, tex: tex },
+      label: 'tex' + tex,
+      slot: slot,
       onApply: rgba => {
         try {
           const out = encodeGIF(rgba, w, h, { maxColors: 256 });
-          c.mxw.replaceGif(selectedTex, out);
+          c.mxw.replaceGif(tex, out);
           rebuild();
           renderAll();
-          notify('tex' + selectedTex + ' updated, re-encoded to ' +
+          notify('tex' + tex + ' updated, re-encoded to ' +
                  (out.length / 1024).toFixed(1) + 'K');
         } catch (e) {
           notify('encoding failed: ' + e.message, 1);
@@ -1198,9 +1556,18 @@ for (const [name, fn] of [['sprites', () => spriteWire()],
    inspectors and every export must still work, and the page has to say
    what broke rather than dying silently */
 enableActions();
+menuWire();
 
 try {
   initThree();
+  mvWire();
+  /* right-clicking the viewport is about the model, so it waits until
+     there is a renderer to talk about */
+  $('view').addEventListener('contextmenu', e => {
+    if (paint.open && paint.shown) return;   /* the canvas has its own */
+    if (document.body.classList.contains('sprite-mode')) return;
+    viewMenu(e);
+  });
 } catch (e) {
   notify('3D view unavailable: ' + e.message + ' -- sprites, inspecting, editing and exporting still work', 1);
 }

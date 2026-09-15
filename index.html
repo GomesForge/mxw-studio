@@ -373,6 +373,48 @@
     justify-content:center;background:rgba(11,17,29,.82);color:var(--cyan);
     font-size:16px;z-index:50;border:3px dashed var(--cyan);
     pointer-events:none;text-align:center;padding:24px}
+
+  /* ---- the model, while you paint ----
+     The 3D renderer's own canvas moves in here rather than a second
+     renderer being built: one context, one upload of each texture, and
+     the orbit handlers are already bound to that canvas, so dragging
+     and the wheel work inside the panel for free. It is fixed to the
+     window, not to the viewport, so it can be dragged anywhere. */
+  #mv{position:fixed;right:322px;bottom:44px;width:300px;height:330px;
+    min-width:180px;min-height:180px;z-index:40;display:flex;
+    flex-direction:column;background:var(--panel);border-radius:8px;
+    border:1px solid var(--edgeStrong);overflow:hidden;resize:both;
+    box-shadow:0 12px 34px rgba(0,0,0,.45)}
+  #mv[hidden]{display:none!important}
+  #mvBar{display:flex;align-items:center;gap:4px;padding:0 4px 0 9px;
+    height:26px;background:var(--panel);cursor:move;user-select:none;
+    border-bottom:1px solid var(--edge);flex:0 0 auto}
+  #mvBar b{font-size:10.5px;font-weight:550;color:var(--dim);
+    font-family:var(--mono);margin-right:auto;white-space:nowrap}
+  #mvBar button{height:19px;min-width:22px;padding:0 5px;font-size:11px;
+    border-radius:3px}
+  #mvBody{flex:1;min-height:0;position:relative;background:var(--view)}
+  #mvBody>canvas{display:block}
+  #mvHint{position:absolute;left:6px;bottom:4px;color:#54658a;font-size:9.5px;
+    font-family:var(--mono);pointer-events:none}
+
+  /* ------------------------------ context menu ----------------------- */
+  #menu{position:fixed;z-index:60;min-width:196px;padding:4px;
+    background:var(--panel);border:1px solid var(--edgeStrong);
+    border-radius:7px;box-shadow:0 10px 30px rgba(0,0,0,.4);
+    font-size:12px;display:none}
+  #menu.on{display:block}
+  #menu .mHead{padding:4px 9px 5px;color:var(--dim);font-size:10px;
+    font-family:var(--mono);border-bottom:1px solid var(--edge);
+    margin-bottom:3px;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  #menu button{display:flex;width:100%;height:auto;min-height:24px;
+    padding:3px 9px;background:none;border:0;border-radius:4px;
+    text-align:left;justify-content:flex-start;color:var(--ink);
+    font-size:12px;cursor:pointer}
+  #menu button:hover{background:var(--btnHover)}
+  #menu button:disabled{opacity:.4;cursor:default;background:none}
+  #menu hr{border:0;border-top:1px solid var(--edge);margin:3px 0}
 </style>
 
 <!-- Icons, drawn on one 24-unit grid with one stroke weight so they sit
@@ -494,6 +536,7 @@
   <span class="actGroup" id="actPaint">
     <button id="bPaintApply" class="primary">Apply</button>
     <button id="bPaintCancel">Cancel</button>
+    <button id="bMV" class="on">Model panel</button>
   </span>
 
   <input type="file" id="texFile" accept="image/*">
@@ -759,12 +802,25 @@
 </div>
 <div id="over">Drop meshes, sprites, an .obj, or an image to replace the selection</div>
 
+<div id="mv" hidden>
+  <div id="mvBar">
+    <b id="mvTitle">Model</b>
+    <button id="bMVOut" title="zoom out">&minus;</button>
+    <button id="bMVIn" title="zoom in">+</button>
+    <button id="bMVFit" title="frame the whole model">fit</button>
+    <button id="bMVClose" title="hide this panel">&times;</button>
+  </div>
+  <div id="mvBody"><div id="mvHint">drag = orbit &middot; wheel = zoom</div></div>
+</div>
+
+<div id="menu"></div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="mxw.js?v=3"></script>
-<script src="gra.js?v=3"></script>
-<script src="obj.js?v=3"></script>
-<script src="checks.js?v=3"></script>
-<script src="gifenc.js?v=3"></script>
-<script src="paint.js?v=3"></script>
-<script src="sprite.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="mxw.js?v=4"></script>
+<script src="gra.js?v=4"></script>
+<script src="obj.js?v=4"></script>
+<script src="checks.js?v=4"></script>
+<script src="gifenc.js?v=4"></script>
+<script src="paint.js?v=4"></script>
+<script src="sprite.js?v=4"></script>
+<script src="app.js?v=4"></script>

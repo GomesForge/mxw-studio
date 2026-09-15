@@ -21,6 +21,9 @@ const paint = {
   shown: false,
   owner: null,       /* {kind:'texture'|'frame', entry, tex|frame} */
   label: '',         /* what the tab says: 'tex3', 'frame 2' */
+  slot: null,        /* what it occupies: only one edit per slot at a time */
+  id: null,          /* the active session */
+  sessions: [],      /* every edit open right now, oldest first */
   w: 0, h: 0,
   layers: [],        /* [{name, visible, opacity, cv, ctx}] */
   active: 0,
@@ -53,6 +56,43 @@ const paint = {
 
 const PAINT_UNDO_CAP = 40;
 
+/* Several edits can be open at once -- a face and a body, say -- and
+   only one of them is on the canvas at a time. Rather than reach
+   through a session object from every one of the drawing functions,
+   the active session's fields live directly on `paint` and are swapped
+   in and out: stash copies them back into the session you are leaving,
+   adopt copies the next one in. The arrays are reassigned in places
+   (undo trimming, layer deletion), which is exactly why a copy back is
+   needed and a shared reference would not do.
+
+   Tool settings -- the brush, its size, the colour, the overlays --
+   stay on `paint` and are deliberately shared: they belong to you, not
+   to the file you happen to be painting. */
+const PAINT_SESSION_KEYS = ['id', 'w', 'h', 'layers', 'active', 'uv',
+  'onApply', 'title', 'owner', 'label', 'slot', 'undo', 'redo', 'sel',
+  'selDrag', 'moveFrom', 'moveData', 'zoom', '_dot'];
+
+let paintNextId = 1;
+
+function paintSession(id) {
+  return paint.sessions.find(x => x.id === id) || null;
+}
+
+function paintStash() {
+  const s = paintSession(paint.id);
+  if (!s) return;
+  for (const k of PAINT_SESSION_KEYS) s[k] = paint[k];
+}
+
+function paintAdopt(s) {
+  for (const k of PAINT_SESSION_KEYS) paint[k] = s[k];
+}
+
+/* Find an open edit, by whatever the caller cares about. */
+function paintFind(pred) {
+  return paint.sessions.find(pred) || null;
+}
+
 function paintLayer(name, w, h) {
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
@@ -62,38 +102,64 @@ function paintLayer(name, w, h) {
 }
 
 function paintOpen(opts) {
-  paint.w = opts.width;
-  paint.h = opts.height;
-  paint.uv = opts.uv || null;
-  paint.onApply = opts.onApply;
-  paint.title = opts.title || '';
-  paint.owner = opts.owner || null;
-  paint.label = opts.label || 'edit';
-  paint.layers = [];
-  paint.active = 0;
-  paint.undo = [];
-  paint.redo = [];
-  paint._dot = false;
-  paint.sel = null;
+  if (paint.open) paintStash();
 
-  const base = paintLayer('base', paint.w, paint.h);
+  const s = {
+    id: paintNextId++,
+    w: opts.width, h: opts.height,
+    uv: opts.uv || null,
+    onApply: opts.onApply,
+    title: opts.title || '',
+    owner: opts.owner || null,
+    label: opts.label || 'edit',
+    slot: opts.slot === undefined ? null : opts.slot,
+    layers: [], active: 0, undo: [], redo: [], sel: null,
+    selDrag: null, moveFrom: null, moveData: null, zoom: 6, _dot: false
+  };
+  const base = paintLayer('base', s.w, s.h);
   if (opts.base) {
     base.ctx.putImageData(new ImageData(
       opts.base instanceof Uint8ClampedArray ? opts.base
-        : new Uint8ClampedArray(opts.base), paint.w, paint.h), 0, 0);
+        : new Uint8ClampedArray(opts.base), s.w, s.h), 0, 0);
   }
-  paint.layers.push(base);
+  s.layers.push(base);
+  paint.sessions.push(s);
+  paintAdopt(s);
 
   paint.open = true;
   paint.shown = true;
-  document.body.classList.add('paint-mode');
-  $('paintTitle').textContent = paint.title +
-    '   ' + paint.w + 'x' + paint.h;
+  paintVisibility();
+  if (typeof onPaintSessionStart === 'function') onPaintSessionStart(s);
+  paintShow();
+}
+
+/* One place decides whether the canvas is the thing on screen, so the
+   model panel and the shell stay in step with it. */
+function paintVisibility() {
+  const on = paint.open && paint.shown;
+  document.body.classList.toggle('paint-mode', on);
+  if (typeof onPaintShown === 'function') onPaintShown(on);
+}
+
+/* Put the adopted session on screen. */
+function paintShow() {
+  $('paintTitle').textContent = paint.title + '   ' + paint.w + 'x' + paint.h;
   paintFit();
   paintRenderLayers();
   paintRenderTools();
   paintDraw();
   if (typeof renderList === 'function') renderList();
+}
+
+/* Move to another open edit. */
+function paintSelect(id) {
+  const s = paintSession(id);
+  if (!s) return;
+  if (s.id !== paint.id) { paintStash(); paintAdopt(s); }
+  paint.open = true;
+  paint.shown = true;
+  paintVisibility();
+  paintShow();
 }
 
 /* Step off the canvas without ending the session: the layers, the
@@ -102,36 +168,82 @@ function paintOpen(opts) {
 function paintSuspend() {
   if (!paint.open) return;
   paint.shown = false;
-  document.body.classList.remove('paint-mode');
+  paintVisibility();
   if (typeof renderList === 'function') renderList();
 }
 
 function paintResume() {
   if (!paint.open) return;
   paint.shown = true;
-  document.body.classList.add('paint-mode');
-  paintFit();
-  paintRenderLayers();
-  paintRenderTools();
-  paintDraw();
-  if (typeof renderList === 'function') renderList();
+  paintVisibility();
+  paintShow();
 }
 
-/* Is there work in this session that has not been applied? */
+/* Is there work that has not been applied? paintDirty asks about the
+   edit on screen; sessionDirty about any one of them -- the active
+   session's arrays are the live ones, so read those. */
 function paintDirty() {
   return paint.open && paint.undo.length > 0;
 }
 
+function sessionDirty(s) {
+  return ((s.id === paint.id ? paint.undo : s.undo) || []).length > 0;
+}
+
+function paintAnyDirty() {
+  return paint.sessions.some(sessionDirty);
+}
+
+/* End one edit. If others are open, one of them is adopted but left
+   off screen -- closing an edit should show you the model again, not
+   drop you straight into another canvas. */
+function paintCloseSession(id) {
+  const i = paint.sessions.findIndex(x => x.id === id);
+  if (i < 0) return;
+  const s = paint.sessions[i];
+  if (s.id === paint.id) paintStash();
+  paint.sessions.splice(i, 1);
+  if (typeof onPaintSessionEnd === 'function') onPaintSessionEnd(s);
+
+  if (s.id === paint.id) {
+    if (paint.sessions.length) {
+      paintAdopt(paint.sessions[paint.sessions.length - 1]);
+      paint.open = true;
+    } else {
+      paint.open = false;
+      paint.id = null;
+      paint.owner = null;
+      paint.label = '';
+      paint.slot = null;
+      paint.layers = [];
+      paint.undo = [];
+      paint.redo = [];
+      paint._dot = false;
+    }
+    paint.shown = false;
+    paintVisibility();
+  }
+  if (typeof renderList === 'function') renderList();
+}
+
+/* End every edit -- what closing the file or clearing everything does. */
 function paintClose() {
+  const all = paint.sessions.slice();
+  paint.sessions.length = 0;
+  if (typeof onPaintSessionEnd === 'function') {
+    for (const s of all) onPaintSessionEnd(s);
+  }
   paint.open = false;
   paint.shown = false;
+  paint.id = null;
   paint.owner = null;
   paint.label = '';
+  paint.slot = null;
   paint.layers = [];
   paint.undo = [];
   paint.redo = [];
   paint._dot = false;
-  document.body.classList.remove('paint-mode');
+  paintVisibility();
   if (typeof renderList === 'function') renderList();
 }
 
@@ -161,9 +273,18 @@ function paintFit(again) {
 function paintComposite() {
   const cv = document.createElement('canvas');
   cv.width = paint.w; cv.height = paint.h;
+  paintCompositeInto(cv);
+  return cv;
+}
+
+/* The live preview owns its canvas and keeps it, so it needs the
+   composite drawn into that one rather than a fresh one each stroke. */
+function paintCompositeInto(cv, session) {
+  const src = session || paint;
   const ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
-  for (const L of paint.layers) {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  for (const L of src.layers) {
     if (!L.visible) continue;
     ctx.globalAlpha = L.opacity;
     ctx.drawImage(L.cv, 0, 0);
@@ -221,6 +342,9 @@ function paintDraw() {
     for (let y = 0; y <= paint.h; y++) { ctx.moveTo(0, y * z); ctx.lineTo(cv.width, y * z); }
     ctx.stroke();
   }
+  /* the model is showing this edit live, so it has to see the pixels
+     too -- every path that changes them ends up here */
+  if (typeof onPaintPixels === 'function') onPaintPixels();
 }
 
 /* ------------------------------ history -------------------------- */
@@ -616,6 +740,21 @@ function paintRenderLayers() {
       L.opacity = (+e.target.value) / 100;
       paintDraw();
     };
+    row.oncontextmenu = ev => {
+      if (typeof menuAt !== 'function') return;
+      paint.active = i;
+      paintRenderLayers();
+      menuAt(ev, L.name, [
+        { label: L.visible ? 'Hide this layer' : 'Show this layer',
+          run: () => { L.visible = !L.visible; paintRenderLayers(); paintDraw(); } },
+        { label: 'Merge it down', disabled: i === 0, run: paintMergeDown },
+        { label: 'Delete it', disabled: paint.layers.length < 2,
+          run: paintDeleteLayer },
+        '-',
+        { label: 'Add a layer above', run: paintAddLayer },
+        { label: 'Erase the selection on it', run: paintEraseSel }
+      ]);
+    };
     host.appendChild(row);
   }
   $('layerCount').textContent = paint.layers.length +
@@ -734,15 +873,24 @@ function paintApply() {
   if (!paint.onApply) return;
   const cv = paintComposite();
   const rgba = cv.getContext('2d').getImageData(0, 0, paint.w, paint.h).data;
-  paint.onApply(rgba);
-  paintClose();
+  const fn = paint.onApply;
+  const id = paint.id;
+  /* the session ends first, so the model is rebuilt from the file's own
+     texture rather than from the live canvas that is about to go */
+  paintCloseSession(id);
+  fn(rgba);
 }
 
 function paintWire() {
   $('paintCanvas').addEventListener('mousedown', paintDown);
   addEventListener('mousemove', paintMove);
   addEventListener('mouseup', paintUp);
-  $('paintCanvas').addEventListener('contextmenu', e => e.preventDefault());
+  /* right-clicking the canvas offers what the tools and the bar do,
+     where the cursor already is */
+  $('paintCanvas').addEventListener('contextmenu', e => {
+    if (typeof canvasMenu === 'function') canvasMenu(e);
+    else e.preventDefault();
+  });
 
   document.querySelectorAll('#paintTools button[data-tool]').forEach(b =>
     b.onclick = () => { paint.tool = b.dataset.tool; paintRenderTools(); });
@@ -781,8 +929,10 @@ function paintWire() {
   $('bClearSel').onclick = paintEraseSel;
   $('bPaintApply').onclick = paintApply;
   $('bPaintCancel').onclick = () => {
-    paintClose();
-    notify('closed without applying');
+    if (paintDirty() && !confirm('Discard the unapplied changes to ' +
+        paint.label + '?')) return;
+    paintCloseSession(paint.id);
+    notify('closed the edit without applying');
   };
 
   addEventListener('keydown', e => {
@@ -795,7 +945,9 @@ function paintWire() {
       e.preventDefault(); paintRedo();
     } else if (e.key === 'Escape') {
       if (paint.sel) { paintClearSelection(); return; }
-      paintClose();
+      /* Escape steps back to the model. It used to throw the edit
+         away, which is a lot to lose to one keystroke. */
+      paintSuspend();
     } else if (!mod) {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault(); paintEraseSel(); return;

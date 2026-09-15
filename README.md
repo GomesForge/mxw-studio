@@ -49,6 +49,22 @@ right; and one status line along the bottom.
   the file does not go away while you edit it &mdash; move between the
   two as often as you like, and nothing is discarded until you apply or
   close the edit. A dot on the tab means the edit is still unapplied
+- **Every stroke lands on the character as you make it.** While an edit
+  is open the model draws the editor's canvas instead of the stored
+  GIF, so there is no encode, no apply and no rebuild between the brush
+  and the 3D view
+- **A model panel** floats over the canvas while you paint: drag it
+  anywhere by its bar, drag inside it to orbit, wheel or the +/&minus;
+  buttons to zoom, `fit` to frame the whole thing, and its corner to
+  resize. It holds the renderer's own canvas rather than a second
+  renderer, so there is one GL context and one copy of each texture
+- **Several edits at once, one per slot.** A face and a body together
+  make sense, two faces do not &mdash; the model can only wear one of
+  them &mdash; so the same texture reopens its own edit and a different
+  texture in the same slot replaces it. Both open edits show on the
+  model at the same time
+- **Right-click** a texture, a tab, an open edit, a layer, a frame, the
+  3D view or the pixel canvas for what applies to that thing
 - Edit the mesh id, the texture names, and which texture each material
   draws from
 - **Import and export Wavefront `.obj`**, so geometry can go through any

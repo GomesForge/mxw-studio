@@ -212,6 +212,33 @@ function spriteRenderStrip() {
       spriteDraw();
       spriteMarkStrip();
     };
+    fig.oncontextmenu = ev => {
+      if (typeof menuAt !== 'function') return;
+      spritePause();
+      sprite.frame = i;
+      spriteDraw();
+      spriteMarkStrip();
+      const open = typeof paintFind === 'function' && paintFind(x =>
+        x.owner && x.owner.kind === 'frame' && x.owner.frame === i);
+      menuAt(ev, 'frame ' + (i + 1) + ' of ' + g.frames.length, [
+        open
+          ? { label: 'Go back to this edit', run: () => goToEdit(open.id) }
+          : { label: 'Edit this frame', run: spritePaintFrame },
+        open && { label: 'Discard this edit', run: () => dropEdit(open.id) },
+        '-',
+        { label: 'Duplicate it', run: spriteFrameDup },
+        { label: 'Delete it', disabled: g.frames.length < 2,
+          run: spriteFrameDel },
+        { label: 'Add an empty frame after the last', run: spriteFrameAdd },
+        '-',
+        { label: 'Save it as .PNG', run: spriteExportFrame },
+        { label: 'Replace it from an image\u2026',
+          run: () => $('spriteFile').click() },
+        '-',
+        { label: 'Save the animation as .GIF', run: spriteExportGIF },
+        { label: 'Save every frame as one .PNG strip', run: spriteExportStrip }
+      ]);
+    };
     host.appendChild(fig);
   });
 }
@@ -466,16 +493,18 @@ function spritePaintFrame() {
   const e = sprite.entry;
   if (!e) return;
   spritePause();
-  /* the frame already being edited is the one to go back to */
-  if (paint.open) {
-    const o = paint.owner;
-    if (o && o.kind === 'frame' && o.entry === e && o.frame === sprite.frame) {
-      paintResume();
-      return;
-    }
-    if (paintDirty() && !confirm('An unapplied edit of ' + paint.label +
-        ' is open. Discard it and edit frame ' + (sprite.frame + 1) + '?')) return;
-    paintClose();
+  /* The frame already being edited is the one to go back to. Frames all
+     occupy the same slot -- one sheet, one frame on screen -- so a
+     different frame replaces the edit rather than joining it. */
+  const same = paintFind(x => x.owner && x.owner.kind === 'frame' &&
+    x.owner.entry === e && x.owner.frame === sprite.frame);
+  if (same) { paintSelect(same.id); return; }
+  const rival = paintFind(x => x.owner && x.owner.kind === 'frame');
+  if (rival) {
+    if (sessionDirty(rival) && !confirm('An unapplied edit of ' +
+        rival.label + ' is open. Discard it and edit frame ' +
+        (sprite.frame + 1) + '?')) return;
+    paintCloseSession(rival.id);
   }
   const g = e.gra;
   const f = g.frames[sprite.frame];
@@ -485,6 +514,7 @@ function spritePaintFrame() {
     title: e.name + '  frame ' + (sprite.frame + 1) + '/' + g.frames.length,
     owner: { kind: 'frame', entry: e, frame: sprite.frame },
     label: 'frame ' + (sprite.frame + 1),
+    slot: 'frame',
     onApply: rgba => {
       g.replaceFrameRGBA(sprite.frame, rgba);
       spriteRenderAll();
