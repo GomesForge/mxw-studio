@@ -18,6 +18,64 @@ let spin = false, radius = 4, theta = -Math.PI / 2, phi = 1.5, targetY = 0;
 let texPreview = null;        /* {mat, tex} or null for the file's own */
 let selectedTex = 0;
 
+/* ------------------------------ the rig -------------------------- */
+/* One skeleton drives the whole scene, because item bone tables index
+   the body's bones. `pose` is a rotation in degrees added to a bone's
+   rest pose, which is exactly what a motion track carries, so the pose
+   sliders and a playing motion are the same mechanism. */
+let rig = null;
+let skinned = [];            /* [{geo, src, vertexBone}] */
+let pose = {};               /* {boneIndex: [x, y, z]} in degrees */
+let skinMats = null;
+let selectedBone = -1;
+let motion = null;           /* the motion being played, or null */
+let motionFrame = 0;
+let motionPlaying = false;
+let motionLast = 0;          /* performance.now() of the last step */
+
+function rigOf(entry) {
+  if (!entry._rig) entry._rig = buildRig(entry.mxw.skeletons[0]);
+  return entry._rig;
+}
+
+/* Move every skinned piece to the current pose, and redraw the bone
+   overlay to match. Runs from the pose sliders and from playback. */
+function applyPose() {
+  if (!rig || !skinned.length) return;
+  skinMats = rigSkinMatrices(rig, pose, skinMats);
+  for (const b of skinned) skinGeometry(b.geo, b.src, b.vertexBone, skinMats);
+  if (boneLines) {
+    const now = rigMatrices(rig, pose);
+    const pts = [];
+    for (const b of rig.bones) {
+      if (b.parent < 0) continue;
+      const a = now[b.index].elements, p = now[b.parent].elements;
+      pts.push(p[12], p[13], p[14], a[12], a[13], a[14]);
+    }
+    boneLines.geometry.setAttribute('position',
+      new THREE.Float32BufferAttribute(pts, 3));
+    boneLines.geometry.computeBoundingSphere();
+  }
+  if (wireGroup && wireGroup.children.length === skinned.length) {
+    /* the wireframe is built from the rest geometry, so it has to be
+       rebuilt rather than transformed */
+    skinned.forEach((b, i) => {
+      const w = wireGroup.children[i];
+      if (!w) return;
+      w.geometry.dispose();
+      w.geometry = new THREE.WireframeGeometry(b.geo);
+    });
+  }
+}
+
+function resetPose() {
+  pose = {};
+  motion = null;
+  motionPlaying = false;
+  motionFrame = 0;
+  applyPose();
+}
+
 /* Textures being edited right now.
 
    While an edit is open the model draws the editor's own canvas instead
@@ -80,6 +138,25 @@ async function saveFile(name, data, mime) {
   notify('saved ' + name);
 }
 
+/* One step of playback, from the render loop. Time-based rather than
+   frame-based, so a motion runs at its own speed whatever the display
+   is doing. */
+function stepMotion() {
+  if (!motionPlaying || !motion || !rig) return;
+  const now = performance.now();
+  const dt = motionLast ? (now - motionLast) / 1000 : 0;
+  motionLast = now;
+  const end = motionLength(motion);
+  motionFrame += dt * motion.fps;
+  if (motionFrame > end) {
+    if (motion.loop && end > 0) motionFrame = motionFrame % end;
+    else { motionFrame = end; motionPlaying = false; }
+  }
+  pose = motionPose(motion, motionFrame);
+  applyPose();
+  renderMotion();
+}
+
 /* ------------------------------ three ---------------------------- */
 /* Size the renderer to whatever element currently holds its canvas. */
 function fitRenderer() {
@@ -134,6 +211,7 @@ function initThree() {
   ready = true;
   (function loop() {
     requestAnimationFrame(loop);
+    stepMotion();
     if (spin) theta += 0.004;
     cam.position.set(radius * Math.sin(phi) * Math.cos(theta),
                      radius * Math.cos(phi) + targetY,
@@ -176,10 +254,16 @@ function bindOrbit() {
 
 function meshOf(m, gifs, entry) {
   const pos = [], nor = [], uv = [], groups = [];
+  /* which bone each emitted corner follows, so the mesh can be posed.
+     The geometry is non-indexed, so a vertex used by four faces appears
+     four times and needs its bone recorded four times. */
+  const own = boneOfVertex(m);
+  const vertexBone = [];
   const push = (vi, u, v, su, sv) => {
     pos.push(m.verts[vi * 3], m.verts[vi * 3 + 1], m.verts[vi * 3 + 2]);
     nor.push(m.norms[vi * 3], m.norms[vi * 3 + 1], m.norms[vi * 3 + 2]);
     uv.push(u / su, 1 - v / sv);
+    vertexBone.push(own[vi] === undefined ? -1 : own[vi]);
   };
   const nMat = Math.max(1, m.materials.length);
   for (let mi = 0; mi < nMat; mi++) {
@@ -243,7 +327,11 @@ function meshOf(m, gifs, entry) {
     });
   });
 
-  return { geo, mats, obj: new THREE.Mesh(geo, mats.length > 1 ? mats : mats[0]) };
+  return { geo, mats, obj: new THREE.Mesh(geo, mats.length > 1 ? mats : mats[0]),
+           /* the rest pose, kept so posing never accumulates error:
+              every frame is computed from these, not from the last */
+           src: { pos: Float32Array.from(pos), nor: Float32Array.from(nor) },
+           vertexBone: Int16Array.from(vertexBone) };
 }
 
 function build(items) {
@@ -255,11 +343,21 @@ function build(items) {
   const stage = new THREE.Group();
   const union = new THREE.Box3();
   const built = [];
+  skinned = [];
+  /* One rig for the whole scene. Items carry bone tables that index the
+     body's skeleton -- hair follows bone 18, a jacket follows the hips,
+     spine, chest, arms and wrists -- so posing the body moves everything
+     worn on it. */
+  rig = null;
+  for (const it of items) {
+    if (it.mxw.skeletons.length) { rig = rigOf(it); break; }
+  }
   for (const it of items) {
     const m = it.mxw.meshes[it.meshIndex || 0];
     if (!m || !m.faces.length) continue;
     const b = meshOf(m, it.mxw.gifs, it);
     built.push(b);
+    if (b.vertexBone && b.vertexBone.length) skinned.push(b);
     texMats = texMats.concat(b.mats);
     stage.add(b.obj);
     union.union(b.geo.boundingBox);
@@ -295,25 +393,19 @@ function build(items) {
     stage.add(normHelper);
   }
 
-  /* the skeleton, when the file carries one */
-  const sk = current && current.mxw.skeletons[0];
-  if (sk) {
-    const pts = [];
-    const at = b => [b.a, b.b, b.c];
-    for (const b of sk.bones) {
-      if (b.parent === 0xFF || b.parent >= sk.bones.length) continue;
-      pts.push(...at(b), ...at(sk.bones[b.parent]));
-    }
-    if (pts.length) {
-      const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-      boneLines = new THREE.LineSegments(g,
-        new THREE.LineBasicMaterial({ color: 0xff7ac8 }));
-      boneLines.visible = $('bBone').classList.contains('on');
-      stage.add(boneLines);
-    }
+  /* The skeleton, drawn from the rig's world matrices.
+
+     It used to plot the six i16 of each bone as if the first three were
+     a world position. They are not: they are an offset from the parent
+     and a rotation, so the overlay was a scribble. */
+  if (rig) {
+    boneLines = new THREE.LineSegments(new THREE.BufferGeometry(),
+      new THREE.LineBasicMaterial({ color: 0xff7ac8 }));
+    boneLines.visible = $('bBone').classList.contains('on');
+    stage.add(boneLines);
   }
   radius = 4; targetY = 0;
+  applyPose();
 }
 
 
@@ -403,6 +495,7 @@ function renderHealth() {
 
 function renderAll() {
   renderList();
+  renderPosePanel();
   renderHeader();
   renderMesh();
   renderTextures();
@@ -985,6 +1078,189 @@ async function replaceTexture(file) {
 
 /* Paint the selected texture, with the UV layout of the faces that
    use it drawn on top so a garment lands in the right place. */
+/* ------------------------------ motion UI ------------------------ */
+/* Bone names are read off the vertices each bone drives, since nothing
+   in the format carries a name -- python/dump_skeleton.py shows how,
+   and docs/mxw-format.md has the tree. */
+const BONE_NAMES = {
+  0: 'root', 1: 'root 2', 2: 'root 3', 3: 'hips', 4: 'spine',
+  5: 'pelvis', 6: 'spine 2', 7: 'leg root R', 8: 'leg root L',
+  9: 'chest', 10: 'thigh R', 11: 'thigh L', 12: 'neck', 13: 'shoulder R',
+  14: 'shoulder L', 15: 'shin R', 16: 'shin L', 17: 'chest branch',
+  18: 'head', 19: 'upper arm R', 20: 'upper arm L', 21: 'ankle R',
+  22: 'ankle L', 23: 'forearm R', 24: 'forearm L', 25: 'foot R',
+  26: 'foot L', 30: 'wrist R', 31: 'wrist L', 32: 'toe R', 33: 'toe L',
+  36: 'hand R', 37: 'hand L'
+};
+
+function boneName(i) {
+  return BONE_NAMES[i] || ('bone ' + i);
+}
+
+/* Named bones first: those are the ones anyone wants to pose. */
+function poseBones() {
+  if (!rig) return [];
+  return rig.bones.map(b => b.index).sort((a, b) => {
+    const na = BONE_NAMES[a] !== undefined, nb = BONE_NAMES[b] !== undefined;
+    if (na !== nb) return na ? -1 : 1;
+    return a - b;
+  });
+}
+
+function renderPosePanel() {
+  const has = !!rig;
+  if (!$('motionPanel')) return;
+  $('motionPanel').style.display = has ? 'block' : 'none';
+  $('motionNone').style.display = has ? 'none' : 'block';
+  if (!has) return;
+
+  if (!$('motionList').childElementCount) {
+    $('motionList').innerHTML = BUILT_IN_MOTIONS.map((m, i) =>
+      '<button data-mo="' + i + '" title="' + esc(m.note || '') + '">' +
+      esc(m.name) + '</button>').join('');
+    $('motionList').querySelectorAll('button').forEach(b =>
+      b.onclick = () => playMotion(BUILT_IN_MOTIONS[+b.dataset.mo]));
+  }
+  const sel = $('boneSel');
+  const want = poseBones();
+  if (sel.options.length !== want.length) {
+    sel.innerHTML = want.map(i =>
+      '<option value="' + i + '">' + esc(boneName(i)) + '</option>').join('');
+  }
+  if (want.indexOf(selectedBone) < 0) selectedBone = want[0];
+  sel.value = String(selectedBone);
+  renderBoneSliders();
+  renderMotion();
+}
+
+function renderBoneSliders() {
+  const p = (pose && pose[selectedBone]) || [0, 0, 0];
+  const set = (id, v) => {
+    if ($(id)) $(id).value = Math.round(v);
+    if ($(id + 'Out')) $(id + 'Out').textContent = Math.round(v) + '\u00b0';
+  };
+  set('boneX', p[0]); set('boneY', p[1]); set('boneZ', p[2]);
+}
+
+function renderMotion() {
+  if (!$('moFrame')) return;
+  const end = motion ? motionLength(motion) : 0;
+  const f = $('moFrame');
+  f.max = Math.max(1, Math.round(end));
+  f.value = Math.min(end, motionFrame);
+  $('moFrameOut').textContent = motionFrame.toFixed(1) + (end ? ' / ' + end : '');
+  $('bMoPlay').textContent = motionPlaying ? 'Pause' : 'Play';
+  $('bMoPlay').classList.toggle('on', motionPlaying);
+  $('motionNote').textContent = motion
+    ? motion.name + (motion.note ? ' -- ' + motion.note : '') +
+      '  (' + Object.keys(motion.tracks).length + ' tracks)'
+    : 'no motion chosen; the sliders below pose one bone at a time';
+  $('motionList').querySelectorAll('button').forEach(b =>
+    b.classList.toggle('on', !!motion && BUILT_IN_MOTIONS[+b.dataset.mo] === motion));
+  $('moFps').value = motion ? motion.fps : 12;
+  $('moFpsOut').textContent = (motion ? motion.fps : 12) + ' fps';
+  $('moLoop').checked = motion ? motion.loop !== false : true;
+}
+
+function playMotion(m) {
+  if (!rig || !m) return;
+  motion = m;
+  motionFrame = 0;
+  motionLast = 0;
+  const end = motionLength(m);
+  motionPlaying = end > 0;
+  pose = motionPose(m, 0);
+  applyPose();
+  renderBoneSliders();
+  renderMotion();
+  if (!end) notify(m.name + ' is a single pose, so there is nothing to play');
+}
+
+function poseWire() {
+  $('bMoPlay').onclick = () => {
+    if (!motion) { notify('pick a motion first'); return; }
+    motionPlaying = !motionPlaying;
+    motionLast = 0;
+    renderMotion();
+  };
+  $('bMoStop').onclick = () => {
+    motionPlaying = false;
+    motionFrame = 0;
+    if (motion) { pose = motionPose(motion, 0); applyPose(); }
+    renderBoneSliders();
+    renderMotion();
+  };
+  $('bMoRest').onclick = () => {
+    resetPose();
+    renderBoneSliders();
+    renderMotion();
+  };
+  $('moFrame').oninput = e => {
+    if (!motion) return;
+    motionPlaying = false;
+    motionFrame = +e.target.value;
+    pose = motionPose(motion, motionFrame);
+    applyPose();
+    renderBoneSliders();
+    renderMotion();
+  };
+  $('moFps').oninput = e => {
+    if (motion) motion.fps = Math.max(1, Math.min(60, +e.target.value || 12));
+    renderMotion();
+  };
+  $('moLoop').onchange = e => { if (motion) motion.loop = e.target.checked; };
+  $('boneSel').onchange = e => {
+    selectedBone = +e.target.value;
+    renderBoneSliders();
+  };
+  const axes = [['boneX', 0], ['boneY', 1], ['boneZ', 2]];
+  for (let k = 0; k < axes.length; k++) {
+    const id = axes[k][0], slot = axes[k][1];
+    $(id).oninput = e => {
+      if (!rig) return;
+      /* posing by hand steps out of playback rather than fighting it */
+      motionPlaying = false;
+      const p = (pose[selectedBone] || [0, 0, 0]).slice();
+      p[slot] = +e.target.value;
+      pose[selectedBone] = p;
+      applyPose();
+      renderBoneSliders();
+      renderMotion();
+    };
+  }
+  $('bBoneZero').onclick = () => {
+    delete pose[selectedBone];
+    applyPose();
+    renderBoneSliders();
+  };
+  $('bMoSave').onclick = () => {
+    const m = poseToMotion(motion ? motion.name + ' pose' : 'pose', pose);
+    if (!Object.keys(m.tracks).length) {
+      notify('nothing to save -- the model is in its bind pose', 1);
+      return;
+    }
+    saveFile((current ? current.name.replace(/\.[^.]+$/, '') : 'pose') +
+             '.motion.json',
+             new TextEncoder().encode(JSON.stringify(m, null, 1)),
+             'application/json');
+  };
+  $('bMoIn').onclick = () => $('moFile').click();
+  $('moFile').onchange = async e => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const m = parseMotion(await f.text());
+      m.note = 'loaded from ' + f.name;
+      playMotion(m);
+      notify('loaded ' + m.name + ', ' + Object.keys(m.tracks).length +
+             ' tracks, ' + motionLength(m) + ' frames');
+    } catch (err) {
+      notify(f.name + ': ' + err.message, 1);
+    }
+  };
+}
+
 /* ---------------------------- context menu ----------------------- */
 /* One menu, filled by whatever was right-clicked. Items are
    {label, run, disabled} or the string '-' for a rule; a leading
@@ -1276,12 +1552,31 @@ function paintTexture() {
   const g = c.mxw.gifs[selectedTex];
   const size = gifSize(g);
   const w = size[0], h = size[1];
+  /* The UV layout of the faces that use this texture, and which of
+     them share their texels with another face.
+
+     Half of a head is mirrored: the forehead, cheeks and back map to
+     the same texels on both sides, so painting there appears twice,
+     while each eye has its own space and does not. Measured on the boy:
+     texel (12,20) is sampled by faces at x +820 and -820, texel (34,72)
+     by one face at x -369 only. Worth seeing rather than discovering by
+     surprise. */
   const polys = [];
   if (m) {
-    for (const f of m.faces) {
-      const mt = m.materials[f.mat] ? m.materials[f.mat].tex : 0;
-      if (m.materials.length > 1 && mt !== textureSlot(m, selectedTex)) continue;
-      polys.push(f.vs.map(v => ({ x: v.u, y: v.v })));
+    const slot = textureSlot(m, selectedTex);
+    const mine = m.faces.filter(f =>
+      m.materials.length <= 1 ||
+      (m.materials[f.mat] ? m.materials[f.mat].tex : 0) === slot);
+    const seen = new Map();
+    const key = f => f.vs.map(v => v.u + ',' + v.v).sort().join(' ');
+    for (const f of mine) {
+      const k = key(f);
+      seen.set(k, (seen.get(k) || 0) + 1);
+    }
+    for (const f of mine) {
+      const poly = f.vs.map(v => ({ x: v.u, y: v.v }));
+      poly.shared = seen.get(key(f)) > 1;
+      polys.push(poly);
     }
   }
   /* Which texture this edit is of, fixed now.
@@ -1450,11 +1745,20 @@ function addFile(name, buf) {
 /* A refusal is far more useful when it names the format you actually
    dropped. Several files share these extensions without sharing the
    format. */
+/* Why a file was not opened.
+
+   When the bytes are recognisably another format, say so -- that is
+   more use than a parse error. But keep the error either way: a bug in
+   this program once surfaced as a confident and wrong "this is the item
+   index", because the guess was allowed to replace the message rather
+   than lead it. */
 function describeRefusal(name, buf, err) {
   let other = null;
   try { other = identifyOther(buf); } catch (e) { other = null; }
-  if (other) return name + ' is ' + other.name + '. ' + other.note;
-  return name + ': ' + err.message;
+  const why = (err && err.message) ? err.message : String(err);
+  if (other) return name + ' is ' + other.name + '. ' + other.note +
+                    ' (' + why + ')';
+  return name + ': ' + why;
 }
 
 function select(i) {
@@ -1618,6 +1922,8 @@ for (const [name, fn] of [['sprites', () => spriteWire()],
    what broke rather than dying silently */
 enableActions();
 menuWire();
+try { poseWire(); }
+catch (e) { notify('the motion panel failed to start: ' + e.message, 1); }
 
 try {
   initThree();

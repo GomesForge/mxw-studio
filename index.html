@@ -126,14 +126,14 @@
      but only a second: left to wrap freely it reached three columns and
      ate a third of the viewport. */
   #rail{grid-area:rail;background:var(--rail);border-right:1px solid var(--edge);
-    display:grid;grid-template-columns:48px;justify-content:center;
+    display:grid;grid-template-columns:44px;justify-content:center;
     align-content:start;gap:2px;padding:6px 4px;overflow-y:auto}
   @media (max-height:920px){
-    #rail{grid-template-columns:48px 48px}
+    #rail{grid-template-columns:44px 44px}
   }
   #rail #paintTools{display:contents}
   #rail .railRule{grid-column:1/-1;justify-self:center}
-  #rail button{width:48px;height:44px;padding:0;border-radius:6px;
+  #rail button{width:44px;height:40px;padding:0;border-radius:5px;
     border:1px solid transparent;background:none;color:var(--dim);
     cursor:pointer;display:grid;place-items:center}
   #rail button:hover{background:var(--btnHover);color:var(--ink)}
@@ -146,8 +146,8 @@
   #rail .railRule{width:30px;height:1px;background:var(--edge);margin:7px 0}
 
   /* One grid, one stroke weight, sized in one place. */
-  .ico{width:27px;height:27px;display:block;fill:none;stroke:currentColor;
-    stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+  .ico{width:24px;height:24px;display:block;fill:none;stroke:currentColor;
+    stroke-width:1.45;stroke-linecap:round;stroke-linejoin:round}
 
   /* ----------------------------- viewport ---------------------------- */
   #view{grid-area:view;position:relative;background:var(--view);overflow:hidden}
@@ -312,7 +312,8 @@
   #strip img{display:block;height:40px;width:auto;image-rendering:pixelated}
   #strip figcaption{font-size:9px;font-family:var(--mono);color:var(--dim)}
 
-  #palette{display:flex;flex-wrap:wrap;gap:3px}
+  #palette,.pal{display:flex;flex-wrap:wrap;gap:3px}
+  .pal:empty::after{content:"nothing yet";color:var(--dim);font-size:10.5px}
   .sw{width:16px;height:16px;padding:0;border-radius:3px;
     border:1px solid rgba(0,0,0,.35);cursor:pointer}
   .sw.sel{outline:2px solid var(--cyan);outline-offset:1px}
@@ -369,6 +370,7 @@
   body.paint-mode #paintDock{display:block}
   /* Every mesh panel is shown by setting style.display in JS, so hiding
      one from a rule needs !important. */
+  body.sprite-mode #poseDock,body.paint-mode #poseDock,
   body.sprite-mode #meshDock,body.paint-mode #meshDock,
   body.sprite-mode #texDock,body.paint-mode #texDock,
   body.sprite-mode #viewDock,body.paint-mode #viewDock,
@@ -630,6 +632,22 @@
         <div class="slider"><span>zoom</span>
           <input type="range" id="paintZoom" min="1" max="16" value="6">
           <b id="paintZoomOut">6x</b></div>
+        <div class="row"><span>mirror</span>
+          <select id="paintSym">
+            <option value="off">off</option>
+            <option value="v">left and right</option>
+            <option value="h">top and bottom</option>
+            <option value="both">both</option>
+          </select></div>
+        <label class="check" id="onionRow" style="display:none">
+          <input type="checkbox" id="paintOnion" checked>
+          show the frames either side</label>
+        <h2>Recently used</h2>
+        <div id="recentColours" class="pal"></div>
+        <p class="hint">Mirroring paints the other half as you go, about
+          the middle of the image. <b>[</b> and <b>]</b> size the brush,
+          <b>+</b> and <b>&minus;</b> zoom, <b>alt</b> picks a colour
+          without leaving the brush.</p>
         <p class="hint" id="paintTitle"></p>
       </div>
     </details>
@@ -714,8 +732,68 @@
         <div id="texPreview"></div>
         <canvas id="uv"></canvas>
         <p class="hint">The cyan edges are the UV layout of the faces
-        that use this texture &mdash; paint inside them. Editing,
-        replacing and saving are on the bar above.</p>
+        that use this texture &mdash; paint inside them. <b>Amber edges
+        are shared</b>: another face samples the same texels, so
+        anything painted there appears more than once. About half a
+        head is mirrored that way &mdash; the forehead, cheeks and back
+        &mdash; while each eye has its own space. Editing, replacing and
+        saving are on the bar above.</p>
+      </div>
+    </div>
+  </details>
+
+  <details class="dock" id="poseDock" open><summary>Motion</summary>
+    <div class="dockBody">
+      <div id="motionNone" class="note">This file has no skeleton, so
+        there is nothing to pose. Open a body &mdash; <b>210001.bin</b>
+        or <b>1210001.bin</b> &mdash; and anything worn on it follows
+        the same bones.</div>
+      <div id="motionPanel" style="display:none">
+        <div id="motionList" class="ctrl"></div>
+        <div class="ctrl seg" style="margin-top:6px">
+          <button id="bMoPlay">Play</button>
+          <button id="bMoStop">Stop</button>
+          <button id="bMoRest">Bind pose</button>
+        </div>
+        <div class="slider"><span>frame</span>
+          <input type="range" id="moFrame" min="0" max="100" value="0" step="0.5">
+          <b id="moFrameOut">0</b></div>
+        <div class="slider"><span>speed</span>
+          <input type="range" id="moFps" min="1" max="60" value="12">
+          <b id="moFpsOut">12 fps</b></div>
+        <label class="check"><input type="checkbox" id="moLoop" checked>
+          loop</label>
+        <p class="hint" id="motionNote"></p>
+
+        <h2>Pose a bone</h2>
+        <div class="row"><span>bone</span>
+          <select id="boneSel"></select></div>
+        <div class="slider"><span>swing</span>
+          <input type="range" id="boneX" min="-180" max="180" value="0">
+          <b id="boneXOut">0&deg;</b></div>
+        <div class="slider"><span>lift</span>
+          <input type="range" id="boneY" min="-180" max="180" value="0">
+          <b id="boneYOut">0&deg;</b></div>
+        <div class="slider"><span>twist</span>
+          <input type="range" id="boneZ" min="-180" max="180" value="0">
+          <b id="boneZOut">0&deg;</b></div>
+        <div class="ctrl">
+          <button id="bBoneZero">Straighten this bone</button>
+        </div>
+        <p class="hint">For an arm, swing moves it forward and lift
+          raises it; for a leg, swing steps and lift spreads. Twist is
+          the bone's own axis. Measured on the rig rather than guessed.</p>
+
+        <h2>Keep a pose</h2>
+        <div class="ctrl">
+          <button id="bMoSave">Save as .json</button>
+          <button id="bMoIn" type="button">Load a motion&hellip;</button>
+        </div>
+        <input type="file" id="moFile" accept=".json,.JSON">
+        <p class="hint">The built-in motions are ours, not the game's
+          &mdash; the rig underneath is the file's own. A real motion
+          file carries one track per bone, 74 on the boy and 75 on the
+          girl, which is the shape this player already expects.</p>
       </div>
     </div>
   </details>
@@ -828,11 +906,13 @@
 <div id="menu"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="mxw.js?v=6"></script>
-<script src="gra.js?v=6"></script>
-<script src="obj.js?v=6"></script>
-<script src="checks.js?v=6"></script>
-<script src="gifenc.js?v=6"></script>
-<script src="paint.js?v=6"></script>
-<script src="sprite.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="mxw.js?v=8"></script>
+<script src="gra.js?v=8"></script>
+<script src="obj.js?v=8"></script>
+<script src="checks.js?v=8"></script>
+<script src="gifenc.js?v=8"></script>
+<script src="paint.js?v=8"></script>
+<script src="skin.js?v=8"></script>
+<script src="motions.js?v=8"></script>
+<script src="sprite.js?v=8"></script>
+<script src="app.js?v=8"></script>

@@ -33,6 +33,15 @@ const paint = {
   zoom: 6,
   showUV: true,
   showGrid: true,
+  /* Mirror every dab across the middle of the image. A face is drawn
+     symmetrically and half a head is mapped that way anyway, so this is
+     the difference between painting one eyebrow and painting two. */
+  symmetry: 'off',          /* off | v | h | both */
+  /* The frames either side, ghosted underneath, when editing one frame
+     of an animation. */
+  onion: null,              /* {prev, next} as ImageData, or null */
+  showOnion: true,
+  recent: [],               /* colours used, most recent first */
   uv: null,          /* [[{x,y}...]...] polygons, in image pixels */
   onApply: null,
   title: '',
@@ -70,7 +79,7 @@ const PAINT_UNDO_CAP = 40;
    to the file you happen to be painting. */
 const PAINT_SESSION_KEYS = ['id', 'w', 'h', 'layers', 'active', 'uv',
   'onApply', 'title', 'owner', 'label', 'slot', 'undo', 'redo', 'sel',
-  'selDrag', 'moveFrom', 'moveData', 'zoom', '_dot'];
+  'selDrag', 'moveFrom', 'moveData', 'zoom', '_dot', 'onion'];
 
 let paintNextId = 1;
 
@@ -114,7 +123,8 @@ function paintOpen(opts) {
     label: opts.label || 'edit',
     slot: opts.slot === undefined ? null : opts.slot,
     layers: [], active: 0, undo: [], redo: [], sel: null,
-    selDrag: null, moveFrom: null, moveData: null, zoom: 6, _dot: false
+    selDrag: null, moveFrom: null, moveData: null, zoom: 6, _dot: false,
+    onion: opts.onion || null
   };
   const base = paintLayer('base', s.w, s.h);
   if (opts.base) {
@@ -144,6 +154,11 @@ function paintVisibility() {
 /* Put the adopted session on screen. */
 function paintShow() {
   $('paintTitle').textContent = paint.title + '   ' + paint.w + 'x' + paint.h;
+  if ($('onionRow')) {
+    $('onionRow').style.display = paint.onion ? 'flex' : 'none';
+  }
+  if ($('paintSym')) $('paintSym').value = paint.symmetry;
+  paintRenderRecent();
   paintFit();
   paintRenderLayers();
   paintRenderTools();
@@ -302,14 +317,36 @@ function paintDraw() {
   const ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, cv.width, cv.height);
+
+  /* The frames either side, underneath and faint, so a pose can be
+     judged against the one before it. Drawn before the layers, never
+     into them: onion skin is a reference, not paint. */
+  if (paint.showOnion && paint.onion) {
+    for (const side of ['prev', 'next']) {
+      const img = paint.onion[side];
+      if (!img) continue;
+      const t = document.createElement('canvas');
+      t.width = paint.w; t.height = paint.h;
+      t.getContext('2d').putImageData(img, 0, 0);
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.drawImage(t, 0, 0, cv.width, cv.height);
+      ctx.restore();
+    }
+  }
+
   ctx.drawImage(paintComposite(), 0, 0, cv.width, cv.height);
 
   /* the UV layout of the faces that use this texture, so a garment
      can be painted in the right place */
   if (paint.showUV && paint.uv && paint.uv.length) {
     ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(58,212,236,.8)';
+    /* Amber marks a face that shares its texels with another one --
+       usually the mirrored half of a head. Paint inside an amber
+       outline and it appears on both sides of the model. */
     for (const poly of paint.uv) {
+      ctx.strokeStyle = poly.shared ? 'rgba(232,180,60,.85)'
+                                    : 'rgba(58,212,236,.8)';
       ctx.beginPath();
       poly.forEach((p, i) => {
         const x = p.x * z, y = p.y * z;
@@ -398,15 +435,30 @@ function paintPixelAt(ev) {
   };
 }
 
+/* Every place a dab lands, once symmetry is taken into account. The
+   mirror is the middle of the image, which is where a character's
+   centre line is in every texture measured. */
+function paintMirrors(x, y) {
+  const out = [[x, y]];
+  const mx = paint.w - 1 - x, my = paint.h - 1 - y;
+  const sym = paint.symmetry;
+  if (sym === 'v' || sym === 'both') out.push([mx, y]);
+  if (sym === 'h' || sym === 'both') out.push([x, my]);
+  if (sym === 'both') out.push([mx, my]);
+  return out;
+}
+
 function paintDot(ctx, x, y, erase) {
   const s = paint.size;
   const o = Math.floor((s - 1) / 2);
   ctx.save();
-  if (erase) {
-    ctx.clearRect(x - o, y - o, s, s);
-  } else {
-    ctx.fillStyle = paint.colour;
-    ctx.fillRect(x - o, y - o, s, s);
+  for (const p of paintMirrors(x, y)) {
+    if (erase) {
+      ctx.clearRect(p[0] - o, p[1] - o, s, s);
+    } else {
+      ctx.fillStyle = paint.colour;
+      ctx.fillRect(p[0] - o, p[1] - o, s, s);
+    }
   }
   ctx.restore();
 }
@@ -595,6 +647,28 @@ function paintCentre(axis) {
 /* ------------------------------ pointer -------------------------- */
 function paintDown(ev) {
   if (!paint.open || !paint.shown) return;
+  /* alt picks a colour and hands the brush straight back, so matching a
+     shade does not cost two tool changes */
+  if (ev.altKey && ev.button === 0) {
+    ev.preventDefault();
+    const p = paintPixelAt(ev);
+    const px = paintComposite().getContext('2d')
+      .getImageData(Math.max(0, Math.min(paint.w - 1, p.x)),
+                    Math.max(0, Math.min(paint.h - 1, p.y)), 1, 1).data;
+    if (px[3] > 0) {
+      paint.colour = '#' + [px[0], px[1], px[2]]
+        .map(v => v.toString(16).padStart(2, '0')).join('');
+      $('paintColour').value = paint.colour;
+      paintRenderTools();
+    }
+    return;
+  }
+  if (ev.button === 0 && !ev.altKey &&
+      (paint.tool === 'brush' || paint.tool === 'fill' ||
+       paint.tool === 'line' || paint.tool === 'rect' ||
+       paint.tool === 'rectfill')) {
+    paintRemember(paint.colour);
+  }
   if (ev.button === 1 || ev.shiftKey) {       /* pan */
     paint.panning = true;
     const host = $('paintStage');
@@ -862,6 +936,30 @@ function paintRenderTint() {
   }
 }
 
+/* The last few colours, so going back to one is a click. Kept on the
+   editor rather than the session: it is about you, not the file. */
+function paintRemember(colour) {
+  if (!colour) return;
+  const i = paint.recent.indexOf(colour);
+  if (i >= 0) paint.recent.splice(i, 1);
+  paint.recent.unshift(colour);
+  if (paint.recent.length > 16) paint.recent.length = 16;
+  paintRenderRecent();
+}
+
+function paintRenderRecent() {
+  const host = $('recentColours');
+  if (!host) return;
+  host.innerHTML = paint.recent.map(c =>
+    '<button class="sw" data-c="' + c + '" title="' + c + '" style="background:' +
+    c + '"></button>').join('');
+  host.querySelectorAll('button').forEach(b => b.onclick = () => {
+    paint.colour = b.dataset.c;
+    $('paintColour').value = paint.colour;
+    paintRenderTools();
+  });
+}
+
 function paintColourAs565() {
   const m = /^#?([0-9a-f]{6})$/i.exec(paint.colour);
   if (!m) return -1;
@@ -897,6 +995,11 @@ function paintWire() {
   $('paintColour').oninput = e => {
     paint.colour = e.target.value;
     paintRenderTint();
+  };
+  $('paintSym').onchange = e => { paint.symmetry = e.target.value; };
+  $('paintOnion').onchange = e => {
+    paint.showOnion = e.target.checked;
+    paintDraw();
   };
   $('paintSize').oninput = e => {
     paint.size = Math.max(1, Math.min(32, +e.target.value || 1));
@@ -951,6 +1054,24 @@ function paintWire() {
     } else if (!mod) {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault(); paintEraseSel(); return;
+      }
+      /* the brackets size the brush and +/- the zoom, as everywhere */
+      if (e.key === '[' || e.key === ']') {
+        e.preventDefault();
+        paint.size = Math.max(1, Math.min(32,
+          paint.size + (e.key === ']' ? 1 : -1)));
+        $('paintSize').value = paint.size;
+        paintRenderTools();
+        return;
+      }
+      if (e.key === '+' || e.key === '=' || e.key === '-') {
+        e.preventDefault();
+        paint.zoom = Math.max(1, Math.min(16,
+          paint.zoom + (e.key === '-' ? -1 : 1)));
+        $('paintZoom').value = paint.zoom;
+        $('paintZoomOut').textContent = paint.zoom + 'x';
+        paintDraw();
+        return;
       }
       const k = { b: 'brush', e: 'eraser', g: 'fill', i: 'picker',
                   l: 'line', r: 'rect', f: 'rectfill', m: 'select',

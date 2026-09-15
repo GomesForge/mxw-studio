@@ -508,9 +508,16 @@ function spritePaintFrame() {
   }
   const g = e.gra;
   const f = g.frames[sprite.frame];
+  /* the frames either side, for onion skin -- a pose is judged against
+     the one before it, not on its own */
+  const neighbour = i => (i >= 0 && i < g.frames.length)
+    ? new ImageData(g.frames[i].toRGBA(g.width, g.height), g.width, g.height)
+    : null;
   paintOpen({
     width: g.width, height: g.height,
     base: f.toRGBA(g.width, g.height),
+    onion: { prev: neighbour(sprite.frame - 1),
+             next: neighbour(sprite.frame + 1) },
     title: e.name + '  frame ' + (sprite.frame + 1) + '/' + g.frames.length,
     owner: { kind: 'frame', entry: e, frame: sprite.frame },
     label: 'frame ' + (sprite.frame + 1),

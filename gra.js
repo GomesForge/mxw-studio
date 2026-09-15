@@ -38,9 +38,19 @@
 
 const OTHER_FORMATS = [
   {
-    /* The server's item index opens with the same "OK  " as a mesh. */
-    test: u8 => u8[0] === 0x4F && u8[1] === 0x4B && u8[2] === 0x20 &&
-                u8[3] === 0x20,
+    /* The server's item index opens with the same "OK  " as a mesh, so
+       the signature alone identified every mesh as the index. What
+       separates them is the body: 9 bytes per record, and the u32 at
+       0x04 is how many records there are. */
+    test: u8 => {
+      if (!(u8[0] === 0x4F && u8[1] === 0x4B && u8[2] === 0x20 && u8[3] === 0x20)) {
+        return false;
+      }
+      const body = u8.length - 8;
+      if (body <= 0 || body % 9 !== 0) return false;
+      const count = (u8[4] << 24 | u8[5] << 16 | u8[6] << 8 | u8[7]) >>> 0;
+      return count === body / 9;
+    },
     name: 'the item index (get_item_list.bin)',
     note: 'It shares the mesh signature but holds 9-byte records: a type ' +
           'byte, a u32 item id and a u32 token. python/get_item_list_decoder.py ' +

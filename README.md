@@ -44,7 +44,10 @@ right; and one status line along the bottom.
   quantised and encoded to GIF89a — keeping transparency, which 36 of
   the 58 sample textures rely on
 - **Paint the texture in place**, with the UV layout drawn on top so a
-  garment lands where you mean it to, layers, and undo. The texture
+  garment lands where you mean it to, layers, and undo. Amber edges in
+  that layout mean the face shares its texels with another one: about
+  half a head is mirrored, so painting a forehead paints both sides
+  while each eye has its own space. The texture
   opens as a tab *inside* that file's group, beside a `model` tab, so
   the file does not go away while you edit it &mdash; move between the
   two as often as you like, and nothing is discarded until you apply or
@@ -87,6 +90,30 @@ parse with no leftover bytes at all, so nothing is being skipped: the
 file holds the hierarchy and the bind pose and stops there. Whatever
 plays a motion reads it from somewhere else.
 
+## Motion
+
+The rig is real: the bone order, the parent chain, the rest pose and
+which vertices follow which bone all come out of the file. What the six
+`i16` per bone meant was derived rather than assumed &mdash; see
+[docs/motion-format.md](docs/motion-format.md) &mdash; and the joints
+land where a skeleton should have them.
+
+- **Pose any bone**, by name, with a slider per axis. For an arm, swing
+  moves it forward and lift raises it; for a leg, swing steps and lift
+  spreads. Which axis does what was measured on the rig
+- **Play a motion**: stand, breathe, wave, nod, walk, run, sit, cheer.
+  Scrub the frame, set the speed, loop or not
+- **Items follow the body.** Their bone tables index the body's
+  skeleton, so hair follows the head bone and a jacket follows the
+  hips, spine, arms and wrists &mdash; Dress-up plus a motion is a
+  dressed character in movement
+- **Save a pose** as a small JSON, and load one back
+
+**The motions shipped here are ours, not the game's.** Nobody has
+published one of the game's motion files; when someone does it plays
+through the same player, because it is the same thing &mdash; a rotation
+per bone per frame. The format page says what to check first.
+
 ## Sprites
 
 Drop a `.gra`, `.spr` or `.eft` and the page switches to sprite mode.
@@ -105,6 +132,13 @@ Drop a `.gra`, `.spr` or `.eft` and the page switches to sprite mode.
 - **Paint** any frame directly: brush, eraser, flood fill, eyedropper,
   line and rectangle, with **layers** so you can draw over the original
   without destroying it, plus undo and redo
+- **Onion skin**: the frames either side, ghosted underneath, so a pose
+  is judged against the one before it
+- **Mirror** the brush left/right, top/bottom or both, about the middle
+  of the image
+- `[` and `]` size the brush, `+` and `&minus;` zoom, **alt** picks a
+  colour without leaving the brush, and the colours you have used stay
+  one click away
 - **Start a sheet from nothing** with New sprite, then add, duplicate
   or delete frames
 - A **team preview** shows how the game will recolour the sheet, and the
@@ -194,6 +228,9 @@ mesh and rewritten wrongly.
 - [docs/encrypted-parameter-file.md](docs/encrypted-parameter-file.md) —
   one encrypted table nobody has opened, and everything already ruled
   out on it
+- [docs/motion-format.md](docs/motion-format.md) — the rest pose,
+  how it was derived, which axis moves what, and what a motion file
+  needs to look like
 - [docs/roadmap.md](docs/roadmap.md) — where this is going
 
 ## One thing to remember when changing a script
