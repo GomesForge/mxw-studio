@@ -1,7 +1,7 @@
 # The encrypted parameter file
 
 An encrypted or custom-compressed file that ships in every build of the
-game, from the first Japanese release to the last community client. It
+release, from the earliest to the last community client. It
 is not opened by anything here. This is a record of what is known and
 what has already been ruled out, so nobody repeats it.
 
@@ -63,22 +63,22 @@ does — and bytes `0x00`–`0x03`, which differ in every copy, are the
 obvious candidate for that seed. Custom compression would do the same
 thing.
 
-## Why it is the best target in the game
+## Why it is the best target
 
 At **3334 bytes** the the community server copy is by far the smallest encrypted
-file in the game. The `Data/cache/*.dat` textures are much larger and
+file of its kind. The `Data/cache/*.dat` textures are much larger and
 there are 39 of them. Three generations of this file exist, two of them
 byte-identical, so a candidate routine can be checked against
 independent samples immediately. If the same cipher protects the cache,
 this is the cheaper door.
 
-The routine is inside the game executable, which ships **ASPack-packed**
+The routine is inside the client executable, which ships **ASPack-packed**
 (an `.adata` section). It is not in `syswin.dll` — that one only does
 hotkeys (`RegisterHotKey`, `GetAsyncKeyState`). There are no Blowfish,
 AES, TEA, MD5 or CRC32 constants anywhere in the binary, so expect
 something hand-rolled.
 
-> Some executables shipped with community tools for this game are
+> Some executables shipped with community tools for these files are
 > flagged by multiple engines as `Trojan-Downloader.Win32.Banload`.
 > Anything packed hides its imports, so a clean-looking import table
 > proves nothing. Check hashes before running old binaries.

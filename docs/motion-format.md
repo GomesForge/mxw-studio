@@ -8,12 +8,11 @@ hierarchy and the rest pose and stops there. See
 What follows is therefore two different things, and it is worth keeping
 them apart:
 
-- **the rig is the game's** — the bone order, the parent chain, the rest
+- **the rig is original** — the bone order, the parent chain, the rest
   pose, and which vertices follow which bone, all read out of the file;
 - **the motions shipped here are ours** — hand-authored so the rig can
-  be exercised and a character judged in movement. Nothing in
-  `motions.js` claims to be the game's animation data, because nobody
-  has published any.
+  be exercised and a figure judged in movement. Nothing in `motions.js`
+  is original animation data, because none survives.
 
 When a real motion file does turn up it plays through the same
 machinery, because it is the same thing: a rotation per bone per frame.
@@ -101,18 +100,17 @@ carries nine to eleven on the hips, spine, chest, upper arms, forearms
 and wrists. So posing a body moves everything worn on it, and Dress-up
 plus a motion is a dressed character in movement.
 
-## What the game has, and what it does not
+## Two different systems
 
-The 3D avatars and the battle characters are **two different systems**,
-which is why "the bomber's motions" and "the human's motions" are not
-the same kind of thing:
+A 3D body and a 2D sprite set animate in completely different ways,
+which is why one set's animation and the other's are not the same kind
+of thing:
 
-- the **3D avatars** — the boy and the girl — have the 74- and 75-bone
-  skeleton this page is about. No motion data for them is in the
-  archive;
-- the **battle characters** are 2D sprites, and their animation *is*
-  the `.GRA` frames, which the sprite editor already plays. Measured
-  across all eight of them:
+- the **3D bodies** have the 74- and 75-bone skeleton this page is
+  about. No motion data for them survives;
+- the **sprite sets** are 2D, and their animation *is* the `.GRA`
+  frames, which the sprite editor already plays. Measured across all
+  eight of them:
 
 | action | frames | what |
 |--------|--------|------|
@@ -125,13 +123,13 @@ the same kind of thing:
 | `DD` | 15–21 | down |
 | `WI` | 9–23 | win |
 
-plus `RUI_ST` 3, `RUI_MO` 8, `RUI_RI` 8 and `RUI_JU` 4 for riding a
-Louie, and `MSB_CH` at one frame.
+plus a `RUI_` set — `ST` 3, `MO` 8, `RI` 8, `JU` 4 — for a mounted
+variant, and `MSB_CH` at one frame.
 
 The motions shipped here take that vocabulary — the names, the order
 and the frame counts — and reconstruct each action on the 3D rig. The
 joint angles are ours. They could not be read out of the sprites: those
-are a different character, drawn in one projection, a few dozen pixels
+are a different figure, drawn in one projection, a few dozen pixels
 tall, with the legs mostly hidden. Deriving a skeleton pose from them
 would be invention wearing the costume of measurement.
 
@@ -163,6 +161,25 @@ would be invention wearing the costume of measurement.
 
 Degrees rather than the file's own 12-bit unit, because this is a file
 you might write by hand. Multiply by 2047/180 to go the other way.
+
+## Where the original motion data is not
+
+Worth writing down so nobody spends the same hours twice. Every one of
+these was checked, and none of them holds it:
+
+| looked at | result |
+|-----------|--------|
+| both body meshes | parse with **no leftover bytes** — the file holds the hierarchy and the rest pose and stops |
+| every other `.bin` in the archive | items and faces; none carries a skeleton chunk except the bodies |
+| the two client executables | scanned for long runs of 12-bit values, the shape a rotation table would have. Five windows matched in one and two in the other, and all of them are version-resource strings read as `int16` |
+| the Director movie shipped with one client | 104 cast members, 73 bitmaps and Lingo scripts — a 2D launcher. No `W3D`, so the 3D side is not Director |
+| `items.dat` | 1116 shop thumbnails, 100×150 BMP, no geometry at all |
+| the encrypted parameter file | 8.000 bits of entropy per byte |
+| the 137 distinct `Data/cache/*.dat` | also 8.000 bits per byte. Assuming a known header (`OK&nbsp;&nbsp;`, `GIF8`, `BM`, PNG) gives 136 different leading keys across 137 files, so no fixed XOR; deriving a key from the file name produces no known header either. There is no foothold without the client's key schedule, and the client that holds it is packed |
+| every file extension in the archive | enumerated; nothing unaccounted for that could be a motion class |
+
+So a motion file exists somewhere — someone has one, with 75 tracks —
+but it is not in anything reachable from here.
 
 ## Reading a real motion file, when one appears
 

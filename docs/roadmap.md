@@ -28,7 +28,7 @@ Ordered by what unblocks the most.
 - **Creating a sheet from nothing**, and adding, duplicating or
   deleting frames
 - **The 64 reserved colours** identified and measured, with a team
-  preview and a report of how much of a sheet the game recolours --
+  preview and a report of how much of a sheet the runtime recolours --
   see [character-sprites.md](character-sprites.md)
 - **Wavefront OBJ import**, lossless against this project's own export:
   every vertex and every texture coordinate comes back identical.
@@ -111,7 +111,7 @@ Female is the class plus 100. What it needs:
 ## 5. Maps
 
 **Grid decoded.** `map.spr` is one byte per tile, **17 columns by 15
-rows** per arena — a solid border, a destructible ring, and alternating
+rows** per map — a solid border, a destructible ring, and alternating
 interior cells. Four values cover 89% of the file: open floor, the hard
 border and lattice, the destructible ring, and a second block type.
 See [map-format.md](map-format.md).

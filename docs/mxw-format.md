@@ -1,6 +1,6 @@
 # The MXW mesh format
 
-Every 3D object in the game — hair, hats, headbands, jackets,
+Every 3D object — hair, hats, headbands, jackets,
 shoes, back items, the collectible cards, and the two character bodies —
 sits in one container. The client fetched item files over HTTP from the asset server's
 `/itemids/<id>.bin` path, so the on-disk extension is `.bin` for items
@@ -190,7 +190,7 @@ An id is `[class][4 digits]`, and the female counterpart of a class is
 that class plus 100 — jackets are `6xxxx` on the boy and `106xxxx` on
 the girl. The bodies are class 21.
 
-The class list is not guesswork: the BMOWorld 4.x client ships
+The class list is not guesswork: one later client ships
 `items.dat`, an archive of 1116 shop thumbnails keyed by id (see
 [items-dat-format.md](items-dat-format.md)), so each class can simply be
 looked at.

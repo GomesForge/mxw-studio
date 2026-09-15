@@ -195,10 +195,10 @@ function skinGeometry(geo, src, vertexBone, skinMats) {
    be saved as a one-frame motion and back. Frames between keys are
    interpolated linearly; a track with one key is a constant offset.
 
-   This is our format, not the game's. The game's motion files have one
-   track per bone too -- the count matches the skeleton, 74 on the boy
-   and 75 on the girl -- but nobody has published one, so nothing here
-   claims to be the original animation data. */
+   This format is ours. An original motion file has one track per bone
+   too -- the count matches the skeleton, 74 on one body and 75 on the
+   other -- but none has ever surfaced, so nothing here claims to be the
+   original animation data. */
 
 function motionLength(motion) {
   let last = 0;

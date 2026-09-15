@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reader and writer for the MXW mesh format.
 
-The game stored every 3D item --
+The format holds every 3D item --
 hair, hats, jackets, shoes, back items, cards and the two character
 bodies -- in one container. This module reads it, writes it back
 byte-for-byte, and lets you change it.
@@ -47,7 +47,7 @@ run 0..128. Divide by the size of the GIF that material points at.
 
 The bone table partitions the vertex list into contiguous ranges, each
 tagged with a bone id -- every range's start equals the previous
-range's end. That is how the game skins a mesh to the skeleton.
+range's end. That is how a mesh is skinned to the skeleton.
 
 THREE THINGS THAT ARE EASY TO GET WRONG
 

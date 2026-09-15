@@ -21,7 +21,7 @@
 
    Replacing the geometry of a loaded mesh keeps its textures, material
    names and skeleton, because an OBJ carries none of those. Importing
-   on its own produces a mesh with no texture, which the game may well
+   on its own produces a mesh with no texture, which a reader may well
    refuse -- so the caller is told to add one. */
 
 function parseOBJ(text) {
@@ -241,7 +241,7 @@ function objReplaceGeometry(mxw, meshIndex, obj, opts) {
   return res.warnings;
 }
 
-/* A container holding just this mesh. It has no texture, which the game
+/* A container holding just this mesh. It has no texture, which a reader
    may refuse, so the caller should say so. */
 function objToContainer(obj, opts) {
   const res = objToMesh(obj, opts);

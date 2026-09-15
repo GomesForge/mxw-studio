@@ -156,7 +156,7 @@ def do_mesh(path, raw, r, verbose):
         elif raw[:4] == b'OK  ':
             r.bump('.bin that is the item index, not a mesh')
         elif os.path.basename(path).lower() == 'layout.bin':
-            r.bump('.bin from an installer, not game data')
+            r.bump('.bin from an installer, not asset data')
         else:
             r.bump('mesh rejected')
             r.fail(path, 'mesh', str(e))

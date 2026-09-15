@@ -1,12 +1,12 @@
 /* A starter set of motions.
 
-   These are ours, not the game's. Nobody has published one of the
-   game's motion files for the 3D avatars, so nothing here is the
-   original animation data. What *is* the game's is the rig underneath
-   -- the skeleton, the bone order, the rest pose, which vertices follow
-   which bone -- and the timing: the names and frame counts below are
-   taken from the battle sprites, which are the game's own animation
-   set. Measured across all eight characters:
+   The joint angles here are ours. No motion data for the 3D bodies
+   survives anywhere -- docs/motion-format.md lists what was ruled out
+   looking for it -- so nothing below is original animation data. What
+   *is* original is the rig underneath (the skeleton, the bone order,
+   the rest pose, which vertices follow which bone) and the timing: the
+   names and frame counts come from the 2D sprite sets. Measured across
+   all eight of them:
 
      ST  3 frames   stand      TH  7-9      throw
      WA  13-18      walk       PU  5        push
@@ -14,9 +14,9 @@
      WI  9-23       win        DD  15-21    down
 
    Those sprites are 2D and cannot be posed; they are what the sprite
-   editor plays. The 3D avatars are the ones with a skeleton. Two
-   different systems, which is why "the bomber's motions" and "the
-   human's motions" are not the same kind of thing at all.
+   editor plays. The 3D bodies are the ones with a skeleton. Two
+   different systems, which is why a sprite set's animation and a
+   body's are not the same kind of thing at all.
 
    WHICH AXIS MOVES WHAT -- measured on the rig, and not the same for
    every part, which is the mistake the first version of this file made:
@@ -49,8 +49,8 @@ const ELBOW = 12;          /* a little bend, so the arms are not planks */
 
 const BUILT_IN_MOTIONS = [
   {
-    name: 'Stand', game: 'ST',
-    note: 'arms at the sides -- game action ST, 3 frames',
+    name: 'Stand', action: 'ST',
+    note: 'arms at the sides -- sprite action ST, 3 frames',
     fps: 6, loop: true,
     tracks: {
       19: [[0, 0, ARM_DOWN_R, 0]],
@@ -61,8 +61,8 @@ const BUILT_IN_MOTIONS = [
     }
   },
   {
-    name: 'Walk', game: 'WA',
-    note: 'game action WA, 18 frames',
+    name: 'Walk', action: 'WA',
+    note: 'sprite action WA, 18 frames',
     fps: 18, loop: true,
     tracks: {
       /* right leg leads; the knee only ever flexes, never extends past
@@ -84,8 +84,8 @@ const BUILT_IN_MOTIONS = [
     }
   },
   {
-    name: 'Carry', game: 'MO',
-    note: 'game action MO, 8 frames -- holding something at the chest',
+    name: 'Carry', action: 'MO',
+    note: 'sprite action MO, 8 frames -- holding something at the chest',
     fps: 12, loop: true,
     tracks: {
       19: [[0, -30, ARM_DOWN_R + 26, 0]],
@@ -100,8 +100,8 @@ const BUILT_IN_MOTIONS = [
     }
   },
   {
-    name: 'Hit', game: 'PA',
-    note: 'game action PA, 8 frames -- recoiling',
+    name: 'Hit', action: 'PA',
+    note: 'sprite action PA, 8 frames -- recoiling',
     fps: 16, loop: false,
     tracks: {
       3:  [[0, 0, 0, 0], [2, 0, 14, 0], [8, 0, 4, 0]],
@@ -118,8 +118,8 @@ const BUILT_IN_MOTIONS = [
     }
   },
   {
-    name: 'Push', game: 'PU',
-    note: 'game action PU, 5 frames -- leaning into something',
+    name: 'Push', action: 'PU',
+    note: 'sprite action PU, 5 frames -- leaning into something',
     fps: 10, loop: true,
     tracks: {
       3:  [[0, 0, -18, 0], [2, 0, -24, 0], [5, 0, -18, 0]],
@@ -135,8 +135,8 @@ const BUILT_IN_MOTIONS = [
     }
   },
   {
-    name: 'Throw', game: 'TH',
-    note: 'game action TH, 8 frames',
+    name: 'Throw', action: 'TH',
+    note: 'sprite action TH, 8 frames',
     fps: 16, loop: true,
     tracks: {
       19: [[0, -20, ARM_DOWN_R + 20, 0], [3, -74, ARM_DOWN_R + 44, 0],
@@ -154,8 +154,8 @@ const BUILT_IN_MOTIONS = [
     }
   },
   {
-    name: 'Down', game: 'DD',
-    note: 'game action DD, 21 frames -- knocked out, body comes down too',
+    name: 'Down', action: 'DD',
+    note: 'sprite action DD, 21 frames -- knocked out, body comes down too',
     fps: 16, loop: false,
     /* Rotations alone cannot lower a character: the root has to move,
        which is what this track is for. */
@@ -179,8 +179,8 @@ const BUILT_IN_MOTIONS = [
     }
   },
   {
-    name: 'Win', game: 'WI',
-    note: 'game action WI, 12 frames -- both arms up, twice',
+    name: 'Win', action: 'WI',
+    note: 'sprite action WI, 12 frames -- both arms up, twice',
     fps: 14, loop: true,
     tracks: {
       19: [[0, 0, ARM_DOWN_R, 0], [2, -10, 62, 0], [5, -10, 34, 0],

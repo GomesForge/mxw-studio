@@ -6,9 +6,9 @@ files.
 
 ## 64 colours are reserved
 
-**64 of the 65536 RGB565 values are substituted by the game at run
+**64 of the 65536 RGB565 values are substituted by the runtime at
 time.** Left alone they read as a neutral ramp from black through grey
-to white in 64 steps. The game paints a palette over them, which is how
+to white in 64 steps. The runtime paints a palette over them, which is how
 one character sheet serves every team colour — and it is the single
 reason character work is hard: half of what you draw is not the colour
 it will be.
@@ -31,7 +31,7 @@ Measured across 974 character sprite files:
 | share in the non-character graphics | **81.9%** |
 
 They are not merely present, they are the *most used colours in the
-game*. The editor marks them, reports what fraction of a sheet sits in
+runtime*. The editor marks them, reports what fraction of a sheet sits in
 the ramp, and can preview a team palette over them.
 
 The real substitution tables are **not known**. The manual lists the
@@ -58,7 +58,7 @@ the client.
 
 ## Size limit
 
-The manual reports the game failing to start when a frame's data is too
+The manual reports the runtime failing to start when a frame's data is too
 large, with trouble around 60x100 pixels, and recommends staying at or
 under **64x80**. Larger frames also get in the way during play. Files
 that shipped at larger sizes are fine; newly grown ones may not be. The

@@ -1,6 +1,6 @@
 /* GIF89a encoder, for writing a new texture back into an MXW file.
 
-   The game's textures are 128x128 GIF89a with a 64, 128 or 256 entry
+   These textures are 128x128 GIF89a with a 64, 128 or 256 entry
    global colour table, no interlacing, and -- in 36 of the 58 in the
    archive -- a transparent index. Hair, headbands and back items rely
    on that transparency for their cut-out silhouette, so an encoder

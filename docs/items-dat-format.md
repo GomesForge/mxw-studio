@@ -1,7 +1,7 @@
 # items.dat — the client's shop thumbnails
 
-The BMOWorld 4.x client ships an `items.dat` of about 25 MB beside
-`BomberMan.exe`. It is not encrypted and not related to the `.dat` files
+One later client ships an `items.dat` of about 25 MB beside its
+executable. It is not encrypted and not related to the `.dat` files
 in `Data/cache`: it is a flat archive of the shop's preview pictures,
 each one keyed by its item id.
 

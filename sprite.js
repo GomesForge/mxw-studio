@@ -21,7 +21,7 @@ const sprite = {
 };
 
 /* Render a frame to RGBA, optionally substituting a team palette over
-   the reserved colours so the sheet can be judged the way the game
+   the reserved colours so the sheet can be judged the way the runtime
    will show it. */
 function spriteFrameRGBA(g, f) {
   if (sprite.team === 'none') return f.toRGBA(g.width, g.height);
@@ -128,8 +128,8 @@ function spriteRenderAll() {
   spriteCheckRoundTrip();
 }
 
-/* How much of this sheet the game will recolour, and whether the frame
-   size is within what the game tolerates. */
+/* How much of this sheet the runtime will recolour, and whether the
+   frame size is within what the format tolerates. */
 function spriteRenderTint() {
   const g = sprite.entry.gra;
   let total = 0, tinted = 0;
@@ -145,7 +145,7 @@ function spriteRenderTint() {
   }
   $('tintStat').innerHTML = total
     ? '<b>' + (100 * tinted / total).toFixed(1) + '%</b> of this sheet is in the '
-      + 'reserved ramp (' + steps.size + ' of 64 steps used), so the game '
+      + 'reserved ramp (' + steps.size + ' of 64 steps used), so the runtime '
       + 'recolours it. The preview above is an approximation -- the real '
       + 'substitution tables are not known.'
     : 'no pixels';
@@ -165,10 +165,10 @@ function spriteRenderTint() {
   if (g.width > cap[0] || g.height > cap[1]) {
     warn.style.display = 'block';
     warn.textContent = "This frame is " + g.width + "x" + g.height +
-      ". The original authoring tool's manual reports the game failing on " +
+      ". The original authoring tool's manual reports a failure on " +
       "frames around 60x100, and recommends staying at or under " +
       cap[0] + "x" + cap[1] + ". Files this size that shipped with the " +
-      "game are fine; newly grown ones may not be.";
+      "set are fine; newly grown ones may not be.";
   } else {
     warn.style.display = 'none';
   }
@@ -433,7 +433,7 @@ function spriteExportStrip() {
 
 /* The animation as one GIF, at the speed set on the slider.
 
-   The canvas is mostly empty -- a bomber occupies about 34x52 of a
+   The canvas is mostly empty -- a figure occupies about 34x52 of a
    256x256 sheet -- so the result is cropped to the box every frame
    together occupies. Cropping per frame would be smaller still and
    would also throw the poses out of register with each other, which is

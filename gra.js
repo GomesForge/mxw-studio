@@ -103,7 +103,7 @@ function rgb565ToRgb(v) {
 
    64 of the 65536 RGB565 values are reserved. Left alone they read as
    a neutral ramp from black through grey to white in 64 steps, and the
-   game substitutes a palette over them at run time -- which is how one
+   runtime substitutes a palette over them -- which is how one
    character sheet serves every team colour.
 
    The original authoring tool's manual states the reservation and that
@@ -117,8 +117,8 @@ function rgb565ToRgb(v) {
    non-character graphics.
 
    The practical consequence: more than half of a character is recoloured
-   by the game. Paint with one of these by accident and the result looks
-   right in an editor and wrong in play. */
+   by the runtime. Paint with one of these by accident and the result
+   looks right in an editor and wrong once it is loaded. */
 
 const TINT_STEPS = 64;
 

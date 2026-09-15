@@ -26,7 +26,7 @@ row 14   XXXXXXXXXXXXXXXXX
 ```
 
 A solid border, a ring inside it, and alternating cells across the
-interior — the arrangement any tile-based arena uses. So a grid is
+interior — the arrangement any tile-based map uses. So a grid is
 **17 x 15 = 255 bytes**, and the file holds a series of them.
 
 ### Tile values

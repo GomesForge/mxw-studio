@@ -373,6 +373,7 @@
   body.paint-mode #paintDock{display:block}
   /* Every mesh panel is shown by setting style.display in JS, so hiding
      one from a rule needs !important. */
+  body.sprite-mode #makeDock,body.paint-mode #makeDock,
   body.sprite-mode #poseDock,body.paint-mode #poseDock,
   body.sprite-mode #meshDock,body.paint-mode #meshDock,
   body.sprite-mode #texDock,body.paint-mode #texDock,
@@ -537,6 +538,7 @@
     <button id="bTexOut">Save .GIF</button>
     <button id="bUV">Save UV .PNG</button>
     <span class="actRule"></span>
+    <button id="bViewGif">Save view .GIF</button>
     <button id="bObj">Export .OBJ</button>
     <button id="bObjIn" type="button">Import .OBJ&hellip;</button>
   </span>
@@ -657,10 +659,10 @@
     <details class="dock" open><summary>Reserved colours</summary>
       <div class="dockBody">
         <div id="tintRamp"></div>
-        <p class="hint">These 64 values are substituted by the game at
-        run time, which is how one sheet serves every team colour. Click
-        one to paint with it deliberately; <b>anything you paint in one
-        of these will change colour in play.</b></p>
+        <p class="hint">These 64 values are substituted at run time,
+        which is how one sheet serves every team colour. Click one to
+        paint with it deliberately; <b>anything you paint in one of
+        these changes colour once the file is loaded.</b></p>
         <p class="warn" id="tintWarn" style="display:none"></p>
       </div>
     </details>
@@ -745,6 +747,56 @@
     </div>
   </details>
 
+  <details class="dock" id="makeDock"><summary>Create and transform</summary>
+    <div class="dockBody">
+      <h2>Start a shape</h2>
+      <div id="shapeList" class="ctrl"></div>
+      <div class="slider"><span>size</span>
+        <input type="range" id="shapeSize" min="100" max="4000" step="50" value="1000">
+        <b id="shapeSizeOut">1000</b></div>
+      <div class="slider"><span>sides</span>
+        <input type="range" id="shapeSeg" min="3" max="48" value="16">
+        <b id="shapeSegOut">16</b></div>
+      <div class="slider"><span>height</span>
+        <input type="range" id="shapeAt" min="0" max="7200" step="50" value="0">
+        <b id="shapeAtOut">0</b></div>
+      <p class="hint">A new shape opens as its own file, sized in the
+        same units the meshes use &mdash; a body runs about 7090 tall,
+        so 1000 is roughly a hand. Height lifts it off the floor: 4300
+        is shoulder level, 5600 the head. It has no texture yet; drop an
+        image on it or use Replace texture.</p>
+
+      <h2>Move this mesh</h2>
+      <div id="xformPanel">
+        <div class="ctrl">
+          <button id="bXbigger">Scale &times;1.1</button>
+          <button id="bXsmaller">Scale &divide;1.1</button>
+        </div>
+        <div class="ctrl seg">
+          <button id="bXrotX">Turn X</button>
+          <button id="bXrotY">Turn Y</button>
+          <button id="bXrotZ">Turn Z</button>
+        </div>
+        <div class="ctrl seg">
+          <button id="bXmirX">Mirror X</button>
+          <button id="bXmirY">Mirror Y</button>
+          <button id="bXmirZ">Mirror Z</button>
+        </div>
+        <div class="slider"><span>raise</span>
+          <input type="range" id="xMove" min="-2000" max="2000" step="25" value="0">
+          <b id="xMoveOut">0</b></div>
+        <div class="ctrl">
+          <button id="bXcentre">Centre on X and Z</button>
+          <button id="bXfloor">Drop to the floor</button>
+        </div>
+        <p class="hint">Turns are 90 degrees. Mirroring flips the face
+          winding with the geometry, or the mesh comes out inside
+          out. Coordinates are 16-bit, so anything pushed past
+          &plusmn;32767 is clamped and the panel says how much.</p>
+      </div>
+    </div>
+  </details>
+
   <details class="dock" id="poseDock" open><summary>Motion</summary>
     <div class="dockBody">
       <div id="motionNone" class="note">This file has no skeleton, so
@@ -793,10 +845,10 @@
           <button id="bMoIn" type="button">Load a motion&hellip;</button>
         </div>
         <input type="file" id="moFile" accept=".json,.JSON">
-        <p class="hint">The built-in motions are ours, not the game's
-          &mdash; the rig underneath is the file's own. A real motion
-          file carries one track per bone, 74 on the boy and 75 on the
-          girl, which is the shape this player already expects.</p>
+        <p class="hint">The built-in motions are ours; the rig under
+          them is the file's own. An original motion file carries one
+          track per bone, 74 on one body and 75 on the other, which is
+          the shape this player already expects.</p>
       </div>
     </div>
   </details>
@@ -909,13 +961,14 @@
 <div id="menu"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="mxw.js?v=9"></script>
-<script src="gra.js?v=9"></script>
-<script src="obj.js?v=9"></script>
-<script src="checks.js?v=9"></script>
-<script src="gifenc.js?v=9"></script>
-<script src="paint.js?v=9"></script>
-<script src="skin.js?v=9"></script>
-<script src="motions.js?v=9"></script>
-<script src="sprite.js?v=9"></script>
-<script src="app.js?v=9"></script>
+<script src="mxw.js?v=10"></script>
+<script src="gra.js?v=10"></script>
+<script src="obj.js?v=10"></script>
+<script src="checks.js?v=10"></script>
+<script src="gifenc.js?v=10"></script>
+<script src="paint.js?v=10"></script>
+<script src="shapes.js?v=10"></script>
+<script src="skin.js?v=10"></script>
+<script src="motions.js?v=10"></script>
+<script src="sprite.js?v=10"></script>
+<script src="app.js?v=10"></script>

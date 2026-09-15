@@ -1,13 +1,13 @@
 # get_item_list.bin — the item index
 
-The server's index of every item that exists in the game. The client
+The server's index of every item that exists. The client
 fetched it over HTTP; an item that is not listed here is one the client
 never requests, so a new `.bin` on the server stays invisible until it
 is also registered in this file.
 
 The server admin said as much in a forum thread in April 2010:
 
-> get item list allocates the amount of items there are in the game
+> get item list allocates the amount of items there are
 > i broke that format so i can add more and new bins
 
 ## Getting a copy

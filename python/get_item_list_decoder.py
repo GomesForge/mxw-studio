@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Decoder for get_item_list.bin, an online game's item index.
+"""Decoder for get_item_list.bin, a server-side item index.
 
-The file is the server-side index of every item that exists in the game.
+The file is the server-side index of every item that exists.
 The client fetched it over HTTP; without an entry here the client never
 requests the item's .bin, so a new item is invisible until it is added.
 

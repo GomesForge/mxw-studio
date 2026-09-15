@@ -92,7 +92,7 @@ def rgb_to_rgb565(r, g, b):
 #
 # 64 of the 65536 RGB565 values are reserved. Left alone they read as a
 # neutral ramp from black through grey to white in 64 steps, and the
-# game substitutes a palette over them at run time -- which is how one
+# runtime substitutes a palette over them -- which is how one
 # character sheet serves every team colour.
 #
 # The original authoring tool's manual states the reservation, and that
@@ -106,8 +106,8 @@ def rgb_to_rgb565(r, g, b):
 # graphics.
 #
 # The practical consequence: more than half of a character is recoloured
-# by the game, so painting over one of these by accident gives a result
-# that looks right in an editor and wrong in play.
+# by the runtime, so painting over one of these by accident gives a
+# result that looks right in an editor and wrong once it is loaded.
 
 TINT_STEPS = 64
 
@@ -142,7 +142,7 @@ def rgb_to_rgb565_truncate(r, g, b):
     return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
 
 
-# The game rejects frames whose pixel data is too large -- the manual
+# Frames whose pixel data is too large are rejected -- the manual
 # reports failures around 60x100 and recommends staying at or under
 # 64x80.
 SAFE_FRAME = (64, 80)
@@ -151,7 +151,7 @@ SAFE_FRAME = (64, 80)
 def frame_warnings(width, height):
     out = []
     if width > SAFE_FRAME[0] or height > SAFE_FRAME[1]:
-        out.append('frame is %dx%d; the game has been reported to fail '
+        out.append('frame is %dx%d; readers have been reported to fail '
                    'on frames around 60x100, and %dx%d is the '
                    'recommended ceiling'
                    % (width, height, SAFE_FRAME[0], SAFE_FRAME[1]))

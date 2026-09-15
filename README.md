@@ -1,9 +1,9 @@
 # mxw-studio
 
-An editor and toolkit for the **MXW** asset family — the container and
-companion formats used by an early-2000s online game whose servers shut
-down long ago. It opens the files, shows them in 3D, lets you change
-them, and writes working files back out.
+An editor and toolkit for the **MXW** asset family — a container
+format and its companions, from an early-2000s application whose
+servers are long gone. It opens the files, shows them in 3D, lets you
+change them, and writes working files back out.
 
 **[Open the editor →](https://gomesforge.github.io/mxw-studio/)**
 
@@ -101,11 +101,11 @@ land where a skeleton should have them.
 - **Pose any bone**, by name, with a slider per axis. For an arm, swing
   moves it forward and lift raises it; for a leg, swing steps and lift
   spreads. Which axis does what was measured on the rig
-- **Play a motion.** The eight actions the game itself has come first,
-  under its own names and frame counts &mdash; `ST` stand, `WA` walk,
-  `MO` carrying, `PA` hit, `PU` push, `TH` throw, `DD` down, `WI` win
-  &mdash; then run, sit, wave, nod and the rest. Scrub the frame, set
-  the speed, loop or not
+- **Play a motion.** The eight actions the sprite sets themselves
+  carry come first, under the names and frame counts found in those
+  files &mdash; `ST` stand, `WA` walk, `MO` carrying, `PA` hit, `PU`
+  push, `TH` throw, `DD` down, `WI` win &mdash; then run, sit, wave,
+  nod and the rest. Scrub the frame, set the speed, loop or not
 - **Every motion is checked**, not eyeballed:
   `python/check_motion.py` measures the torso angle, the feet against
   the floor, the angle at each knee, the hands' clearance from the
@@ -117,14 +117,15 @@ land where a skeleton should have them.
   dressed character in movement
 - **Save a pose** as a small JSON, and load one back
 
-**The action set is the game's; the joint angles are ours.** The
-archive has no motion file for the 3D avatars &mdash; the meshes carry
-no keyframes and no such file exists in it. What it does have is the
-battle characters' 2D sprites, which are the game's own animation, and
-those gave the vocabulary and the timing. They could not give the
-angles: a different character, one projection, a few dozen pixels tall.
-When a real motion file turns up it plays through the same player,
-because it is the same thing &mdash; a rotation per bone per frame.
+**The action set is read from the files; the joint angles are ours.**
+No motion data for the 3D avatars survives anywhere we can find &mdash;
+the meshes carry no keyframes, and
+[docs/motion-format.md](docs/motion-format.md) lists everything ruled
+out looking for it. What does survive is the 2D sprite sets, and those
+gave the vocabulary and the timing. They could not give the angles: a
+different figure, one projection, a few dozen pixels tall. When a real
+motion file turns up it plays through the same player, because it is
+the same thing &mdash; a rotation per bone per frame.
 
 ## Sprites
 
@@ -153,12 +154,12 @@ Drop a `.gra`, `.spr` or `.eft` and the page switches to sprite mode.
   one click away
 - **Start a sheet from nothing** with New sprite, then add, duplicate
   or delete frames
-- A **team preview** shows how the game will recolour the sheet, and the
+- A **team preview** shows how the runtime recolours the sheet, and the
   panel reports what fraction of it sits in the reserved ramp
 - **Save the animation as one GIF**, at the speed on the slider and in
   whichever team colours are previewed. Every frame shares one colour
   table, or the palette crawls between frames, and the result is cropped
-  to the box all the frames together occupy &mdash; a bomber is about
+  to the box all the frames together occupy &mdash; a figure is about
   45&times;69 of a 256&times;256 sheet
 - Save the sprite back out
 
@@ -227,11 +228,11 @@ mesh and rewritten wrongly.
 - [docs/gra-format.md](docs/gra-format.md) — the sprite format, its
   run encoding, and the files that do not fit it
 - [docs/map-format.md](docs/map-format.md) — the map tile grid: 17x15
-  bytes per arena, what the common tile values mean, and the part that
+  bytes per map, what the common tile values mean, and the part that
   is still unknown
 - [docs/character-sprites.md](docs/character-sprites.md) — the 64
-  reserved colours the game recolours at run time, the frame size the
-  game tolerates, and the animation file naming
+  reserved colours the runtime substitutes, the frame size the format
+  tolerates, and the animation file naming
 - [docs/get-item-list-format.md](docs/get-item-list-format.md) — the
   item index, what the type byte means, and how to obtain a copy
 - [docs/items-dat-format.md](docs/items-dat-format.md) — the client's
@@ -240,6 +241,9 @@ mesh and rewritten wrongly.
 - [docs/encrypted-parameter-file.md](docs/encrypted-parameter-file.md) —
   one encrypted table nobody has opened, and everything already ruled
   out on it
+- [docs/shapes.md](docs/shapes.md) — what a mesh built from nothing
+  has to contain, and the winding that caught every primitive the
+  first time round
 - [docs/motion-format.md](docs/motion-format.md) — the rest pose,
   how it was derived, which axis moves what, and what a motion file
   needs to look like
@@ -264,10 +268,9 @@ What would help most right now is the dress room and character export
 ## Credits
 
 Community researchers got a long way into these files first, in forum
-threads from 2008 to 2010: **Broomop**, **Segovia** and **Bomberguy** in
-particular. Segovia noticed in 2008 that item files differ at offsets
-`0A-0B` without knowing those bytes were the mesh id, and Broomop had
-already worked out the item index well before any of this.
+threads from 2008 to 2010. Segovia noticed in 2008 that item files
+differ at offsets `0A-0B` without knowing those bytes were the mesh id,
+and Broomop had worked out the item index well before any of this.
 
 ## Licence
 

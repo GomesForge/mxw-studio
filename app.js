@@ -174,7 +174,10 @@ function initThree() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0d1524);
   cam = new THREE.PerspectiveCamera(42, host.clientWidth / host.clientHeight, 0.01, 500);
-  rend = new THREE.WebGLRenderer({ antialias: true });
+  /* preserveDrawingBuffer, because saving the view reads the canvas
+     back, and without it a WebGL canvas reads back empty. */
+  rend = new THREE.WebGLRenderer({ antialias: true, alpha: true,
+                                   preserveDrawingBuffer: true });
   rend.setPixelRatio(Math.min(devicePixelRatio, 2));
   rend.setSize(host.clientWidth, host.clientHeight);
   host.appendChild(rend.domElement);
@@ -652,6 +655,7 @@ function enableActions() {
   const off = (id, ok) => { const b = $(id); if (b) b.disabled = !ok; };
   off('bSave', hasFile);
   off('bObj', hasMesh);
+  off('bViewGif', hasMesh);
   off('bPaintTex', hasTex);
   off('bTexIn', hasTex);
   off('bTexOut', hasTex);
@@ -1078,6 +1082,187 @@ async function replaceTexture(file) {
 
 /* Paint the selected texture, with the UV layout of the faces that
    use it drawn on top so a garment lands in the right place. */
+/* --------------------------- create and move --------------------- */
+/* A shape opens as its own file rather than replacing what is loaded:
+   starting a new piece should never cost you the one you had open. */
+function makeShape(kind) {
+  const opts = {
+    width: +$('shapeSize').value,
+    height: +$('shapeSize').value,
+    depth: +$('shapeSize').value,
+    radius: +$('shapeSize').value / 2,
+    tube: +$('shapeSize').value / 5,
+    segments: +$('shapeSeg').value,
+    rings: Math.max(3, Math.round(+$('shapeSeg').value / 2)),
+    at: [0, +$('shapeAt').value, 0]
+  };
+  let res;
+  try { res = shapeContainer(kind, opts); }
+  catch (e) { notify('could not build that shape: ' + e.message, 1); return; }
+  const entry = { name: kind + '.bin', raw: res.mxw.write(), mxw: res.mxw,
+                  meshIndex: 0 };
+  loaded.push(entry);
+  current = entry;
+  selectedTex = 0;
+  texPreview = null;
+  setView('whole');
+  rebuild();
+  renderAll();
+  $('empty').style.display = 'none';
+  const m = res.mxw.meshes[0];
+  notify(SHAPES[kind].label.toLowerCase() + ': ' + m.nv + ' vertices, ' +
+         m.faces.length + ' faces. It has no texture yet -- drop an image ' +
+         'on it, or use Replace texture.');
+}
+
+/* Every transform runs through here so one place reports the clamping
+   and keeps the panels in step. */
+function transform(label, fn) {
+  const c = current;
+  const m = c && c.mxw.meshes[c.meshIndex || 0];
+  if (!m) { notify('open a mesh first', 1); return; }
+  let clipped = 0;
+  try { clipped = fn(m) || 0; }
+  catch (e) { notify(label + ' failed: ' + e.message, 1); return; }
+  /* the rig is built from the rest pose, so a moved mesh needs it again */
+  if (c._rig) c._rig = null;
+  rebuild();
+  renderAll();
+  notify(label + (clipped ? ' -- ' + clipped + ' coordinate(s) hit the ' +
+         '16-bit limit and were clamped' : ''));
+}
+
+function makeWire() {
+  $('shapeList').innerHTML = Object.keys(SHAPES).map(k =>
+    '<button data-shape="' + k + '" title="' + esc(SHAPES[k].note) + '">' +
+    esc(SHAPES[k].label) + '</button>').join('');
+  $('shapeList').querySelectorAll('button').forEach(b =>
+    b.onclick = () => makeShape(b.dataset.shape));
+  const show = (id, suffix) => {
+    $(id).oninput = () => { $(id + 'Out').textContent = $(id).value + (suffix || ''); };
+    $(id).oninput();
+  };
+  show('shapeSize'); show('shapeSeg'); show('shapeAt'); show('xMove');
+
+  $('bXbigger').onclick = () => transform('scaled up', m => meshScale(m, 1.1));
+  $('bXsmaller').onclick = () => transform('scaled down', m => meshScale(m, 1 / 1.1));
+  for (const ax of ['X', 'Y', 'Z']) {
+    $('bXrot' + ax).onclick = () =>
+      transform('turned 90 degrees about ' + ax,
+                m => meshRotate(m, ax.toLowerCase(), 90));
+    $('bXmir' + ax).onclick = () =>
+      transform('mirrored on ' + ax, m => meshMirror(m, ax.toLowerCase()));
+  }
+  $('xMove').onchange = e => {
+    const d = +e.target.value;
+    if (!d) return;
+    transform('raised by ' + d, m => meshMove(m, [0, d, 0]));
+    e.target.value = 0;
+    $('xMoveOut').textContent = '0';
+  };
+  $('bXcentre').onclick = () => transform('centred', meshCentre);
+  $('bXfloor').onclick = () => transform('dropped to the floor', meshToFloor);
+  $('bViewGif').onclick = exportViewGIF;
+}
+
+/* ------------------------ the view, as a GIF --------------------- */
+/* What is on screen, turned into an animated GIF: the motion that is
+   loaded, or a turntable when there is none. Renders off to the side
+   at a fixed square size and puts everything back, so the viewport is
+   not disturbed. */
+async function exportViewGIF() {
+  if (!rend || !current) { notify('open a mesh first', 1); return; }
+  const size = 320;
+  const host = rend.domElement.parentElement;
+  const keep = {
+    w: rend.domElement.clientWidth, h: rend.domElement.clientHeight,
+    bg: scene.background, theta: theta, spin: spin,
+    playing: motionPlaying, frame: motionFrame, aspect: cam.aspect
+  };
+  const steps = motion && motionLength(motion) > 0 ? 24 : 36;
+  const fps = motion && motionLength(motion) > 0 ? motion.fps : 18;
+
+  spin = false;
+  motionPlaying = false;
+  /* a transparent ground, so the GIF drops onto any page */
+  scene.background = null;
+  rend.setClearColor(0x000000, 0);
+  cam.aspect = 1;
+  cam.updateProjectionMatrix();
+  rend.setSize(size, size, false);
+
+  const flat = document.createElement('canvas');
+  flat.width = flat.height = size;
+  const fx = flat.getContext('2d', { willReadFrequently: true });
+  const frames = [];
+  try {
+    for (let i = 0; i < steps; i++) {
+      if (motion && motionLength(motion) > 0) {
+        motionFrame = motionLength(motion) * i / steps;
+        pose = motionPose(motion, motionFrame);
+        applyPose();
+      } else {
+        theta = keep.theta + i / steps * Math.PI * 2;
+      }
+      cam.position.set(radius * Math.sin(phi) * Math.cos(theta),
+                       radius * Math.cos(phi) + targetY,
+                       radius * Math.sin(phi) * Math.sin(theta));
+      cam.lookAt(0, targetY, 0);
+      rend.render(scene, cam);
+      fx.clearRect(0, 0, size, size);
+      fx.drawImage(rend.domElement, 0, 0, size, size);
+      frames.push(fx.getImageData(0, 0, size, size).data);
+    }
+  } catch (e) {
+    notify('could not read the view back: ' + e.message, 1);
+  } finally {
+    scene.background = keep.bg;
+    rend.setClearColor(0x000000, 1);
+    theta = keep.theta;
+    spin = keep.spin;
+    motionPlaying = keep.playing;
+    motionFrame = keep.frame;
+    if (motion) { pose = motionPose(motion, motionFrame); applyPose(); }
+    cam.aspect = keep.aspect;
+    cam.updateProjectionMatrix();
+    if (host) fitRenderer();
+  }
+  if (!frames.length) return;
+  /* every frame is mostly empty, so trim to what is actually drawn --
+     the same crop the sprite exporter uses, and for the same reason */
+  let x0 = size, y0 = size, x1 = -1, y1 = -1;
+  for (const px of frames) {
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        if (px[(y * size + x) * 4 + 3] >= 128) {
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
+        }
+      }
+    }
+  }
+  if (x1 < x0) { notify('the view came back empty', 1); return; }
+  const cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+  const cropped = frames.map(px => {
+    const out = new Uint8ClampedArray(cw * ch * 4);
+    for (let y = 0; y < ch; y++) {
+      const src = ((y + y0) * size + x0) * 4;
+      out.set(px.subarray(src, src + cw * 4), y * cw * 4);
+    }
+    return out;
+  });
+  let gif;
+  try { gif = encodeAnimatedGIF(cropped, cw, ch, { delayMs: Math.round(1000 / fps) }); }
+  catch (e) { notify('could not encode the view: ' + e.message, 1); return; }
+  saveFile(current.name.replace(/\.[^.]+$/, '') +
+           (motion ? '.' + motion.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : '.turntable') +
+           '.gif', gif, 'image/gif');
+  notify(steps + ' frames at ' + cw + 'x' + ch +
+         (motion && motionLength(motion) > 0 ? ', ' + motion.name : ', turning'));
+}
+
 /* ------------------------------ motion UI ------------------------ */
 /* Bone names are read off the vertices each bone drives, since nothing
    in the format carries a name -- python/dump_skeleton.py shows how,
@@ -1115,22 +1300,22 @@ function renderPosePanel() {
   if (!has) return;
 
   if (!$('motionList').childElementCount) {
-    /* The game's own action set first, named as the game names it --
-       the eight actions every battle character carries, with their
-       frame counts. Then everything else. */
+    /* The action set found in the sprite files first, under the
+       names and frame counts those files use. Then everything else. */
     const chip = (m, i) =>
       '<button data-mo="' + i + '" title="' + esc(m.note || '') + '">' +
-      esc(m.name) + (m.game ? ' <span class="dim">' + m.game + '</span>' : '') +
+      esc(m.name) + (m.action ? ' <span class="dim">' + m.action + '</span>' : '') +
       '</button>';
-    const game = [], extra = [];
-    BUILT_IN_MOTIONS.forEach((m, i) => (m.game ? game : extra).push(chip(m, i)));
+    const known = [], extra = [];
+    BUILT_IN_MOTIONS.forEach((m, i) =>
+      (m.action ? known : extra).push(chip(m, i)));
     $('motionList').innerHTML =
-      '<div class="moGroup">' + game.join('') + '</div>' +
-      '<p class="hint">Those eight are the actions the game itself has, ' +
-      'with its names and frame counts. The joint angles are ours: the ' +
-      'archive holds no motion file for the 3D avatars, only the 2D ' +
-      'battle sprites, which are a different character in a different ' +
-      'projection and cannot be read back into a skeleton.</p>' +
+      '<div class="moGroup">' + known.join('') + '</div>' +
+      '<p class="hint">Those eight are the actions the 2D sprite sets ' +
+      'carry, under the names and frame counts found in those files. ' +
+      'The joint angles are ours: no motion data for the 3D bodies ' +
+      'survives, and a sprite drawn in one projection a few dozen ' +
+      'pixels tall cannot be read back into a skeleton.</p>' +
       '<div class="moGroup">' + extra.join('') + '</div>';
     $('motionList').querySelectorAll('button').forEach(b =>
       b.onclick = () => playMotion(BUILT_IN_MOTIONS[+b.dataset.mo]));
@@ -1689,7 +1874,7 @@ async function importOBJ(file) {
       $('empty').style.display = 'none';
       notify('imported ' + res.mxw.meshes[0].nv + ' vertices and ' +
              res.mxw.meshes[0].faces.length + ' faces. It has no texture, ' +
-             'which the game may refuse -- add one before saving' +
+             'which a reader may refuse -- add one before saving' +
              (res.warnings.length ? '. ' + res.warnings.join('; ') : ''));
     }
   } catch (e) {
@@ -1936,8 +2121,10 @@ for (const [name, fn] of [['sprites', () => spriteWire()],
    what broke rather than dying silently */
 enableActions();
 menuWire();
-try { poseWire(); }
-catch (e) { notify('the motion panel failed to start: ' + e.message, 1); }
+for (const [what, fn] of [['motion panel', poseWire], ['create panel', makeWire]]) {
+  try { fn(); }
+  catch (e) { notify('the ' + what + ' failed to start: ' + e.message, 1); }
+}
 
 try {
   initThree();

@@ -897,7 +897,7 @@ function paintRenderTools() {
   }
 }
 
-/* The 64 values the game substitutes at run time, as a strip you can
+/* The 64 values the runtime substitutes, as a strip you can
    paint from deliberately -- and a warning when the current colour
    happens to be one of them. */
 function paintRenderTint() {
@@ -930,7 +930,7 @@ function paintRenderTint() {
   if (idx >= 0) {
     warn.style.display = 'block';
     warn.textContent = 'The current colour is reserved step ' + idx +
-      '. Anything you paint with it will be recoloured by the game.';
+      '. Anything you paint with it will be recoloured at run time.';
   } else {
     warn.style.display = 'none';
   }
