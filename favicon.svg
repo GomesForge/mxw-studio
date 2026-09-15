@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="bomb3d-title bomb3d-desc">
+  <title id="bomb3d-title">Bomba cartoon com efeito 3D</title>
+  <desc id="bomb3d-desc">Bomba esférica preta e brilhante, com reflexos azuis, bocal dourado, pavio trançado e faísca laranja. Fundo transparente.</desc>
+  <defs>
+    <radialGradient id="bomb3d-body" gradientUnits="userSpaceOnUse" cx="164" cy="243" r="263" fx="155" fy="229">
+      <stop stop-color="#778398"/>
+      <stop offset=".22" stop-color="#414A60"/>
+      <stop offset=".47" stop-color="#1E2537"/>
+      <stop offset=".71" stop-color="#090D18"/>
+      <stop offset=".88" stop-color="#070A13"/>
+      <stop offset="1" stop-color="#25334D"/>
+    </radialGradient>
+    <radialGradient id="bomb3d-rim">
+      <stop offset=".83" stop-color="#174FCF" stop-opacity="0"/>
+      <stop offset=".94" stop-color="#146CFF" stop-opacity=".42"/>
+      <stop offset=".976" stop-color="#367AF7" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#7886AC" stop-opacity=".35"/>
+    </radialGradient>
+    <linearGradient id="bomb3d-rim-mask" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="white"/><stop offset=".45" stop-color="#AAAAAA"/><stop offset=".85" stop-color="#202020"/><stop offset="1" stop-color="#444444"/>
+    </linearGradient>
+    <radialGradient id="bomb3d-blue">
+      <stop stop-color="#6AE0FF" stop-opacity=".95"/>
+      <stop offset=".22" stop-color="#008DFF" stop-opacity=".85"/>
+      <stop offset=".52" stop-color="#0754E8" stop-opacity=".6"/>
+      <stop offset="1" stop-color="#0644DF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bomb3d-bounce">
+      <stop stop-color="#7797F0" stop-opacity=".36"/><stop offset="1" stop-color="#3360C1" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bomb3d-shine" cx=".44" cy=".42" r=".61">
+      <stop stop-color="#FFFFFF"/><stop offset=".24" stop-color="#F7FAFF" stop-opacity=".98"/><stop offset=".64" stop-color="#C6D4F4" stop-opacity=".72"/><stop offset="1" stop-color="#94A7D0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bomb3d-soft-light">
+      <stop stop-color="#DCE6FF" stop-opacity=".24"/><stop offset="1" stop-color="#A5B5D8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bomb3d-gold" gradientUnits="userSpaceOnUse" x1="-53" y1="0" x2="53" y2="0">
+      <stop stop-color="#764205"/><stop offset=".1" stop-color="#CC820E"/><stop offset=".23" stop-color="#FFD052"/><stop offset=".31" stop-color="#FFF5B3"/><stop offset=".42" stop-color="#FFD45A"/><stop offset=".61" stop-color="#A46306"/><stop offset=".75" stop-color="#895006"/><stop offset=".91" stop-color="#EEA720"/><stop offset="1" stop-color="#915408"/>
+    </linearGradient>
+    <linearGradient id="bomb3d-gold-depth" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#603104" stop-opacity="0"/><stop offset=".73" stop-color="#603104" stop-opacity="0"/><stop offset="1" stop-color="#452205" stop-opacity=".45"/>
+    </linearGradient>
+    <linearGradient id="bomb3d-gold-top" x1="0" y1="0" x2=".8" y2="1">
+      <stop stop-color="#C88514"/><stop offset=".3" stop-color="#FFCF50"/><stop offset=".63" stop-color="#FFE896"/><stop offset="1" stop-color="#DC971B"/>
+    </linearGradient>
+    <linearGradient id="bomb3d-hole" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#130D08"/><stop offset="1" stop-color="#4D300E"/>
+    </linearGradient>
+    <linearGradient id="bomb3d-rope" gradientUnits="userSpaceOnUse" x1="348" y1="96" x2="357" y2="142">
+      <stop stop-color="#FFF9E6"/><stop offset=".3" stop-color="#F9E9C9"/><stop offset=".57" stop-color="#EACDA0"/><stop offset=".8" stop-color="#C69D69"/><stop offset="1" stop-color="#9A6C3A"/>
+    </linearGradient>
+    <linearGradient id="bomb3d-seat-shadow" gradientUnits="userSpaceOnUse" x1="0" y1="-14" x2="0" y2="11">
+      <stop stop-color="#241508" stop-opacity="0"/><stop offset=".4" stop-color="#241508" stop-opacity=".06"/><stop offset="1" stop-color="#241508" stop-opacity=".72"/>
+    </linearGradient>
+    <radialGradient id="bomb3d-spark" gradientUnits="userSpaceOnUse" cx="427" cy="76" r="63" fx="424" fy="70">
+      <stop stop-color="#FFFFED"/><stop offset=".19" stop-color="#FFFFAA"/><stop offset=".4" stop-color="#FFE62E"/><stop offset=".65" stop-color="#FFB500"/><stop offset=".83" stop-color="#FF7900"/><stop offset="1" stop-color="#EA3A00"/>
+    </radialGradient>
+    <radialGradient id="bomb3d-ember" cx=".35" cy=".3" r=".7">
+      <stop stop-color="#FFFFBE"/><stop offset=".28" stop-color="#FFE93C"/><stop offset=".7" stop-color="#FF9C00"/><stop offset="1" stop-color="#F45400"/>
+    </radialGradient>
+    <radialGradient id="bomb3d-gold-reflection">
+      <stop stop-color="#EDB347" stop-opacity=".4"/><stop offset="1" stop-color="#D99624" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="bomb3d-soft" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="1.4"/></filter>
+    <filter id="bomb3d-shadow" x="-35%" y="-70%" width="170%" height="240%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="4"/></filter>
+    <clipPath id="bomb3d-body-clip"><circle cx="218" cy="328" r="165"/></clipPath>
+    <clipPath id="bomb3d-fuse-seat" clipPathUnits="userSpaceOnUse">
+      <path d="M-200-220H220V-1H34A34 10.7 0 0 1-34-1H-200Z" transform="translate(306 153) rotate(28)"/>
+    </clipPath>
+    <clipPath id="bomb3d-front-lip"><path d="M-53 0A53 18 0 0 0 53 0L34-1A34 10.7 0 0 1-34-1Z"/></clipPath>
+    <mask id="bomb3d-rim-visibility" x="52" y="162" width="332" height="332" maskUnits="userSpaceOnUse"><circle cx="218" cy="328" r="165" fill="url(#bomb3d-rim-mask)"/></mask>
+    <mask id="bomb3d-rope-mask" x="275" y="70" width="165" height="120" maskUnits="userSpaceOnUse"><path d="M296 173C303 151 307 137 316 124 322 116 328 114 335 113S362 130 384 118 408 108 418 93" stroke="white" stroke-width="24" stroke-linecap="round"/></mask>
+  </defs>
+
+  <circle cx="218" cy="328" r="165" fill="url(#bomb3d-body)"/>
+  <g clip-path="url(#bomb3d-body-clip)">
+    <circle cx="218" cy="328" r="165" fill="url(#bomb3d-rim)" mask="url(#bomb3d-rim-visibility)"/>
+    <ellipse cx="351" cy="274" rx="29" ry="72" transform="rotate(-24 351 274)" fill="url(#bomb3d-blue)"/>
+    <ellipse cx="296" cy="424" rx="101" ry="28" transform="rotate(-38 296 424)" fill="url(#bomb3d-bounce)"/>
+    <ellipse cx="159" cy="252" rx="61" ry="102" transform="rotate(43 159 252)" fill="url(#bomb3d-soft-light)"/>
+    <ellipse cx="147" cy="240" rx="25" ry="67" transform="rotate(43 147 240)" fill="url(#bomb3d-shine)" filter="url(#bomb3d-soft)"/>
+    <ellipse cx="91" cy="397" rx="18" ry="68" transform="rotate(-22 91 397)" fill="url(#bomb3d-soft-light)" opacity=".8"/>
+    <ellipse cx="282" cy="205" rx="56" ry="23" transform="rotate(28 282 205)" fill="#03050B" opacity=".92" filter="url(#bomb3d-shadow)"/>
+    <ellipse cx="267" cy="212" rx="41" ry="21" transform="rotate(28 267 212)" fill="url(#bomb3d-gold-reflection)"/>
+  </g>
+
+  <g transform="translate(306 153) rotate(28)">
+    <path d="M-53 0H53V43C53 53.5 29 62 0 62S-53 53.5-53 43Z" fill="url(#bomb3d-gold)"/>
+    <path d="M-53 0H53V43C53 53.5 29 62 0 62S-53 53.5-53 43Z" fill="url(#bomb3d-gold-depth)"/>
+    <path d="M-53 43C-53 53.5-29 62 0 62S53 53.5 53 43" stroke="#2C1A06" stroke-width="1.8"/>
+    <ellipse rx="53" ry="18" fill="url(#bomb3d-gold-top)" stroke="#D99A25" stroke-width="1.2"/>
+    <path d="M-51 1C-48 11-26 18 0 18S48 11 51 1" stroke="#FFF0A6" stroke-width="2.1" stroke-linecap="round"/>
+    <ellipse cy="-1" rx="34" ry="10.7" fill="url(#bomb3d-hole)" stroke="#BC7A11" stroke-width="1.8"/>
+    <path d="M-31-4C-22-13 22-13 31-4" stroke="#FFE185" stroke-width="1.1" opacity=".85"/>
+  </g>
+
+  <g clip-path="url(#bomb3d-fuse-seat)">
+  <path d="M296 173C303 151 307 137 316 124 322 116 328 114 335 113S362 130 384 118 408 108 418 93" stroke="#AE7F49" stroke-width="25" stroke-linecap="round"/>
+  <path d="M296 173C303 151 307 137 316 124 322 116 328 114 335 113S362 130 384 118 408 108 418 93" stroke="url(#bomb3d-rope)" stroke-width="24" stroke-linecap="round"/>
+  <g mask="url(#bomb3d-rope-mask)" stroke-linecap="round">
+    <path d="M302 126C313 130 319 137 322 149M317 103C330 103 337 114 342 128M346 102C349 120 358 129 372 132M377 102C382 115 392 121 402 121M399 86C400 102 410 108 423 106" stroke="#A57845" stroke-opacity=".57" stroke-width="2.3"/>
+    <path d="M301 124C313 127 320 135 324 147M316 101C331 101 339 114 344 127M348 100C351 118 360 128 374 130M379 100C384 113 394 119 405 119M401 84C402 100 412 106 425 104" stroke="#FFF7E0" stroke-opacity=".55" stroke-width="2.8"/>
+    <path d="M303 135C315 107 331 101 345 107S365 121 382 111 404 103 413 89" stroke="#FFFBEF" stroke-width="4" stroke-opacity=".3" filter="url(#bomb3d-soft)"/>
+  </g>
+  <g mask="url(#bomb3d-rope-mask)">
+    <path d="M-36-14H36V12H-36Z" transform="translate(306 153) rotate(28)" fill="url(#bomb3d-seat-shadow)"/>
+  </g>
+  </g>
+
+  <g transform="translate(306 153) rotate(28)">
+    <ellipse rx="53" ry="18" fill="url(#bomb3d-gold-top)" clip-path="url(#bomb3d-front-lip)"/>
+    <path d="M-34-1A34 10.7 0 0 0 34-1" stroke="#BC7A11" stroke-width="1.8"/>
+    <path d="M-51 1C-48 11-26 18 0 18S48 11 51 1" stroke="#FFF0A6" stroke-width="2.1" stroke-linecap="round"/>
+  </g>
+
+  <ellipse cx="392" cy="46" rx="7" ry="10" transform="rotate(-38 392 46)" fill="url(#bomb3d-ember)"/>
+  <ellipse cx="470" cy="112" rx="6.3" ry="9.7" transform="rotate(-42 470 112)" fill="url(#bomb3d-ember)"/>
+  <ellipse cx="450" cy="149" rx="5.2" ry="8.5" transform="rotate(-25 450 149)" fill="url(#bomb3d-ember)"/>
+  <path d="M426 23C428 15 433 15 435 23 444 53 453 62 484 67 494 69 495 76 484 80 453 91 447 99 442 129 441 138 434 139 431 129 421 98 415 90 383 85 372 83 374 75 383 72 413 63 420 52 426 23Z" fill="url(#bomb3d-spark)" stroke="#F16B08" stroke-width="1"/>
+  <path d="M430 28C429 58 420 71 388 79" stroke="#FFF7AF" stroke-width="3" stroke-linecap="round" opacity=".88" filter="url(#bomb3d-soft)"/>
+  <path d="M430 31C429 53 424 64 416 69" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity=".5"/>
+</svg>

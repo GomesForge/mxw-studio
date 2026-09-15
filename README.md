@@ -7,6 +7,10 @@ change them, and writes working files back out.
 
 **[Open the editor →](https://gomesforge.github.io/mxw-studio/)**
 
+There is a **Tutorial** button in the editor itself, in violet at the
+top. Twelve sections with diagrams, from the shape of the window to
+four worked examples start to finish.
+
 Nothing here ships any asset. These are tools; bring your own files.
 
 ---
@@ -190,6 +194,30 @@ open('out.bin', 'wb').write(m.write())
 ```
 
 `python/get_item_list_decoder.py` reads and rebuilds the item index.
+
+## Can you edit something and use it again
+
+For meshes and sprites, yes, and it is measured rather than hoped.
+
+| class | read | written back identical | editable here |
+|-------|------|------------------------|---------------|
+| mesh `.bin` `.MXW` | 50 | **50 of 50** | geometry, textures, texture names, material bindings, mesh id |
+| sprite `.gra` `.spr` | 1535 | **1535 of 1535** | frames, colours, pixels |
+| item index | 1 | identical | through `python/get_item_list_decoder.py` |
+| effects `.eft` | first group only | no | **no** |
+| map block and layout | recognised | no | not yet |
+| encrypted caches | no | no | no |
+
+That second column is the one that matters. A file you have not changed
+writes back byte for byte, which means the writer agrees with the
+reader on every field, including the ones this editor never shows you.
+Change one thing and only that thing moves.
+
+**What is not ready.** Most effects are `.eft`, 130 files against 27
+`.gra` in the same folders. The first group of an `.eft` decodes and
+the section after it does not, so those are refused rather than opened
+and written back broken. Map grids are recognised but have no editor
+yet. The encrypted caches sit at 8.000 bits of entropy per byte.
 
 ## Correctness
 

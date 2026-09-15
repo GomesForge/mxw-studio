@@ -15,6 +15,16 @@
 
 function encodeGIF(rgba, w, h, opts) {
   opts = opts || {};
+  /* A zero dimension writes a file no decoder will open, and the cause
+     is always upstream -- a size read from the wrong field, say. Better
+     to say so here than to hand back 246 bytes of nothing. */
+  if (!(w > 0 && h > 0)) {
+    throw new Error('a GIF cannot be ' + w + 'x' + h);
+  }
+  if (rgba.length < w * h * 4) {
+    throw new Error('the pixels do not fill ' + w + 'x' + h +
+                    ': ' + rgba.length + ' bytes for ' + (w * h * 4));
+  }
   const cutoff = opts.alphaCutoff === undefined ? 128 : opts.alphaCutoff;
   const maxColors = Math.min(256, opts.maxColors || 256);
 
@@ -124,6 +134,13 @@ function encodeGIF(rgba, w, h, opts) {
 function encodeAnimatedGIF(frames, w, h, opts) {
   opts = opts || {};
   if (!frames || !frames.length) throw new Error('no frames to encode');
+  if (!(w > 0 && h > 0)) throw new Error('a GIF cannot be ' + w + 'x' + h);
+  for (const f of frames) {
+    if (f.length < w * h * 4) {
+      throw new Error('a frame does not fill ' + w + 'x' + h +
+                      ': ' + f.length + ' bytes for ' + (w * h * 4));
+    }
+  }
   const cutoff = opts.alphaCutoff === undefined ? 128 : opts.alphaCutoff;
   const maxColors = Math.min(256, opts.maxColors || 256);
   const n = w * h;

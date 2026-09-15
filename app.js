@@ -655,10 +655,9 @@ function enableActions() {
   const off = (id, ok) => { const b = $(id); if (b) b.disabled = !ok; };
   off('bSave', hasFile);
   off('bObj', hasMesh);
-  off('bViewGif', hasMesh);
   off('bPaintTex', hasTex);
   off('bTexIn', hasTex);
-  off('bTexOut', hasTex);
+  off('bTexOut', hasFile);
   off('bUV', hasMesh && hasTex);
   off('bClear', hasFile || !!sprite.entry);
   const head = $('containerHead');
@@ -1162,7 +1161,195 @@ function makeWire() {
   };
   $('bXcentre').onclick = () => transform('centred', meshCentre);
   $('bXfloor').onclick = () => transform('dropped to the floor', meshToFloor);
-  $('bViewGif').onclick = exportViewGIF;
+  if ($('bPaintGif')) $('bPaintGif').onclick = saveContextGIF;
+}
+
+/* --------------------------- the size prompt ---------------------- */
+/* Saving asks how big first, because a GIF is a fixed number of pixels
+   and the one you want depends on what it is for: a thumbnail, a forum
+   post, a poster. The percentage works the way the wheel does, scaling
+   what is on screen, and the dialog shows the pixels it will produce so
+   there is no guessing.
+
+   Resolves to a scale factor, or null if the prompt was dismissed. */
+let askPending = null;
+
+function askForScale(what, baseW, baseH) {
+  const box = $('ask');
+  if (!box) return Promise.resolve(1);
+  if (askPending) askPending(null);
+  $('askWhat').textContent = what;
+  const show = () => {
+    const pct = +$('askPct').value;
+    $('askPctOut').textContent = pct + '%';
+    const w = Math.max(1, Math.round(baseW * pct / 100));
+    const h = Math.max(1, Math.round(baseH * pct / 100));
+    $('askSize').textContent = w + ' by ' + h + ' pixels' +
+      (w * h > 640 * 640 ? '  --  large, so the file will be too' : '');
+  };
+  $('askPct').oninput = show;
+  show();
+  box.hidden = false;
+  $('askOK').focus();
+  return new Promise(resolve => {
+    askPending = resolve;
+    const close = v => {
+      box.hidden = true;
+      askPending = null;
+      resolve(v);
+    };
+    $('askOK').onclick = () => close(+$('askPct').value / 100);
+    $('askCancel').onclick = () => close(null);
+    box.onclick = e => { if (e.target === box) close(null); };
+    $('askPresets').querySelectorAll('button').forEach(b => b.onclick = () => {
+      $('askPct').value = b.dataset.pct;
+      show();
+    });
+    box.onkeydown = e => {
+      if (e.key === 'Escape') close(null);
+      if (e.key === 'Enter') close(+$('askPct').value / 100);
+    };
+  });
+}
+
+/* Nearest neighbour, because these are pixel images and anything
+   smoother turns a crisp edge into a smear. */
+function scaleFrames(frames, w, h, f) {
+  if (f === 1) return { frames, w, h };
+  const nw = Math.max(1, Math.round(w * f)), nh = Math.max(1, Math.round(h * f));
+  const out = frames.map(src => {
+    const dst = new Uint8ClampedArray(nw * nh * 4);
+    for (let y = 0; y < nh; y++) {
+      const sy = Math.min(h - 1, Math.floor(y / f));
+      for (let x = 0; x < nw; x++) {
+        const sx = Math.min(w - 1, Math.floor(x / f));
+        const si = (sy * w + sx) * 4, di = (y * nw + x) * 4;
+        dst[di] = src[si]; dst[di + 1] = src[si + 1];
+        dst[di + 2] = src[si + 2]; dst[di + 3] = src[si + 3];
+      }
+    }
+    return dst;
+  });
+  return { frames: out, w: nw, h: nh };
+}
+
+/* ------------------------- Save .GIF, in context ------------------ */
+/* One action, and it saves what is in front of you.
+
+   Which is not the same thing in each place, and the rule that makes
+   them consistent is: **whatever is on screen, and if it is one of a
+   set, the whole set**. So the model saves as its motion rather than a
+   still; a sprite saves as its animation; and a texture saves with its
+   siblings, because the nine images in a head slot are one set even
+   though only one is drawn at a time.
+
+   The tab you are on decides between the model and a texture, which is
+   what the sub-tabs are for. */
+
+/* Which textures share a slot with this one.
+
+   A body names two textures and ships ten: image i belongs to named
+   slot min(i, names - 1), so tex1 through tex9 are all the head. That
+   is the set worth saving together. */
+function texturesInSlotOf(entry, tex) {
+  const m = entry && entry.mxw.meshes[entry.meshIndex || 0];
+  if (!m) return [tex];
+  const slot = textureSlot(m, tex);
+  const out = [];
+  for (let i = 0; i < entry.mxw.gifs.length; i++) {
+    if (textureSlot(m, i) === slot) out.push(i);
+  }
+  return out.length ? out : [tex];
+}
+
+/* The texture set, as one GIF -- with whatever is being edited right
+   now standing in for the stored image, so what you save is what you
+   see. */
+async function saveTextureSetGIF(entry, tex) {
+  const list = texturesInSlotOf(entry, tex);
+  /* An open edit stands in for the stored image -- but only once it has
+     actually been painted on. An untouched session composites to the
+     same pixels, and keeping the stored bytes beats re-encoding them. */
+  const live = new Map();
+  for (const l of live_edits_of(entry)) {
+    const sess = paint.sessions.find(x => x.id === l.id);
+    if (sess && sessionDirty(sess)) live.set(l.tex, l.cv);
+  }
+
+  const frames = [];
+  let w = 0, h = 0, skipped = 0;
+  for (const i of list) {
+    let rgba, sw, sh;
+    const cv = live.get(i);
+    if (cv) {
+      rgba = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      sw = cv.width; sh = cv.height;
+    } else {
+      const g = entry.mxw.gifs[i];
+      if (!g) continue;
+      let img;
+      try { img = await decodeImage(new Blob([g], { type: 'image/gif' })); }
+      catch (e) { skipped++; continue; }
+      /* decodeImage names them w and h, not width and height -- reading
+         the wrong pair produced a 0x0 GIF that no decoder would open */
+      rgba = img.rgba; sw = img.w; sh = img.h;
+    }
+    if (!w) { w = sw; h = sh; }
+    /* a set of mixed sizes cannot be one animation; the odd one out is
+       left out rather than stretched */
+    if (sw !== w || sh !== h) { skipped++; continue; }
+    frames.push(rgba);
+  }
+  if (!frames.length) { notify('that texture could not be decoded', 1); return; }
+
+  const scale = await askForScale(frames.length > 1
+    ? frames.length + ' textures of this slot' : 'one texture', w, h);
+  if (scale === null) return;
+  const big = scaleFrames(frames, w, h, scale);
+
+  const name = entry.name.replace(/\.[^.]+$/, '');
+  if (frames.length === 1) {
+    /* one image is not an animation: save the GIF the file already
+       holds, byte for byte, unless it is being edited */
+    const cv = live.get(tex);
+    /* at 100% with nothing edited, the stored GIF is already the
+       answer and copying it beats re-encoding it */
+    const asStored = !cv && scale === 1;
+    const out = asStored ? entry.mxw.gifs[tex]
+                         : encodeGIF(big.frames[0], big.w, big.h, { maxColors: 256 });
+    saveFile(name + '.tex' + tex + '.gif', out, 'image/gif');
+    notify('tex' + tex + ', ' + big.w + 'x' + big.h +
+           (asStored ? ', exactly as stored'
+                     : cv ? ', re-encoded with your edit' : ', re-encoded'));
+    return;
+  }
+  let gif;
+  try { gif = encodeAnimatedGIF(big.frames, big.w, big.h, { delayMs: 500 }); }
+  catch (e) { notify('could not encode that set: ' + e.message, 1); return; }
+  saveFile(name + '.textures.gif', gif, 'image/gif');
+  notify(frames.length + ' textures in that slot, ' + big.w + 'x' + big.h +
+         ', half a second each' + (skipped ? ' -- ' + skipped +
+         ' left out for not matching' : ''));
+}
+
+/* The live edits belonging to one file. */
+function live_edits_of(entry) {
+  return live.filter(x => x.entry === entry);
+}
+
+/* The one entry point the buttons call. */
+async function saveContextGIF() {
+  /* a sprite is open: its animation, edits included */
+  if (sprite.entry) { spriteExportGIF(); return; }
+  if (!current) { notify('nothing is open', 1); return; }
+  /* the pixel editor is on a texture: that texture and its siblings */
+  if (paint.open && paint.shown && paint.owner &&
+      paint.owner.kind === 'texture') {
+    await saveTextureSetGIF(paint.owner.entry, paint.owner.tex);
+    return;
+  }
+  /* otherwise you are looking at the model */
+  await exportViewGIF();
 }
 
 /* ------------------------ the view, as a GIF --------------------- */
@@ -1177,13 +1364,27 @@ async function exportViewGIF() {
   const keep = {
     w: rend.domElement.clientWidth, h: rend.domElement.clientHeight,
     bg: scene.background, theta: theta, spin: spin,
-    playing: motionPlaying, frame: motionFrame, aspect: cam.aspect
+    playing: motionPlaying, frame: motionFrame, aspect: cam.aspect,
+    axes: axes ? axes.visible : false,
+    bones: boneLines ? boneLines.visible : false
   };
   const steps = motion && motionLength(motion) > 0 ? 24 : 36;
   const fps = motion && motionLength(motion) > 0 ? motion.fps : 18;
 
+  const scale = await askForScale(
+    (motion && motionLength(motion) > 0 ? motion.name + ', ' + steps + ' frames'
+                                        : 'a turn, ' + steps + ' frames'),
+    size, size);
+  if (scale === null) return;
+
   spin = false;
   motionPlaying = false;
+  /* The guides come out. They belong to the editor, not to the model:
+     the axis cross is three coloured lines through the middle of the
+     figure and the skeleton overlay is a pink scribble over it, and
+     both landed in the first exported GIF looking like a fault. */
+  if (axes) axes.visible = false;
+  if (boneLines) boneLines.visible = false;
   /* a transparent ground, so the GIF drops onto any page */
   scene.background = null;
   rend.setClearColor(0x000000, 0);
@@ -1217,6 +1418,8 @@ async function exportViewGIF() {
     notify('could not read the view back: ' + e.message, 1);
   } finally {
     scene.background = keep.bg;
+    if (axes) axes.visible = keep.axes;
+    if (boneLines) boneLines.visible = keep.bones;
     rend.setClearColor(0x000000, 1);
     theta = keep.theta;
     spin = keep.spin;
@@ -1253,13 +1456,17 @@ async function exportViewGIF() {
     }
     return out;
   });
+  const big = scaleFrames(cropped, cw, ch, scale);
   let gif;
-  try { gif = encodeAnimatedGIF(cropped, cw, ch, { delayMs: Math.round(1000 / fps) }); }
+  try {
+    gif = encodeAnimatedGIF(big.frames, big.w, big.h,
+                            { delayMs: Math.round(1000 / fps) });
+  }
   catch (e) { notify('could not encode the view: ' + e.message, 1); return; }
   saveFile(current.name.replace(/\.[^.]+$/, '') +
            (motion ? '.' + motion.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : '.turntable') +
            '.gif', gif, 'image/gif');
-  notify(steps + ' frames at ' + cw + 'x' + ch +
+  notify(steps + ' frames at ' + big.w + 'x' + big.h +
          (motion && motionLength(motion) > 0 ? ', ' + motion.name : ', turning'));
 }
 
@@ -1523,7 +1730,11 @@ function textureMenu(ev, i) {
     { label: 'Replace from an image\u2026',
       run: () => { selectTexture(i); $('texFile').click(); } },
     '-',
-    { label: 'Save as .GIF', run: () => { selectTexture(i); exportTexture(); } },
+    { label: 'Save this one as .GIF',
+      run: () => { selectTexture(i); exportTexture(); } },
+    { label: 'Save every texture of this slot as one .GIF',
+      disabled: texturesInSlotOf(c, i).length < 2,
+      run: () => saveTextureSetGIF(c, i) },
     { label: 'Save its UV layout as .PNG',
       disabled: !m, run: () => { selectTexture(i); exportUV(); } }
   ]);
@@ -2105,7 +2316,7 @@ $('objFile').addEventListener('change', e => {
   e.target.value = '';
 });
 $('bUV').onclick = exportUV;
-$('bTexOut').onclick = exportTexture;
+$('bTexOut').onclick = saveContextGIF;
 $('bSave').onclick = saveBin;
 
 /* Each subsystem wires itself independently: one failing must not
@@ -2121,7 +2332,8 @@ for (const [name, fn] of [['sprites', () => spriteWire()],
    what broke rather than dying silently */
 enableActions();
 menuWire();
-for (const [what, fn] of [['motion panel', poseWire], ['create panel', makeWire]]) {
+for (const [what, fn] of [['motion panel', poseWire], ['create panel', makeWire],
+                          ['tutorial', typeof tutWire === 'function' ? tutWire : () => {}]]) {
   try { fn(); }
   catch (e) { notify('the ' + what + ' failed to start: ' + e.message, 1); }
 }

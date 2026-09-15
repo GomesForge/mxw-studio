@@ -439,13 +439,25 @@ function spriteExportStrip() {
    would also throw the poses out of register with each other, which is
    the one thing an animation cannot afford. The team preview is
    honoured: what you see playing is what you get. */
-function spriteExportGIF() {
+async function spriteExportGIF() {
   const e = sprite.entry;
   if (!e) return;
   const g = e.gra, W = g.width, H = g.height;
   if (!g.frames.length) { notify('this sprite has no frames', 1); return; }
 
   const rgbas = g.frames.map(f => spriteFrameRGBA(g, f));
+  /* A frame part-way through being edited is what is on screen, so it
+     is what gets saved -- the stored frame is the one before the edit. */
+  if (typeof paint !== 'undefined' && paint.open && paint.owner &&
+      paint.owner.kind === 'frame' && paint.owner.entry === e) {
+    const i = paint.owner.frame;
+    if (i >= 0 && i < rgbas.length) {
+      const cv = paintComposite();
+      if (cv.width === W && cv.height === H) {
+        rgbas[i] = cv.getContext('2d').getImageData(0, 0, W, H).data;
+      }
+    }
+  }
 
   /* the union of every frame's drawn pixels */
   let x0 = W, y0 = H, x1 = -1, y1 = -1;
@@ -473,17 +485,23 @@ function spriteExportGIF() {
     return out;
   });
 
+  const scale = typeof askForScale === 'function'
+    ? await askForScale(g.frames.length + ' frames at ' + sprite.fps + ' fps',
+                        cw, ch)
+    : 1;
+  if (scale === null) return;
+  const big = scaleFrames(cropped, cw, ch, scale);
   let gif;
   try {
-    gif = encodeAnimatedGIF(cropped, cw, ch,
+    gif = encodeAnimatedGIF(big.frames, big.w, big.h,
       { delayMs: Math.round(1000 / sprite.fps) });
   } catch (err) {
     notify('could not encode the animation: ' + err.message, 1);
     return;
   }
   saveFile(e.name.replace(/\.[^.]+$/, '') + '.gif', gif, 'image/gif');
-  notify(g.frames.length + ' frames at ' + sprite.fps + ' fps, cropped to ' +
-         cw + 'x' + ch + ' from ' + W + 'x' + H +
+  notify(g.frames.length + ' frames at ' + sprite.fps + ' fps, ' +
+         big.w + 'x' + big.h + ' from ' + W + 'x' + H +
          (sprite.team === 'none' ? '' : ', in the ' + sprite.team + ' team colours'));
 }
 

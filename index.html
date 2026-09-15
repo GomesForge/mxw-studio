@@ -1,3 +1,4 @@
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <title>MXW Studio</title>
 <style>
   :root{
@@ -7,6 +8,7 @@
     --onAccent:#ffffff;
     --btn:#fdfdfe; --btnHover:#f0f2f6; --btnDown:#e4e8ef; --btnOn:#dfe5ee;
     --view:#0d1524; --rail:#e7eaf0;
+    --help:#6b4fc7; --helpEdge:#5a3fb5; --onHelp:#ffffff;
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   }
   @media (prefers-color-scheme:dark){
@@ -17,6 +19,7 @@
       --onAccent:#07141a;
       --btn:#182134; --btnHover:#1f2a41; --btnDown:#141c2c; --btnOn:#25324c;
       --view:#0b1120; --rail:#101827;
+      --help:#8b6ff0; --helpEdge:#7a5ee0; --onHelp:#0b0718;
     }
   }
   :root[data-theme="dark"]{
@@ -26,6 +29,7 @@
     --onAccent:#07141a;
     --btn:#182134; --btnHover:#1f2a41; --btnDown:#141c2c; --btnOn:#25324c;
     --view:#0b1120; --rail:#101827;
+    --help:#8b6ff0; --helpEdge:#7a5ee0; --onHelp:#0b0718;
   }
 
   *{box-sizing:border-box}
@@ -433,6 +437,109 @@
   #menu button:hover{background:var(--btnHover)}
   #menu button:disabled{opacity:.4;cursor:default;background:none}
   #menu hr{border:0;border-top:1px solid var(--edge);margin:3px 0}
+
+  /* ------------------------------ the guide -------------------------- */
+  /* Help is not an action, so it does not look like one. Violet, which
+     nothing else in the interface uses. */
+  #bTut{background:var(--help);border-color:var(--helpEdge);
+    color:var(--onHelp);font-weight:550}
+  #bTut:hover{filter:brightness(1.1);background:var(--help);
+    border-color:var(--helpEdge)}
+
+  #tut{position:fixed;inset:0;z-index:80;background:rgba(6,9,16,.72);
+    display:flex;align-items:center;justify-content:center;padding:22px}
+  #tut[hidden]{display:none!important}
+  #tutWin{width:min(1080px,100%);height:min(760px,100%);display:grid;
+    grid-template-columns:238px 1fr;grid-template-rows:46px 1fr;
+    grid-template-areas:"head head" "nav body";
+    background:var(--panel);border:1px solid var(--edgeStrong);
+    border-radius:11px;overflow:hidden;box-shadow:0 26px 70px rgba(0,0,0,.55)}
+  @media (max-width:820px){
+    #tutWin{grid-template-columns:1fr;grid-template-rows:46px auto 1fr;
+      grid-template-areas:"head" "nav" "body"}
+    #tutNav{flex-direction:row;overflow-x:auto;max-height:64px}
+  }
+  #tutHead{grid-area:head;display:flex;align-items:center;gap:12px;
+    padding:0 14px;border-bottom:1px solid var(--edge);background:var(--panel)}
+  #tutHead h2{margin:0;font-size:14px;font-weight:600;letter-spacing:-.01em}
+  #tutStep{margin-left:auto;font-family:var(--mono);font-size:10.5px;
+    color:var(--dim)}
+  #tutX{height:24px;padding:0 10px}
+  #tutNav{grid-area:nav;display:flex;flex-direction:column;gap:1px;
+    padding:8px;overflow-y:auto;background:var(--bg);
+    border-right:1px solid var(--edge)}
+  #tutNav button{justify-content:flex-start;text-align:left;height:auto;
+    min-height:28px;padding:5px 9px;background:none;border:0;
+    color:var(--dim);font-size:11.5px;line-height:1.35;white-space:normal}
+  #tutNav button:hover{background:var(--btnHover);color:var(--ink)}
+  #tutNav button.on{background:var(--btnOn);color:var(--ink);font-weight:550}
+  .tNum{display:inline-grid;place-items:center;width:17px;height:17px;
+    border-radius:50%;background:var(--edge);color:var(--ink);font-size:9.5px;
+    font-family:var(--mono);margin-right:7px;flex:0 0 auto}
+  #tutNav button.on .tNum{background:var(--help);color:var(--onHelp)}
+  #tutBody{grid-area:body;overflow-y:auto;padding:20px 26px 30px;
+    font-size:13.5px;line-height:1.62;max-width:760px}
+  #tutBody h3{margin:0 0 14px;font-size:19px;font-weight:620;
+    letter-spacing:-.015em}
+  #tutBody h4{margin:22px 0 6px;font-size:13.5px;font-weight:600}
+  #tutBody p{margin:11px 0}
+  #tutBody code{font-family:var(--mono);font-size:11.5px;padding:1px 4px;
+    border-radius:3px;background:color-mix(in srgb,var(--dim) 16%,transparent)}
+  .tSteps,.tList{margin:11px 0;padding-left:20px}
+  .tSteps li,.tList li{margin:6px 0}
+  .tNote{padding:10px 13px;border-radius:7px;font-size:12.5px;
+    border-left:3px solid var(--help);
+    background:color-mix(in srgb,var(--help) 13%,transparent)}
+  .tTable{width:100%;border-collapse:collapse;margin:13px 0;font-size:12.5px}
+  .tTable th{text-align:left;font-weight:600;color:var(--dim);
+    font-size:11px;padding:5px 9px;border-bottom:1px solid var(--edge)}
+  .tTable td{padding:6px 9px;border-bottom:1px solid var(--edge);
+    vertical-align:top}
+  .tYes{color:var(--ok)}
+  .tNo{color:var(--red)}
+  .tSwatch{display:inline-block;width:11px;height:11px;border-radius:3px;
+    margin-right:6px;vertical-align:-1px}
+  .tSwatch.tCy{background:#3ad4ec}
+  .tSwatch.tAm{background:#e8b43c}
+  .tNav{display:flex;justify-content:space-between;gap:10px;margin-top:26px;
+    padding-top:14px;border-top:1px solid var(--edge)}
+
+  /* the diagrams: one stroke weight, themed by the same tokens */
+  .tFigW{margin:16px 0}
+  .tSvg{width:100%;height:auto;display:block}
+  .tSvg .tWin{fill:var(--bg);stroke:var(--edgeStrong)}
+  .tSvg .tBar,.tSvg .tTabs,.tSvg .tSide,.tSvg .tStat{fill:var(--panel);
+    stroke:var(--edge)}
+  .tSvg .tRail{fill:var(--rail);stroke:var(--edge)}
+  .tSvg .tView{fill:var(--view);stroke:var(--edge)}
+  .tSvg .tBtn,.tSvg .tTool,.tSvg .tDock,.tSvg .tSub,.tSvg .tThumb{
+    fill:var(--btn);stroke:var(--edge)}
+  .tSvg .tBtnOn,.tSvg .tSubOn,.tSvg .tTabOn,.tSvg .tThumbOn{
+    fill:var(--btnOn);stroke:var(--cyan)}
+  .tSvg .tSlider{fill:var(--edge);stroke:none}
+  .tSvg .tKnob{fill:var(--cyan);stroke:none}
+  .tSvg .tDot{fill:var(--amber);stroke:none}
+  .tSvg .tFig{fill:color-mix(in srgb,var(--cyan) 26%,var(--panel));
+    stroke:var(--cyan);stroke-width:1}
+  .tSvg .tArrow{fill:none;stroke:var(--help);stroke-width:1.6;
+    stroke-dasharray:5 4;stroke-linecap:round}
+  .tSvg .tHead{fill:none;stroke:var(--help);stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round}
+  .tSvg .tRing{fill:none;stroke:var(--help);stroke-width:1.6;
+    stroke-dasharray:4 3}
+  .tSvg .tLbl{fill:var(--ink);font-size:12.5px;
+    font-family:system-ui,sans-serif}
+  .tSvg rect{stroke-width:1}
+
+  /* ---------------------------- the size prompt ---------------------- */
+  #ask{position:fixed;inset:0;z-index:70;display:flex;align-items:center;
+    justify-content:center;background:rgba(8,12,20,.6);padding:20px}
+  #ask[hidden]{display:none!important}
+  #askBox{width:330px;max-width:100%;background:var(--panel);
+    border:1px solid var(--edgeStrong);border-radius:10px;padding:14px 16px;
+    box-shadow:0 18px 50px rgba(0,0,0,.5)}
+  #askBox h3{margin:0 0 6px;font-size:14px;font-weight:600}
+  #askPresets{margin:2px 0 4px}
 </style>
 
 <!-- Icons, drawn on one 24-unit grid with one stroke weight so they sit
@@ -528,6 +635,7 @@
     <input type="file" id="file" multiple>
     <button id="bNewSprite">New sprite</button>
     <button id="bClear">Close all</button>
+    <button id="bTut" title="how all of this works">Tutorial</button>
   </span>
 
   <span class="actRule" id="ruleMesh"></span>
@@ -535,10 +643,9 @@
     <button id="bSave">Save .bin</button>
     <button id="bPaintTex" type="button">Edit texture&hellip;</button>
     <button id="bTexIn" type="button">Replace texture&hellip;</button>
-    <button id="bTexOut">Save .GIF</button>
+    <button id="bTexOut" title="saves whatever the active tab shows: the model, moving if a motion is loaded, or the texture you are editing">Save .GIF</button>
     <button id="bUV">Save UV .PNG</button>
     <span class="actRule"></span>
-    <button id="bViewGif">Save view .GIF</button>
     <button id="bObj">Export .OBJ</button>
     <button id="bObjIn" type="button">Import .OBJ&hellip;</button>
   </span>
@@ -547,7 +654,7 @@
     <button id="bSpriteSave">Save sprite</button>
     <button id="bPaintFrame">Edit frame&hellip;</button>
     <button id="bSpriteIn" type="button">Import image&hellip;</button>
-    <button id="bSpriteGif">Save animated .GIF</button>
+    <button id="bSpriteGif" title="the whole animation, with any frame you are part-way through editing included as it stands">Save .GIF</button>
     <button id="bFrameOut">Save frame .PNG</button>
     <button id="bStripOut">Save strip .PNG</button>
   </span>
@@ -555,6 +662,7 @@
   <span class="actGroup" id="actPaint">
     <button id="bPaintApply" class="primary">Apply</button>
     <button id="bPaintCancel">Cancel</button>
+    <button id="bPaintGif" title="saves what you are editing: the whole set of textures in this slot, or the whole sprite animation">Save .GIF</button>
     <button id="bMV" class="on">Model panel</button>
   </span>
 
@@ -960,15 +1068,49 @@
 
 <div id="menu"></div>
 
+<div id="tut" hidden>
+  <div id="tutWin">
+    <div id="tutHead">
+      <h2>MXW Studio, end to end</h2>
+      <span id="tutStep"></span>
+      <button id="tutX">Close</button>
+    </div>
+    <div id="tutNav"></div>
+    <div id="tutBody"></div>
+  </div>
+</div>
+
+<div id="ask" hidden>
+  <div id="askBox">
+    <h3 id="askTitle">Save as .GIF</h3>
+    <p id="askWhat" class="hint"></p>
+    <div class="slider"><span>size</span>
+      <input type="range" id="askPct" min="25" max="400" step="25" value="100">
+      <b id="askPctOut">100%</b></div>
+    <div class="ctrl seg" id="askPresets">
+      <button data-pct="50">50%</button>
+      <button data-pct="100">100%</button>
+      <button data-pct="200">200%</button>
+      <button data-pct="400">400%</button>
+    </div>
+    <p class="hint" id="askSize"></p>
+    <div class="ctrl" style="margin-top:10px;justify-content:flex-end">
+      <button id="askCancel">Cancel</button>
+      <button id="askOK" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="mxw.js?v=10"></script>
-<script src="gra.js?v=10"></script>
-<script src="obj.js?v=10"></script>
-<script src="checks.js?v=10"></script>
-<script src="gifenc.js?v=10"></script>
-<script src="paint.js?v=10"></script>
-<script src="shapes.js?v=10"></script>
-<script src="skin.js?v=10"></script>
-<script src="motions.js?v=10"></script>
-<script src="sprite.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="mxw.js?v=12"></script>
+<script src="gra.js?v=12"></script>
+<script src="obj.js?v=12"></script>
+<script src="checks.js?v=12"></script>
+<script src="gifenc.js?v=12"></script>
+<script src="paint.js?v=12"></script>
+<script src="shapes.js?v=12"></script>
+<script src="skin.js?v=12"></script>
+<script src="motions.js?v=12"></script>
+<script src="sprite.js?v=12"></script>
+<script src="tutorial.js?v=12"></script>
+<script src="app.js?v=12"></script>
