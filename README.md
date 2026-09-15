@@ -26,6 +26,12 @@ Nothing here ships any asset. These are tools; bring your own files.
 
 Open the link above, or `index.html` locally. No build step, no server.
 
+The layout follows the shape of an image editor: file and export
+actions on one bar across the top, which changes with the kind of file
+open; the drawing tools down the left; the canvas or the 3D view in the
+middle; the panels that describe and change what is open docked on the
+right; and one status line along the bottom.
+
 - Drop item `.bin`, body `.bin` or `.MXW` files on the page
 - 3D view: orbit, texture, wireframe, vertex normals, skeleton, axes
 - **Dress-up** draws every loaded file at once. All meshes are authored
@@ -48,8 +54,12 @@ Open the link above, or `index.html` locally. No build step, no server.
   material bindings, and says plainly what an OBJ cannot carry
 - Save the edited file
 
-A badge in the sidebar says whether the file currently writes back
+A badge in the status bar says whether the file currently writes back
 byte-identical, so you always know if you have changed anything.
+
+The characters face &minus;Z, measured rather than assumed &mdash; see
+[docs/mxw-format.md](docs/mxw-format.md). Front, Face and Whole look
+from that side, so the model faces you.
 
 ## Sprites
 
@@ -73,6 +83,11 @@ Drop a `.gra`, `.spr` or `.eft` and the page switches to sprite mode.
   or delete frames
 - A **team preview** shows how the game will recolour the sheet, and the
   panel reports what fraction of it sits in the reserved ramp
+- **Save the animation as one GIF**, at the speed on the slider and in
+  whichever team colours are previewed. Every frame shares one colour
+  table, or the palette crawls between frames, and the result is cropped
+  to the box all the frames together occupy &mdash; a bomber is about
+  45&times;69 of a 256&times;256 sheet
 - Save the sprite back out
 
 ```

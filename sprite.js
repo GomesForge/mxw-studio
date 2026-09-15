@@ -404,6 +404,62 @@ function spriteExportStrip() {
          ' -- drop it back on the page to import every frame at once');
 }
 
+/* The animation as one GIF, at the speed set on the slider.
+
+   The canvas is mostly empty -- a bomber occupies about 34x52 of a
+   256x256 sheet -- so the result is cropped to the box every frame
+   together occupies. Cropping per frame would be smaller still and
+   would also throw the poses out of register with each other, which is
+   the one thing an animation cannot afford. The team preview is
+   honoured: what you see playing is what you get. */
+function spriteExportGIF() {
+  const e = sprite.entry;
+  if (!e) return;
+  const g = e.gra, W = g.width, H = g.height;
+  if (!g.frames.length) { notify('this sprite has no frames', 1); return; }
+
+  const rgbas = g.frames.map(f => spriteFrameRGBA(g, f));
+
+  /* the union of every frame's drawn pixels */
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (const px of rgbas) {
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (px[(y * W + x) * 4 + 3] >= 128) {
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
+        }
+      }
+    }
+  }
+  if (x1 < x0) { x0 = y0 = 0; x1 = W - 1; y1 = H - 1; }   /* all blank */
+  const cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+
+  const cropped = rgbas.map(px => {
+    const out = new Uint8ClampedArray(cw * ch * 4);
+    for (let y = 0; y < ch; y++) {
+      const src = ((y + y0) * W + x0) * 4;
+      out.set(px.subarray(src, src + cw * 4), y * cw * 4);
+    }
+    return out;
+  });
+
+  let gif;
+  try {
+    gif = encodeAnimatedGIF(cropped, cw, ch,
+      { delayMs: Math.round(1000 / sprite.fps) });
+  } catch (err) {
+    notify('could not encode the animation: ' + err.message, 1);
+    return;
+  }
+  saveFile(e.name.replace(/\.[^.]+$/, '') + '.gif', gif, 'image/gif');
+  notify(g.frames.length + ' frames at ' + sprite.fps + ' fps, cropped to ' +
+         cw + 'x' + ch + ' from ' + W + 'x' + H +
+         (sprite.team === 'none' ? '' : ', in the ' + sprite.team + ' team colours'));
+}
+
 /* Hand the current frame to the paint editor and take back whatever
    comes out. Layers are flattened on the way in. */
 function spritePaintFrame() {
@@ -528,6 +584,7 @@ function spriteWire() {
       spriteDraw();
     });
   $('bFrameOut').onclick = spriteExportFrame;
+  $('bSpriteGif').onclick = spriteExportGIF;
   $('bStripOut').onclick = spriteExportStrip;
   $('bSpriteSave').onclick = spriteSave;
 }

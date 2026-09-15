@@ -120,13 +120,34 @@ Nothing needs aligning. Measured ranges:
 | `210001` | `boy_01` | 18 .. 7090 | the male body |
 | `1210001` | `girl_01` | 27 .. 7090 | the female body |
 | `2210001` | `Shoes0026_00` | -38 .. 332 | at the feet |
-| `1100039` | `Back0039_10` | -43 .. 2076 | Z -1657..-825, behind |
+| `1100039` | `Back0039_10` | -43 .. 2076 | Z -1657..-825, in front of the shins |
+| `1100046` | `back0046_10` | 3341 .. 5058 | Z +390..+1176, on the back |
 | `1060062` | `Jacket0062_10` | 2686 .. 4801 | torso |
 | `10005` | `Hair0005_00` | 3067 .. 7536 | head |
 | `20031` | `Katyusha0031_00` | 3067 .. 7942 | headband |
 
 Draw a body and any items in raw model coordinates and every piece lands
 where it belongs.
+
+### The characters face &minus;Z
+
+Worth stating because it is easy to get backwards, and we did at first.
+Four independent measurements agree:
+
+- the toes of both bodies reach Z -584, against only +196 behind the heel;
+- the head material's faces are biased to Z -275, and its textured
+  detail — eyes, mouth — sits at the far negative end;
+- `1100046`, worn on the back, lies entirely at Z +390..+1176;
+- `20035`, a bangs-style hair band worn at the front of the head, lies
+  entirely at Z -880..-470.
+
+The misleading case is `1100039`…`1100056`: sixteen files sharing one
+placeholder mesh at Z -1657..-825 and shin height, despite the `Back`
+prefix. Reading only those suggests the opposite, which is the mistake
+to avoid.
+
+So a camera at +Z sees the back of the head. Y is up and X is the
+model's own right.
 
 ## Item ids encode the slot
 

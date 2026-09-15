@@ -9,7 +9,7 @@ let mesh = null, wireGroup = null, normHelper = null, boneLines = null;
 let texMats = [];
 /* The camera starts still and facing the model. It used to spin, which
    meant whatever you were inspecting rotated away from you. */
-let spin = false, radius = 4, theta = Math.PI / 2, phi = 1.5, targetY = 0;
+let spin = false, radius = 4, theta = -Math.PI / 2, phi = 1.5, targetY = 0;
 /* Which texture to show on which material, while previewing. The
    file's own binding is untouched -- this only changes what is drawn.
    A body binds tex0 to the body and tex1 to the head, leaving the eight
@@ -132,7 +132,7 @@ function bindOrbit() {
 /* --------------------------- geometry ---------------------------- */
 /* Every file is authored in one shared coordinate space -- a body runs
    Y 18..7090, shoes sit at Y -38..332, hair at Y 3067+, back items at
-   negative Z -- so drawing several in raw coordinates lines them up
+   positive Z -- so drawing several in raw coordinates lines them up
    with no fitting. That is what Dress-up does. */
 
 function meshOf(m, gifs) {
@@ -267,18 +267,32 @@ function build(items) {
 }
 
 
-/* Named viewpoints. Back items sit at negative Z in every file measured,
-   so +Z is the front and theta = pi/2 looks at it. The model is
-   normalised to two units tall and centred, which puts the head near
-   y = +0.8. */
+/* Named viewpoints.
+
+   The characters face -Z, not +Z. Measured on the files rather than
+   assumed: the toes of both bodies reach z -584 against only +196
+   behind the heel; the head material is biased to z -275; item
+   Back0046, worn on the back, lies entirely at z +390..+1176; and the
+   Katyusha20035 hair band -- bangs, worn at the front of the head --
+   lies entirely at z -880..-470. An earlier reading of this had it the
+   other way round, from the Back0039..0056 group, whose sixteen files
+   share one placeholder mesh and sit in front of the shins.
+
+   theta = pi/2 puts the camera at +Z, which is behind the model, so the
+   front views take -pi/2. The model's own right hand is at +X, so
+   right/left stay at theta 0 and pi.
+
+   The model is normalised to two units tall and centred, which puts the
+   head near y = +0.8. */
+const FRONT = -Math.PI / 2;
 const VIEWS = {
-  face:  { theta: Math.PI / 2,  phi: 1.5,  radius: 1.15, targetY: 0.8 },
-  front: { theta: Math.PI / 2,  phi: 1.45, radius: 3.2,  targetY: 0 },
-  back:  { theta: -Math.PI / 2, phi: 1.45, radius: 3.2,  targetY: 0 },
+  face:  { theta: FRONT,        phi: 1.5,  radius: 1.15, targetY: 0.8 },
+  front: { theta: FRONT,        phi: 1.45, radius: 3.2,  targetY: 0 },
+  back:  { theta: Math.PI / 2,  phi: 1.45, radius: 3.2,  targetY: 0 },
   left:  { theta: Math.PI,      phi: 1.45, radius: 3.2,  targetY: 0 },
   right: { theta: 0,            phi: 1.45, radius: 3.2,  targetY: 0 },
-  top:   { theta: Math.PI / 2,  phi: 0.2,  radius: 3.2,  targetY: 0 },
-  whole: { theta: Math.PI / 2,  phi: 1.45, radius: 4,    targetY: 0 }
+  top:   { theta: FRONT,        phi: 0.2,  radius: 3.2,  targetY: 0 },
+  whole: { theta: FRONT,        phi: 1.45, radius: 4,    targetY: 0 }
 };
 
 function setView(name) {
@@ -376,6 +390,29 @@ function renderList() {
     if (b.dataset.rmsprite) { closeSprite(); return; }
     removeFile(+b.dataset.rm);
   });
+  enableActions();
+}
+
+/* The action bar is always on screen, so anything that cannot apply
+   right now has to read as unavailable rather than fail when clicked.
+   While the buttons lived inside the panels, hiding the panel did this
+   on its own. */
+function enableActions() {
+  const hasFile = !!current;
+  const hasMesh = hasFile && current.mxw.meshes.length > 0;
+  const hasTex  = hasFile && current.mxw.gifs.length > 0;
+  const off = (id, ok) => { const b = $(id); if (b) b.disabled = !ok; };
+  off('bSave', hasFile);
+  off('bObj', hasMesh);
+  off('bPaintTex', hasTex);
+  off('bTexIn', hasTex);
+  off('bTexOut', hasTex);
+  off('bUV', hasMesh && hasTex);
+  off('bClear', hasFile || !!sprite.entry);
+  const head = $('containerHead');
+  if (head) head.style.display = hasFile ? '' : 'none';
+  const hint = $('tabsHint');
+  if (hint) hint.style.display = (loaded.length || sprite.entry) ? 'none' : '';
 }
 
 /* Closing a file has to clear the viewport too, or the previous one
@@ -986,7 +1023,12 @@ $('bNewSprite').onclick = () => {
 };
 
 let dragDepth = 0;
-const showOver = on => { $('over').style.display = on ? 'flex' : 'none'; };
+const showOver = on => {
+  $('over').style.display = on ? 'flex' : 'none';
+  /* the empty card lights up too, so the drop target is obvious even
+     before the overlay registers */
+  document.body.classList.toggle('dragging', !!on);
+};
 document.addEventListener('dragenter', e => { e.preventDefault(); dragDepth++; showOver(true); });
 document.addEventListener('dragover', e => {
   e.preventDefault();
@@ -1068,6 +1110,8 @@ for (const [name, fn] of [['sprites', () => spriteWire()],
 /* three.js last, and guarded: if it fails, the sprite editor, the
    inspectors and every export must still work, and the page has to say
    what broke rather than dying silently */
+enableActions();
+
 try {
   initThree();
 } catch (e) {

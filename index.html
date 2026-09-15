@@ -42,67 +42,97 @@
   body{background:var(--bg);color:var(--ink);overflow:hidden;
     font:13px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 
-  /* ---- the shell: a tool rail, a viewport, docked panels, a status bar
-     Panels are docked rather than stacked in one column so the canvas
-     keeps the middle and the tools stay in reach of it. ---- */
+  /* ---- The shell. An action bar and a row of document tabs across the
+     top, a tool rail down the left, docked panels on the right, and a
+     status line along the bottom. Panels are docked rather than stacked
+     in one column so the canvas keeps the middle. ---- */
   #app{display:grid;height:100vh;
-    grid-template-columns:46px 1fr 300px;
-    grid-template-rows:42px 1fr 26px;
-    grid-template-areas:"top top top" "rail view side" "status status status"}
+    grid-template-columns:44px 1fr 296px;
+    grid-template-rows:38px 28px 1fr 24px;
+    grid-template-areas:"act act act" "tabs tabs tabs"
+                        "rail view side" "status status status"}
   @media (max-width:900px){
-    #app{grid-template-columns:46px 1fr;
-      grid-template-areas:"top top" "rail view" "side side" "status status";
-      grid-template-rows:42px 52vh auto 26px;height:auto;min-height:100vh}
+    #app{grid-template-columns:44px 1fr;
+      grid-template-areas:"act act" "tabs tabs" "rail view" "side side"
+                          "status status";
+      grid-template-rows:auto 28px 52vh auto 24px;height:auto;min-height:100vh}
     body{overflow:auto}
   }
 
-  /* ------------------------------ top bar ---------------------------- */
-  #top{grid-area:top;display:flex;align-items:center;gap:12px;padding:0 12px;
-    background:var(--panel);border-bottom:1px solid var(--edge)}
-  #top h1{font-size:14px;margin:0;font-weight:650;letter-spacing:-.01em;
-    white-space:nowrap}
-  #top h1 span{color:var(--dim);font-weight:400;font-family:var(--mono);
-    font-size:11px;margin-left:7px}
-  #openWrap{display:flex;gap:6px;align-items:center;margin-left:auto}
-  #list{display:flex;gap:5px;overflow-x:auto;max-width:44vw;padding:2px}
-  #list div{flex:0 0 auto;padding:3px 8px;border-radius:6px;cursor:pointer;
-    font-family:var(--mono);font-size:11px;border:1px solid var(--edge);
-    display:flex;gap:6px;align-items:center;white-space:nowrap}
-  #list div:hover{border-color:var(--cyan)}
-  #list div.sel{background:color-mix(in srgb,var(--cyan) 20%,transparent);
-    border-color:var(--cyan)}
-  .dim{color:var(--dim);font-size:10.5px}
+  /* ---------------------------- action bar --------------------------- */
+  #act{grid-area:act;display:flex;align-items:center;gap:8px;padding:0 10px;
+    background:var(--panel);border-bottom:1px solid var(--edge);
+    overflow-x:auto;overflow-y:hidden}
+  #act h1{font-size:13px;margin:0 6px 0 0;font-weight:650;
+    letter-spacing:-.01em;white-space:nowrap;flex:0 0 auto}
+  .actGroup{display:flex;gap:4px;align-items:center;flex:0 0 auto}
+  .actRule{width:1px;height:20px;background:var(--edge);flex:0 0 auto}
+  /* Which actions apply depends on what is open, the way a tool's
+     options bar changes with the tool. */
+  #actSprite,#actPaint{display:none}
+  body.sprite-mode #actSprite{display:flex}
+  body.paint-mode #actPaint{display:flex}
+  body.sprite-mode #actMesh,body.paint-mode #actMesh,
+  body.paint-mode #actSprite,
+  body.sprite-mode #ruleMesh,body.paint-mode #ruleMesh{display:none}
+
+  /* --------------------------- document tabs ------------------------- */
+  #tabs{grid-area:tabs;display:flex;align-items:stretch;gap:0;
+    background:var(--bg);border-bottom:1px solid var(--edge);overflow-x:auto}
+  #list{display:flex;align-items:stretch}
+  #list div{display:flex;gap:7px;align-items:center;padding:0 10px;
+    cursor:pointer;font-family:var(--mono);font-size:11px;
+    border-right:1px solid var(--edge);color:var(--dim);white-space:nowrap}
+  #list div:hover{background:var(--btnHover);color:var(--ink)}
+  #list div.sel{background:var(--panel);color:var(--ink);
+    box-shadow:inset 0 -2px 0 var(--cyan)}
+  .dim{color:var(--dim);font-size:10px}
   .rm{background:none;border:0;color:var(--dim);padding:0 2px;font-size:13px;
     line-height:1;cursor:pointer}
   .rm:hover{color:var(--red)}
+  #tabsHint{align-self:center;padding:0 10px;color:var(--dim);
+    font-size:11px;white-space:nowrap}
 
   /* ------------------------------- rail ------------------------------ */
   #rail{grid-area:rail;background:var(--rail);border-right:1px solid var(--edge);
-    display:flex;flex-direction:column;align-items:center;gap:1px;
+    display:flex;flex-direction:column;align-items:center;gap:2px;
     padding:6px 0;overflow-y:auto}
-  #rail #paintTools{display:flex;flex-direction:column;align-items:center;gap:1px}
-  #rail button{width:28px;height:26px;padding:0;border-radius:3px;
+  #rail #paintTools{display:flex;flex-direction:column;align-items:center;gap:2px}
+  #rail button{width:34px;height:32px;padding:0;border-radius:4px;
     border:1px solid transparent;background:none;color:var(--dim);
-    cursor:pointer;font-size:13px;line-height:1;display:grid;place-items:center}
+    cursor:pointer;display:grid;place-items:center}
   #rail button:hover{background:var(--btnHover);color:var(--ink)}
   /* the active tool reads as pressed in, with a hairline accent, rather
-     than as a bright chip */
+     than as a saturated chip */
   #rail button.on{background:var(--btnOn);color:var(--ink);
     border-color:var(--edgeStrong);box-shadow:inset 2px 0 0 var(--cyan)}
   #rail button:disabled{opacity:.3;cursor:default}
+  body:not(.paint-mode) #rail button{opacity:.26;pointer-events:none}
   #rail button:disabled:hover{background:none;color:var(--dim)}
-  #rail .railRule{width:18px;height:1px;background:var(--edge);margin:5px 0}
+  #rail .railRule{width:20px;height:1px;background:var(--edge);margin:6px 0}
+
+  /* One grid, one stroke weight, sized in one place. */
+  .ico{width:19px;height:19px;display:block;fill:none;stroke:currentColor;
+    stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 
   /* ----------------------------- viewport ---------------------------- */
   #view{grid-area:view;position:relative;background:var(--view);overflow:hidden}
   #view>canvas{display:block}
 
-  /* The card is one child so the flex container cannot swallow the
-     whitespace between inline elements, which is what ran the file
-     extensions together into "a.binor.MXWmesh". */
+  /* The container ignores the pointer so it never blocks the canvas, but
+     the card is a label for the file input -- clicking anywhere on it
+     opens the picker, and its dashed edge says it takes a drop. It is
+     also one child, because a flex container drops the whitespace text
+     nodes between inline children, which ran the extensions together
+     into "a.binor.MXWmesh". */
   #empty{position:absolute;inset:0;display:flex;align-items:center;
     justify-content:center;padding:24px;pointer-events:none}
-  .emptyCard{max-width:430px;color:#8a99b5;font-size:13px;line-height:1.6}
+  .emptyCard{pointer-events:auto;cursor:pointer;display:block;
+    max-width:452px;color:#8a99b5;font-size:13px;line-height:1.6;margin:0;
+    padding:22px 26px;border:1.5px dashed #2a3a5a;border-radius:10px;
+    background:rgba(18,27,45,.55);transition:border-color .12s,background .12s}
+  .emptyCard:hover{border-color:var(--cyan);background:rgba(22,34,56,.7)}
+  body.dragging .emptyCard{border-color:var(--cyan);background:rgba(24,40,64,.8)}
   .emptyCard h3{margin:0 0 14px;font-size:15px;color:#c9d6ea;font-weight:600;
     letter-spacing:-.01em}
   .emptyCard p{margin:12px 0 0}
@@ -116,9 +146,9 @@
   #spriteWrap{display:none;position:absolute;inset:0;overflow:auto;
     align-items:center;justify-content:center;padding:24px}
   body.sprite-mode #spriteWrap{display:flex}
-  /* three.js appends its canvas as a direct child of #view, and the
-     renderer sets display:block inline on it. An inline style beats a
-     rule, so hiding it needs !important. */
+  /* three.js appends its canvas as a direct child of #view and sets
+     display:block inline on it, and an inline style beats a rule -- so
+     hiding it needs !important. */
   body.sprite-mode #view>canvas,body.paint-mode #view>canvas{display:none!important}
   body.paint-mode #spriteWrap{display:none!important}
   #spriteView{image-rendering:pixelated;
@@ -160,10 +190,10 @@
   h2:first-child{margin-top:3px}
 
   /* ----------------------------- controls ---------------------------- */
-  #drop{display:block;border:1px dashed var(--edge);border-radius:7px;
-    padding:4px 12px;cursor:pointer;color:var(--dim);font-size:11.5px;
-    white-space:nowrap}
-  #drop:hover{border-color:var(--cyan);color:var(--ink)}
+  #drop{display:inline-flex;align-items:center;height:24px;padding:0 9px;
+    background:var(--btn);border:1px solid var(--edge);border-radius:3px;
+    cursor:pointer;color:var(--ink);font-size:11.5px;white-space:nowrap}
+  #drop:hover{background:var(--btnHover);border-color:var(--edgeStrong)}
   input[type=file]{display:none}
 
   dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;
@@ -249,11 +279,11 @@
   #strip figcaption{font-size:9px;font-family:var(--mono);color:var(--dim)}
 
   #palette{display:flex;flex-wrap:wrap;gap:3px}
-  .sw{width:16px;height:16px;padding:0;border-radius:4px;
+  .sw{width:16px;height:16px;padding:0;border-radius:3px;
     border:1px solid rgba(0,0,0,.35);cursor:pointer}
   .sw.sel{outline:2px solid var(--cyan);outline-offset:1px}
   #tintRamp{display:flex;flex-wrap:wrap;gap:2px}
-  #tintRamp button{width:14px;height:14px;padding:0;border-radius:3px;
+  #tintRamp button{width:14px;height:14px;padding:0;border-radius:2px;
     border:1px solid rgba(0,0,0,.35);cursor:pointer}
   #tintRamp button.sel{outline:2px solid var(--amber);outline-offset:1px}
 
@@ -266,9 +296,9 @@
     color:var(--ink);margin:7px 0}
   .check input{width:auto;margin:0}
   input[type=color]{width:100%;height:26px;padding:2px;margin-top:3px;
-    background:var(--bg);border:1px solid var(--edge);border-radius:6px}
+    background:var(--btn);border:1px solid var(--edge);border-radius:3px}
 
-  .layer{display:flex;gap:6px;align-items:center;padding:4px;border-radius:6px;
+  .layer{display:flex;gap:6px;align-items:center;padding:4px;border-radius:4px;
     cursor:pointer;border:1px solid transparent}
   .layer:hover{background:var(--bg)}
   .layer.sel{border-color:var(--cyan);background:var(--bg)}
@@ -282,24 +312,29 @@
 
   /* ---------------------------- status bar --------------------------- */
   #status{grid-area:status;display:flex;align-items:center;gap:14px;
-    padding:0 12px;background:var(--panel);border-top:1px solid var(--edge);
+    padding:0 11px;background:var(--panel);border-top:1px solid var(--edge);
     font-family:var(--mono);font-size:10.5px;color:var(--dim);
     overflow:hidden;white-space:nowrap}
-  #status .sep{width:1px;height:14px;background:var(--edge);flex:0 0 auto}
   #spriteStat,#statMesh{overflow:hidden;text-overflow:ellipsis}
   .rt{font-family:var(--mono);font-size:10.5px;padding:1px 7px;
-    border-radius:5px;margin:0;flex:0 0 auto}
+    border-radius:3px;margin:0;flex:0 0 auto}
   .rt.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
   .rt.changed{color:var(--amber);
     background:color-mix(in srgb,var(--amber) 16%,transparent)}
-  #statRight{margin-left:auto;display:flex;gap:12px;align-items:center}
+  #statRight{margin-left:auto;display:flex;gap:10px;align-items:center}
+  /* the status line describes the document in front of you, so the mesh
+     half of it steps aside while a sprite is open, and the sprite half
+     while one is not */
+  body.sprite-mode #statMesh,body.sprite-mode #rt{display:none}
+  body:not(.sprite-mode) #spriteStat,
+  body:not(.sprite-mode) #spriteRt{display:none}
 
   /* panels that only apply to one kind of file */
   #spritePanel,#paintDock{display:none}
   body.sprite-mode #spritePanel{display:block}
   body.paint-mode #paintDock{display:block}
   /* Every mesh panel is shown by setting style.display in JS, so hiding
-     them from a rule needs !important. */
+     one from a rule needs !important. */
   body.sprite-mode #meshDock,body.paint-mode #meshDock,
   body.sprite-mode #texDock,body.paint-mode #texDock,
   body.sprite-mode #viewDock,body.paint-mode #viewDock,
@@ -315,50 +350,164 @@
     pointer-events:none;text-align:center;padding:24px}
 </style>
 
+<!-- Icons, drawn on one 24-unit grid with one stroke weight so they sit
+     together. Unicode glyphs came from different font blocks and never
+     matched each other in weight, size or baseline. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-brush" viewBox="0 0 24 24">
+    <path d="M6.5 17.5 8 13.2l7.6-7.6 2.8 2.8-7.6 7.6-4.3 1.5z"/>
+    <path d="M14.2 7 17 9.8"/>
+  </symbol>
+  <symbol id="i-eraser" viewBox="0 0 24 24">
+    <path d="M4.5 15.5 11 9l5.5 5.5-3.5 3.5H8z"/>
+    <path d="M11 9l3.5-3.5L20 11l-3.5 3.5"/>
+    <path d="M5 20.5h14"/>
+  </symbol>
+  <symbol id="i-fill" viewBox="0 0 24 24">
+    <path d="M11.5 4.5 5 11l6 6 6.5-6.5z"/>
+    <path d="M8.5 7.5 14 13"/>
+    <path d="M19.5 13.5c1.1 1.7 1.7 2.8 1.7 3.6a1.7 1.7 0 0 1-3.4 0c0-.8.6-1.9 1.7-3.6z"/>
+  </symbol>
+  <symbol id="i-picker" viewBox="0 0 24 24">
+    <path d="M17.5 3.5 20.5 6.5 18 9l-3-3z"/>
+    <path d="M15 6 6 15v3.5h3.5L18.5 9.5"/>
+    <path d="M6 15l-1.5 4.5 4.5-1.5"/>
+  </symbol>
+  <symbol id="i-line" viewBox="0 0 24 24">
+    <path d="M6.5 17.5 17.5 6.5"/>
+    <circle cx="5.5" cy="18.5" r="1.6"/>
+    <circle cx="18.5" cy="5.5" r="1.6"/>
+  </symbol>
+  <symbol id="i-rect" viewBox="0 0 24 24">
+    <path d="M4.5 6.5h15v11h-15z"/>
+  </symbol>
+  <symbol id="i-rectfill" viewBox="0 0 24 24">
+    <path d="M4.5 6.5h15v11h-15z" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="i-select" viewBox="0 0 24 24">
+    <path d="M4.5 6.5h15v11h-15z" stroke-dasharray="3 2.4"/>
+  </symbol>
+  <symbol id="i-move" viewBox="0 0 24 24">
+    <path d="M12 3.5v17M3.5 12h17"/>
+    <path d="M9.5 6 12 3.5 14.5 6M9.5 18 12 20.5l2.5-2.5M6 9.5 3.5 12 6 14.5M18 9.5 20.5 12 18 14.5"/>
+  </symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24">
+    <path d="M4.5 10.5h9a4.5 4.5 0 1 1 0 9H8"/>
+    <path d="M8 6 4.5 10.5 8 15"/>
+  </symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24">
+    <path d="M19.5 10.5h-9a4.5 4.5 0 1 0 0 9H16"/>
+    <path d="M16 6l3.5 4.5L16 15"/>
+  </symbol>
+  <symbol id="i-fliph" viewBox="0 0 24 24">
+    <path d="M12 3.5v17" stroke-dasharray="2.6 2.4"/>
+    <path d="M9 8 4 12l5 4z"/>
+    <path d="M15 8l5 4-5 4z"/>
+  </symbol>
+  <symbol id="i-flipv" viewBox="0 0 24 24">
+    <path d="M3.5 12h17" stroke-dasharray="2.6 2.4"/>
+    <path d="M8 9 12 4l4 5z"/>
+    <path d="M8 15l4 5 4-5z"/>
+  </symbol>
+  <symbol id="i-centreh" viewBox="0 0 24 24">
+    <path d="M4.5 4v16M19.5 4v16"/>
+    <path d="M9 8.5h6v7H9z" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="i-centrev" viewBox="0 0 24 24">
+    <path d="M4 4.5h16M4 19.5h16"/>
+    <path d="M8.5 9h7v6h-7z" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="i-clearsel" viewBox="0 0 24 24">
+    <path d="M4.5 6.5h15v11h-15z" stroke-dasharray="3 2.4"/>
+    <path d="M9 9.5 15 15M15 9.5 9 15"/>
+  </symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24">
+    <path d="M4.5 4.5h15v15h-15z"/>
+    <path d="M9.5 4.5v15M14.5 4.5v15M4.5 9.5h15M4.5 14.5h15"/>
+  </symbol>
+  <symbol id="i-uv" viewBox="0 0 24 24">
+    <path d="M4.5 18.5 12 5l7.5 13.5z"/>
+    <path d="M12 5v13.5M4.5 18.5h15"/>
+    <path d="M8.2 12h7.6"/>
+  </symbol>
+</defs></svg>
+
 <div id="app">
 
-<div id="top">
-  <h1>MXW Studio <span>meshes &middot; sprites &middot; geometry</span></h1>
-  <div id="list"></div>
-  <div id="openWrap">
+<!-- Actions across the top, grouped, and swapped for the kind of file
+     that is open. -->
+<div id="act">
+  <h1>MXW Studio</h1>
+  <span class="actGroup">
     <label id="drop" for="file">Open&hellip;</label>
     <input type="file" id="file" multiple>
     <button id="bNewSprite">New sprite</button>
     <button id="bClear">Close all</button>
-  </div>
+  </span>
+
+  <span class="actRule" id="ruleMesh"></span>
+  <span class="actGroup" id="actMesh">
+    <button id="bSave">Save .bin</button>
+    <button id="bPaintTex" type="button">Edit texture&hellip;</button>
+    <button id="bTexIn" type="button">Replace texture&hellip;</button>
+    <button id="bTexOut">Save .GIF</button>
+    <button id="bUV">Save UV .PNG</button>
+    <span class="actRule"></span>
+    <button id="bObj">Export .OBJ</button>
+    <button id="bObjIn" type="button">Import .OBJ&hellip;</button>
+  </span>
+
+  <span class="actGroup" id="actSprite">
+    <button id="bSpriteSave">Save sprite</button>
+    <button id="bPaintFrame">Edit frame&hellip;</button>
+    <button id="bSpriteIn" type="button">Import image&hellip;</button>
+    <button id="bSpriteGif">Save animated .GIF</button>
+    <button id="bFrameOut">Save frame .PNG</button>
+    <button id="bStripOut">Save strip .PNG</button>
+  </span>
+
+  <span class="actGroup" id="actPaint">
+    <button id="bPaintApply" class="primary">Apply</button>
+    <button id="bPaintCancel">Cancel</button>
+  </span>
+
+  <input type="file" id="texFile" accept="image/*">
+  <input type="file" id="spriteFile" accept="image/*">
+  <input type="file" id="objFile" accept=".obj,.OBJ">
 </div>
 
-<!-- The tool rail. Paint tools are live while the pixel editor is open;
-     the rest act on the viewport. -->
+<div id="tabs"><div id="list"></div>
+  <span id="tabsHint">no file open</span></div>
+
 <div id="rail">
   <span id="paintTools">
-    <button data-tool="brush" class="on" title="Brush (B)">&#9679;</button>
-    <button data-tool="eraser" title="Eraser (E)">&#9723;</button>
-    <button data-tool="fill" title="Flood fill (G)">&#9603;</button>
-    <button data-tool="picker" title="Pick a colour (I)">&#9678;</button>
-    <button data-tool="line" title="Line (L)">&#8725;</button>
-    <button data-tool="rect" title="Rectangle (R)">&#9633;</button>
-    <button data-tool="rectfill" title="Filled rectangle (F)">&#9632;</button>
-    <button data-tool="select" title="Rectangular select (M)">&#11034;</button>
-    <button data-tool="move" title="Move the selection (V)">&#10021;</button>
+    <button data-tool="brush" class="on" title="Brush (B)"><svg class="ico"><use href="#i-brush"/></svg></button>
+    <button data-tool="eraser" title="Eraser (E)"><svg class="ico"><use href="#i-eraser"/></svg></button>
+    <button data-tool="fill" title="Flood fill (G)"><svg class="ico"><use href="#i-fill"/></svg></button>
+    <button data-tool="picker" title="Pick a colour (I)"><svg class="ico"><use href="#i-picker"/></svg></button>
+    <button data-tool="line" title="Line (L)"><svg class="ico"><use href="#i-line"/></svg></button>
+    <button data-tool="rect" title="Rectangle (R)"><svg class="ico"><use href="#i-rect"/></svg></button>
+    <button data-tool="rectfill" title="Filled rectangle (F)"><svg class="ico"><use href="#i-rectfill"/></svg></button>
+    <button data-tool="select" title="Rectangular select (M)"><svg class="ico"><use href="#i-select"/></svg></button>
+    <button data-tool="move" title="Move the selection (V)"><svg class="ico"><use href="#i-move"/></svg></button>
   </span>
   <div class="railRule"></div>
-  <button id="bPaintUndo" title="Undo (ctrl+Z)">&#8630;</button>
-  <button id="bPaintRedo" title="Redo (ctrl+shift+Z)">&#8631;</button>
+  <button id="bPaintUndo" title="Undo (ctrl+Z)"><svg class="ico"><use href="#i-undo"/></svg></button>
+  <button id="bPaintRedo" title="Redo (ctrl+shift+Z)"><svg class="ico"><use href="#i-redo"/></svg></button>
   <div class="railRule"></div>
-  <button id="bFlipH" title="Flip the selection horizontally">&#8646;</button>
-  <button id="bFlipV" title="Flip the selection vertically">&#8645;</button>
-  <button id="bCentreH" title="Centre horizontally">&#8942;</button>
-  <button id="bCentreV" title="Centre vertically">&#8943;</button>
-  <button id="bClearSel" title="Erase the selection (Delete)">&#9003;</button>
+  <button id="bFlipH" title="Flip horizontally"><svg class="ico"><use href="#i-fliph"/></svg></button>
+  <button id="bFlipV" title="Flip vertically"><svg class="ico"><use href="#i-flipv"/></svg></button>
+  <button id="bCentreH" title="Centre horizontally"><svg class="ico"><use href="#i-centreh"/></svg></button>
+  <button id="bCentreV" title="Centre vertically"><svg class="ico"><use href="#i-centrev"/></svg></button>
+  <button id="bClearSel" title="Erase the selection (Delete)"><svg class="ico"><use href="#i-clearsel"/></svg></button>
   <div class="railRule"></div>
-  <button id="bPaintGrid" class="on" title="Pixel grid">&#9638;</button>
-  <button id="bPaintUV" class="on" title="UV layout over the texture">&#9187;</button>
+  <button id="bPaintGrid" class="on" title="Pixel grid"><svg class="ico"><use href="#i-grid"/></svg></button>
+  <button id="bPaintUV" class="on" title="UV layout over the texture"><svg class="ico"><use href="#i-uv"/></svg></button>
 </div>
 
 <div id="view">
-  <div id="empty"><div class="emptyCard">
-    <h3>Open a file to begin</h3>
+  <div id="empty"><label class="emptyCard" for="file">
+    <h3>Drop a file here, or click to choose one</h3>
     <dl class="what">
       <dt>.bin &middot; .MXW</dt>
       <dd>meshes &mdash; 3D view, textures, skeleton, dress-up</dd>
@@ -367,11 +516,11 @@
       <dt>.obj</dt>
       <dd>geometry &mdash; in and out of any modeller</dd>
     </dl>
-    <p>Drop them anywhere on this page, or use Open. Several at once is
-    fine: load a body and some clothes, then turn on Dress-up.</p>
+    <p>Several at once is fine: load a body and some clothes, then turn
+    on Dress-up. Dropping works anywhere on the page, not just here.</p>
     <p class="quiet">Everything runs in this browser. Nothing you open
     is uploaded anywhere.</p>
-  </div></div>
+  </label></div>
   <div id="spriteWrap"><canvas id="spriteView"></canvas></div>
   <div id="paintStage"><canvas id="paintCanvas"></canvas></div>
   <div id="tip">drag = orbit &middot; wheel = zoom &middot; right-drag = pan</div>
@@ -380,7 +529,6 @@
 
 <div id="side">
 
-  <!-- the pixel editor's own panels, only while it is open -->
   <div id="paintDock">
     <details class="dock" open><summary>Layers</summary>
       <div class="dockBody">
@@ -402,10 +550,6 @@
         <div class="slider"><span>zoom</span>
           <input type="range" id="paintZoom" min="1" max="16" value="6">
           <b id="paintZoomOut">6x</b></div>
-        <div class="ctrl" style="margin-top:8px">
-          <button id="bPaintApply" class="primary">Apply</button>
-          <button id="bPaintCancel">Cancel</button>
-        </div>
         <p class="hint" id="paintTitle"></p>
       </div>
     </details>
@@ -421,16 +565,14 @@
     </details>
   </div>
 
-  <!-- sprites -->
   <div id="spritePanel">
     <details class="dock" open><summary>Frames</summary>
       <div class="dockBody">
         <div id="strip"></div>
-        <div class="ctrl" style="margin-top:5px">
-          <button id="bPrev">&larr;</button>
+        <div class="ctrl seg" style="margin-top:5px">
+          <button id="bPrev">Prev</button>
           <button id="bPlay">Play</button>
-          <button id="bNext">&rarr;</button>
-          <button id="bPaintFrame" class="primary">Edit&hellip;</button>
+          <button id="bNext">Next</button>
         </div>
         <div class="slider"><span>speed</span>
           <input type="range" id="fps" min="1" max="30" value="12">
@@ -481,37 +623,19 @@
         </div>
         <p class="hint" id="tintStat"></p>
         <p class="warn" id="sizeWarn" style="display:none"></p>
-        <h2>Import and export</h2>
-        <div class="ctrl">
-          <button id="bSpriteIn" type="button">Import image&hellip;</button>
-          <button id="bFrameOut">Frame .PNG</button>
-          <button id="bStripOut">Strip .PNG</button>
-          <button id="bSpriteSave" class="primary">Save sprite</button>
-        </div>
-        <input type="file" id="spriteFile" accept="image/*">
-        <p class="hint">Save the strip, edit it anywhere, import it back
-        &mdash; a strip exactly as wide as every frame side by side is
-        sliced across all of them.</p>
       </div>
     </details>
   </div>
 
-  <!-- meshes -->
   <details class="dock" id="texDock" open><summary>Textures</summary>
     <div class="dockBody">
       <div id="texPanel" style="display:none">
         <div id="texGrid"></div>
         <div id="texPreview"></div>
-        <div class="ctrl" style="margin-top:8px">
-          <button id="bPaintTex" class="primary" type="button">Edit&hellip;</button>
-          <button id="bTexIn" type="button">Replace&hellip;</button>
-          <button id="bTexOut">.GIF</button>
-          <button id="bUV">UV .PNG</button>
-        </div>
-        <input type="file" id="texFile" accept="image/*">
         <canvas id="uv"></canvas>
         <p class="hint">The cyan edges are the UV layout of the faces
-        that use this texture &mdash; paint inside them.</p>
+        that use this texture &mdash; paint inside them. Editing,
+        replacing and saving are on the bar above.</p>
       </div>
     </div>
   </details>
@@ -537,9 +661,10 @@
         <button id="bSpin">Spin</button>
         <button id="bAll">Dress-up</button>
       </div>
-      <p class="hint">Back items sit at negative Z in every file, so +Z
-      is the front. Choosing a texture never moves the camera &mdash; use
-      these when you want to move it.</p>
+      <p class="hint">The characters face &minus;Z: the toes reach that
+      way, and a back item sits at +Z. Front, Face and Whole look from
+      &minus;Z, so the model faces you. Choosing a texture never moves
+      the camera &mdash; use these when you want to move it.</p>
     </div>
   </details>
 
@@ -567,19 +692,14 @@
     </div>
   </details>
 
-  <details class="dock" id="geoDock"><summary>Geometry</summary>
+  <details class="dock" id="geoDock"><summary>Geometry notes</summary>
     <div class="dockBody">
-      <div class="ctrl">
-        <button id="bObj">Export .OBJ</button>
-        <button id="bObjIn" type="button">Import .OBJ&hellip;</button>
-        <button id="bSave" class="primary">Save .bin</button>
-      </div>
-      <input type="file" id="objFile" accept=".obj,.OBJ">
       <p class="hint">Export, edit the mesh in any modeller, import it
-      back. An OBJ carries no textures, material bindings or skeleton,
-      so importing into a loaded file keeps those and swaps only the
-      geometry. Coordinates quantise to 16-bit integers and texture
-      coordinates to whole pixels.</p>
+      back &mdash; the buttons are on the bar above. An OBJ carries no
+      textures, material bindings or skeleton, so importing into a
+      loaded file keeps those and swaps only the geometry. Coordinates
+      quantise to 16-bit integers and texture coordinates to whole
+      pixels.</p>
     </div>
   </details>
 
