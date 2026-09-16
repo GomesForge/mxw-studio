@@ -224,11 +224,14 @@ function initThree() {
   })();
 }
 
-let dragging = false, px = 0, py = 0, btn = 0;
+let dragging = false, px = 0, py = 0, btn = 0, panning3d = false;
 function bindOrbit() {
   const el = rend.domElement;
   el.addEventListener('mousedown', e => {
     dragging = true; px = e.clientX; py = e.clientY; btn = e.button;
+    /* Held at the moment the drag starts, not read live, so a drag does
+       what it set out to do even if you let go of the key halfway. */
+    panning3d = e.ctrlKey || e.metaKey;
     spin = false; $('bSpin').classList.remove('on'); e.preventDefault();
   });
   addEventListener('mouseup', () => { dragging = false; });
@@ -236,7 +239,13 @@ function bindOrbit() {
     if (!dragging) return;
     const dx = e.clientX - px, dy = e.clientY - py;
     px = e.clientX; py = e.clientY;
-    if (btn === 2) targetY -= dy * radius * 0.002;
+    /* ctrl and the left button raises and lowers what you are looking
+       at. The right button used to do this, which cost the right button
+       its ordinary job, so it now has no drag at all: it opens the
+       menu, and a stray drag with it does nothing rather than turning
+       the model on the way to a menu you were about to open. */
+    if (btn === 2) return;
+    if (panning3d) targetY -= dy * radius * 0.002;
     else {
       theta -= dx * 0.008;
       phi = Math.max(0.05, Math.min(Math.PI - 0.05, phi - dy * 0.008));
@@ -1702,15 +1711,6 @@ function poseWire() {
    {head} labels what the menu is acting on, which matters when the
    thing under the cursor is one thumbnail among twenty. */
 function menuAt(ev, head, items) {
-  /* The right button opens this, and nothing else does.
-
-     The wheel button opens the browser's own scroll widget on whatever
-     is under the cursor, which reads as something of ours popping up on
-     the model; and a mouse whose wheel is mapped to "context menu"
-     would otherwise open this one. Either way the answer is the same:
-     only button 2, and the keyboard menu key, which arrives as a
-     contextmenu event carrying button 0. */
-  if (ev && (ev.button === 1 || (ev.buttons & 4))) return;
   ev.preventDefault();
   ev.stopPropagation();
   const el = $('menu');
@@ -1741,32 +1741,6 @@ function menuClose() {
 function menuWire() {
   addEventListener('mousedown', e => {
     if (!$('menu').contains(e.target)) menuClose();
-  }, true);
-  /* Kill the wheel button's default behaviour, on the document.
-
-     It was bound to #app first, which missed everything that is not
-     inside it: the model panel, this guide, the size prompt, the menu
-     itself, the drop overlay. All of those are direct children of the
-     body, so a wheel press over the model panel still opened the
-     browser's autoscroll puck, which is exactly the thing that looks
-     like the application popping up a menu on the model.
-
-     Capture phase, so it runs before anything that might stop the event
-     on the way down. The pixel editor still reads the wheel button for
-     panning: suppressing a default does not suppress a handler. */
-  for (const type of ['pointerdown', 'mousedown', 'auxclick', 'click']) {
-    document.addEventListener(type, e => {
-      if (e.button === 1) e.preventDefault();
-    }, true);
-  }
-  /* And a context menu that arrives with the wheel button involved is
-     not a right click, whatever the device says it is. */
-  document.addEventListener('contextmenu', e => {
-    if (e.button === 1 || (e.buttons & 4)) {
-      e.preventDefault();
-      e.stopPropagation();
-      menuClose();
-    }
   }, true);
   addEventListener('keydown', e => { if (e.key === 'Escape') menuClose(); });
   addEventListener('blur', menuClose);

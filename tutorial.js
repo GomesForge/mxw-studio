@@ -247,8 +247,10 @@ const TUTORIAL = [
   title: 'Looking at a model',
   body: function () {
     return '' +
-    '<p>Drag to orbit, wheel to zoom, right button to pan. The <b>View</b> ' +
-    'panel has the named angles.</p>' +
+    '<p>Drag to orbit, the wheel to zoom, and <b>ctrl with the left ' +
+    'button</b> to raise and lower what you are looking at. The ' +
+    '<b>View</b> panel has the named angles, and the right button is ' +
+    'free for the menu.</p>' +
     '<figure class="tFigW"><svg viewBox="0 0 580 230" class="tSvg">' +
       '<rect class="tWin" x="10" y="10" width="360" height="200" rx="6"/>' +
       '<rect class="tView" x="10" y="10" width="360" height="200"/>' +

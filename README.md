@@ -37,7 +37,9 @@ middle; the panels that describe and change what is open docked on the
 right; and one status line along the bottom.
 
 - Drop item `.bin`, body `.bin` or `.MXW` files on the page
-- 3D view: orbit, texture, wireframe, vertex normals, skeleton, axes
+- 3D view: drag to orbit, wheel to zoom, ctrl and the left button
+  to raise and lower; texture, wireframe, vertex normals, skeleton,
+  axes
 - **Dress-up** draws every loaded file at once. All meshes are authored
   in one shared coordinate space, so a body plus hair plus a jacket
   plus shoes line up with no fitting
