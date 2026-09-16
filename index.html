@@ -551,9 +551,9 @@
   .tSvg rect{stroke-width:1}
 
   /* ---------------------------- the size prompt ---------------------- */
-  #ask{position:fixed;inset:0;z-index:70;display:flex;align-items:center;
+  #ask,#nsp{position:fixed;inset:0;z-index:70;display:flex;align-items:center;
     justify-content:center;background:rgba(8,12,20,.6);padding:20px}
-  #ask[hidden]{display:none!important}
+  #ask[hidden],#nsp[hidden]{display:none!important}
   #askBox{width:330px;max-width:100%;background:var(--panel);
     border:1px solid var(--edgeStrong);border-radius:10px;padding:14px 16px;
     box-shadow:0 18px 50px rgba(0,0,0,.5)}
@@ -1102,6 +1102,28 @@
   </div>
 </div>
 
+<div id="nsp" hidden>
+  <div id="askBox">
+    <h3>New sprite sheet</h3>
+    <p class="hint">An empty sheet to draw on. Every frame starts blank;
+      open one with <b>Edit frame</b>.</p>
+    <div class="slider"><span>width</span>
+      <input type="range" id="nspW" min="8" max="512" step="8" value="64">
+      <b id="nspWOut">64</b></div>
+    <div class="slider"><span>height</span>
+      <input type="range" id="nspH" min="8" max="512" step="8" value="80">
+      <b id="nspHOut">80</b></div>
+    <div class="slider"><span>frames</span>
+      <input type="range" id="nspN" min="1" max="64" value="4">
+      <b id="nspNOut">4</b></div>
+    <p class="hint" id="nspNote"></p>
+    <div class="ctrl" style="margin-top:10px;justify-content:flex-end">
+      <button id="nspCancel">Cancel</button>
+      <button id="nspOK" class="primary">Create</button>
+    </div>
+  </div>
+</div>
+
 <div id="ask" hidden>
   <div id="askBox">
     <h3 id="askTitle">Save as .GIF</h3>
@@ -1124,15 +1146,15 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="mxw.js?v=16"></script>
-<script src="gra.js?v=16"></script>
-<script src="obj.js?v=16"></script>
-<script src="checks.js?v=16"></script>
-<script src="gifenc.js?v=16"></script>
-<script src="paint.js?v=16"></script>
-<script src="shapes.js?v=16"></script>
-<script src="skin.js?v=16"></script>
-<script src="motions.js?v=16"></script>
-<script src="sprite.js?v=16"></script>
-<script src="tutorial.js?v=16"></script>
-<script src="app.js?v=16"></script>
+<script src="mxw.js?v=17"></script>
+<script src="gra.js?v=17"></script>
+<script src="obj.js?v=17"></script>
+<script src="checks.js?v=17"></script>
+<script src="gifenc.js?v=17"></script>
+<script src="paint.js?v=17"></script>
+<script src="shapes.js?v=17"></script>
+<script src="skin.js?v=17"></script>
+<script src="motions.js?v=17"></script>
+<script src="sprite.js?v=17"></script>
+<script src="tutorial.js?v=17"></script>
+<script src="app.js?v=17"></script>

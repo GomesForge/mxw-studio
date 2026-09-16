@@ -2291,19 +2291,59 @@ $('bPaintTex').onclick = paintTexture;
 document.querySelectorAll('#viewRow button[data-view]').forEach(b =>
   b.onclick = () => setView(b.dataset.view));
 $('bClear').onclick = clearAll;
-$('bNewSprite').onclick = () => {
-  const w = parseInt(prompt('frame width in pixels', '64') || '', 10);
-  const h = parseInt(prompt('frame height in pixels', '80') || '', 10);
-  const n = parseInt(prompt('how many frames', '4') || '', 10);
-  if (!(w > 0 && h > 0 && n > 0)) { notify('cancelled'); return; }
-  if (w > 4096 || h > 4096 || n > 255) {
-    notify('out of range: width and height up to 4096, frames up to 255', 1);
-    return;
-  }
+/* Three native prompts, one after another, is what this was.
+
+   Cancelling the first one did not stop anything: the code asked all
+   three and only then looked at the answers, so saying no to the first
+   question still made you answer two more. One dialog, one Cancel, and
+   the limits are on the sliders instead of being explained after the
+   fact. */
+let nspPending = null;
+
+function askNewSprite() {
+  const box = $('nsp');
+  if (!box) return Promise.resolve(null);
+  if (nspPending) { nspPending(null); nspPending = null; }
+  const show = () => {
+    const w = +$('nspW').value, h = +$('nspH').value, n = +$('nspN').value;
+    $('nspWOut').textContent = w;
+    $('nspHOut').textContent = h;
+    $('nspNOut').textContent = n;
+    $('nspNote').textContent = n + ' frame' + (n === 1 ? '' : 's') + ' of ' +
+      w + ' by ' + h + ', ' + ((w * h * n * 2 / 1024) | 0) +
+      ' KB at most once drawn';
+  };
+  for (const id of ['nspW', 'nspH', 'nspN']) $(id).oninput = show;
+  show();
+  box.hidden = false;
+  $('nspOK').focus();
+  return new Promise(resolve => {
+    nspPending = resolve;
+    const close = v => {
+      box.hidden = true;
+      nspPending = null;
+      resolve(v);
+    };
+    $('nspOK').onclick = () => close({ w: +$('nspW').value, h: +$('nspH').value,
+                                       n: +$('nspN').value });
+    $('nspCancel').onclick = () => close(null);
+    box.onclick = e => { if (e.target === box) close(null); };
+    box.onkeydown = e => {
+      if (e.key === 'Escape') { e.stopPropagation(); close(null); }
+      if (e.key === 'Enter') close({ w: +$('nspW').value, h: +$('nspH').value,
+                                     n: +$('nspN').value });
+    };
+  });
+}
+
+$('bNewSprite').onclick = async () => {
+  const want = await askNewSprite();
+  if (!want) return;                     /* Cancel means cancel */
   spriteClose();
-  spriteNew(w, h, n, 'new.gra');
+  spriteNew(want.w, want.h, want.n, 'new.gra');
   renderList();
-  notify('empty sheet ' + w + 'x' + h + ', ' + n + ' frame(s) -- press "Edit this frame" to draw');
+  notify('empty sheet ' + want.w + 'x' + want.h + ', ' + want.n +
+         ' frame(s) -- press "Edit frame" to draw');
 };
 
 let dragDepth = 0;
