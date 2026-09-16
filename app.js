@@ -1702,6 +1702,15 @@ function poseWire() {
    {head} labels what the menu is acting on, which matters when the
    thing under the cursor is one thumbnail among twenty. */
 function menuAt(ev, head, items) {
+  /* The right button opens this, and nothing else does.
+
+     The wheel button opens the browser's own scroll widget on whatever
+     is under the cursor, which reads as something of ours popping up on
+     the model; and a mouse whose wheel is mapped to "context menu"
+     would otherwise open this one. Either way the answer is the same:
+     only button 2, and the keyboard menu key, which arrives as a
+     contextmenu event carrying button 0. */
+  if (ev && ev.button === 1) return;
   ev.preventDefault();
   ev.stopPropagation();
   const el = $('menu');
@@ -1733,6 +1742,23 @@ function menuWire() {
   addEventListener('mousedown', e => {
     if (!$('menu').contains(e.target)) menuClose();
   }, true);
+  /* Kill the wheel-button default everywhere inside the editor.
+
+     On Windows it opens an autoscroll puck over whatever you clicked,
+     which in a 3D view looks exactly like the application doing
+     something. The 3D canvas already suppressed it; every panel,
+     thumbnail and tab did not. The pixel editor still reads the wheel
+     button itself, for panning, and that is unaffected: suppressing the
+     browser's default does not suppress our own handler. */
+  const shell = $('app');
+  if (shell) {
+    shell.addEventListener('mousedown', e => {
+      if (e.button === 1) e.preventDefault();
+    });
+    shell.addEventListener('auxclick', e => {
+      if (e.button === 1) e.preventDefault();
+    });
+  }
   addEventListener('keydown', e => { if (e.key === 'Escape') menuClose(); });
   addEventListener('blur', menuClose);
   addEventListener('wheel', menuClose, { passive: true });
