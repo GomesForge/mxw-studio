@@ -1305,6 +1305,9 @@ async function saveTextureSetGIF(entry, tex) {
   const scale = await askForScale(frames.length > 1
     ? frames.length + ' textures of this slot' : 'one texture', w, h);
   if (scale === null) return;
+  /* A texture is a bitmap with a size of its own, so above 100 per cent
+     there is nothing to do but repeat pixels. Nearest neighbour keeps
+     the edges hard, which is what these images want. */
   const big = scaleFrames(frames, w, h, scale);
 
   const name = entry.name.replace(/\.[^.]+$/, '');
@@ -1359,7 +1362,7 @@ async function saveContextGIF() {
    not disturbed. */
 async function exportViewGIF() {
   if (!rend || !current) { notify('open a mesh first', 1); return; }
-  const size = 320;
+  const BASE = 320;
   const host = rend.domElement.parentElement;
   const keep = {
     w: rend.domElement.clientWidth, h: rend.domElement.clientHeight,
@@ -1374,8 +1377,17 @@ async function exportViewGIF() {
   const scale = await askForScale(
     (motion && motionLength(motion) > 0 ? motion.name + ', ' + steps + ' frames'
                                         : 'a turn, ' + steps + ' frames'),
-    size, size);
+    BASE, BASE);
   if (scale === null) return;
+
+  /* Render at the size asked for.
+
+     It used to render at 320 and enlarge the pixels afterwards, which
+     is not a bigger picture, it is the same picture magnified: asking
+     for 400 per cent gave back something visibly worse than the view it
+     came from. A 3D scene has no fixed resolution, so the honest answer
+     to "bigger" is to draw it bigger. Nothing is enlarged here now. */
+  const size = Math.max(64, Math.min(1400, Math.round(BASE * scale)));
 
   spin = false;
   motionPlaying = false;
@@ -1396,8 +1408,22 @@ async function exportViewGIF() {
   flat.width = flat.height = size;
   const fx = flat.getContext('2d', { willReadFrequently: true });
   const frames = [];
+  const say = t => {
+    const m = $('msg');
+    if (!m) return;
+    m.textContent = t;
+    m.className = 'msg';
+    m.style.display = 'block';
+  };
   try {
     for (let i = 0; i < steps; i++) {
+      /* One frame per animation frame, so the page keeps painting and
+         the progress can actually be seen. Twenty-four renders at 1280
+         square is not instant and a frozen window reads as a crash. */
+      if (i % 2 === 0) {
+        say('rendering ' + (i + 1) + ' of ' + steps + ' at ' + size + ' by ' + size);
+        await new Promise(r => requestAnimationFrame(r));
+      }
       if (motion && motionLength(motion) > 0) {
         motionFrame = motionLength(motion) * i / steps;
         pose = motionPose(motion, motionFrame);
@@ -1456,7 +1482,10 @@ async function exportViewGIF() {
     }
     return out;
   });
-  const big = scaleFrames(cropped, cw, ch, scale);
+  /* already rendered at the size asked for, so nothing is resampled */
+  const big = { frames: cropped, w: cw, h: ch };
+  say('encoding ' + steps + ' frames at ' + cw + ' by ' + ch);
+  await new Promise(r => requestAnimationFrame(r));
   let gif;
   try {
     gif = encodeAnimatedGIF(big.frames, big.w, big.h,

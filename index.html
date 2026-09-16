@@ -441,6 +441,15 @@
   /* ------------------------------ the guide -------------------------- */
   /* Help is not an action, so it does not look like one. Violet, which
      nothing else in the interface uses. */
+  /* Pinned to the right of the bar, not merely pushed there.
+
+     margin-left:auto alone put it past the right edge, because the bar
+     scrolls sideways when the actions do not fit: the button existed,
+     640 pixels off screen. Sticky keeps it against the edge of the
+     scrollport, and the background stops the actions sliding visibly
+     underneath it. */
+  #actHelp{margin-left:auto;position:sticky;right:0;padding-left:14px;
+    background:linear-gradient(to right,transparent,var(--panel) 12px)}
   #bTut{background:var(--help);border-color:var(--helpEdge);
     color:var(--onHelp);font-weight:550}
   #bTut:hover{filter:brightness(1.1);background:var(--help);
@@ -519,8 +528,18 @@
   .tSvg .tSlider{fill:var(--edge);stroke:none}
   .tSvg .tKnob{fill:var(--cyan);stroke:none}
   .tSvg .tDot{fill:var(--amber);stroke:none}
-  .tSvg .tFig{fill:color-mix(in srgb,var(--cyan) 26%,var(--panel));
-    stroke:var(--cyan);stroke-width:1}
+  .tSvg .tFig .tBody,.tSvg .tFig .tHead{
+    fill:color-mix(in srgb,var(--cyan) 24%,var(--panel));
+    stroke:var(--cyan);stroke-width:1.2}
+  .tSvg .tFig .tLimb{fill:none;stroke:var(--cyan);stroke-width:4.5;
+    stroke-linecap:round}
+  .tSvg .tShape{fill:color-mix(in srgb,var(--cyan) 20%,var(--panel));
+    stroke:var(--cyan);stroke-width:1.2}
+  .tSvg .tShapeLine{fill:none;stroke:var(--cyan);stroke-width:1;
+    stroke-dasharray:3 3}
+  .tSvg .tShapeHole{fill:var(--panel);stroke:var(--cyan);stroke-width:1.2}
+  .tSvg .tHeadFlat{fill:color-mix(in srgb,var(--amber) 26%,var(--panel));
+    stroke:var(--amber);stroke-width:1.2}
   .tSvg .tArrow{fill:none;stroke:var(--help);stroke-width:1.6;
     stroke-dasharray:5 4;stroke-linecap:round}
   .tSvg .tHead{fill:none;stroke:var(--help);stroke-width:1.8;
@@ -635,7 +654,6 @@
     <input type="file" id="file" multiple>
     <button id="bNewSprite">New sprite</button>
     <button id="bClear">Close all</button>
-    <button id="bTut" title="how all of this works">Tutorial</button>
   </span>
 
   <span class="actRule" id="ruleMesh"></span>
@@ -664,6 +682,10 @@
     <button id="bPaintCancel">Cancel</button>
     <button id="bPaintGif" title="saves what you are editing: the whole set of textures in this slot, or the whole sprite animation">Save .GIF</button>
     <button id="bMV" class="on">Model panel</button>
+  </span>
+
+  <span class="actGroup" id="actHelp">
+    <button id="bTut" title="how all of this works">Tutorial</button>
   </span>
 
   <input type="file" id="texFile" accept="image/*">
@@ -1102,15 +1124,15 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="mxw.js?v=12"></script>
-<script src="gra.js?v=12"></script>
-<script src="obj.js?v=12"></script>
-<script src="checks.js?v=12"></script>
-<script src="gifenc.js?v=12"></script>
-<script src="paint.js?v=12"></script>
-<script src="shapes.js?v=12"></script>
-<script src="skin.js?v=12"></script>
-<script src="motions.js?v=12"></script>
-<script src="sprite.js?v=12"></script>
-<script src="tutorial.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="mxw.js?v=14"></script>
+<script src="gra.js?v=14"></script>
+<script src="obj.js?v=14"></script>
+<script src="checks.js?v=14"></script>
+<script src="gifenc.js?v=14"></script>
+<script src="paint.js?v=14"></script>
+<script src="shapes.js?v=14"></script>
+<script src="skin.js?v=14"></script>
+<script src="motions.js?v=14"></script>
+<script src="sprite.js?v=14"></script>
+<script src="tutorial.js?v=14"></script>
+<script src="app.js?v=14"></script>

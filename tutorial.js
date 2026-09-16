@@ -33,6 +33,60 @@ function tutLabel(x, y, text, anchor) {
          text.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</text>';
 }
 
+/* A small figure, so a picture of the viewport has something in it.
+
+   Not the real mesh, and not trying to be: a head, a body, two arms and
+   two legs at the proportions these bodies actually have, which is a
+   head about a third of the height. `pose` moves the limbs so the same
+   drawing can stand, walk or wave, which is what the sections need.
+
+   s is the height in user units; everything else is a fraction of it. */
+function tutPerson(cx, cy, s, pose) {
+  pose = pose || 'stand';
+  const head = s * 0.30, neck = cy - s / 2 + head;
+  const hip = cy + s * 0.10, foot = cy + s / 2;
+  const sh = s * 0.17;                       /* half the shoulder width */
+  const g = ['<g class="tFig">'];
+  /* legs */
+  const legs = {
+    stand: [[-0.05, 0.0], [0.05, 0.0]],
+    walk:  [[-0.22, 0.06], [0.24, -0.04]],
+    sit:   [[-0.40, -0.30], [0.40, -0.30]]
+  }[pose] || [[-0.05, 0], [0.05, 0]];
+  legs.forEach(([dx, dy]) => {
+    g.push('<path class="tLimb" d="M' + (cx + sh * 0.45 * Math.sign(dx || 1)).toFixed(1) +
+           ' ' + hip.toFixed(1) + 'L' + (cx + s * dx).toFixed(1) + ' ' +
+           (foot + s * dy).toFixed(1) + '"/>');
+  });
+  /* arms */
+  const arms = {
+    stand: [[-0.20, 0.10], [0.20, 0.10]],
+    walk:  [[-0.26, 0.04], [0.26, 0.16]],
+    wave:  [[-0.20, 0.10], [0.30, -0.32]],
+    sit:   [[-0.26, 0.02], [0.26, 0.02]]
+  }[pose] || [[-0.2, 0.1], [0.2, 0.1]];
+  arms.forEach(([dx, dy]) => {
+    g.push('<path class="tLimb" d="M' + (cx + sh * Math.sign(dx)).toFixed(1) +
+           ' ' + (neck + s * 0.06).toFixed(1) + 'L' + (cx + s * dx).toFixed(1) +
+           ' ' + (neck + s * 0.06 + s * dy).toFixed(1) + '"/>');
+  });
+  /* body and head */
+  g.push('<rect class="tBody" x="' + (cx - sh).toFixed(1) + '" y="' +
+         (neck + s * 0.01).toFixed(1) + '" width="' + (sh * 2).toFixed(1) +
+         '" height="' + (hip - neck).toFixed(1) + '" rx="' + (sh * 0.7).toFixed(1) + '"/>');
+  g.push('<circle class="tHead" cx="' + cx + '" cy="' + (neck - head * 0.45).toFixed(1) +
+         '" r="' + (head * 0.62).toFixed(1) + '"/>');
+  /* ears, which is most of why these read as the right character */
+  g.push('<ellipse class="tHead" cx="' + (cx - head * 0.62).toFixed(1) + '" cy="' +
+         (neck - head * 0.45).toFixed(1) + '" rx="' + (head * 0.12).toFixed(1) +
+         '" ry="' + (head * 0.2).toFixed(1) + '"/>');
+  g.push('<ellipse class="tHead" cx="' + (cx + head * 0.62).toFixed(1) + '" cy="' +
+         (neck - head * 0.45).toFixed(1) + '" rx="' + (head * 0.12).toFixed(1) +
+         '" ry="' + (head * 0.2).toFixed(1) + '"/>');
+  g.push('</g>');
+  return g.join('');
+}
+
 function tutRing(x, y, w, h) {
   return '<rect class="tRing" x="' + x + '" y="' + y + '" width="' + w +
          '" height="' + h + '" rx="4"/>';
@@ -69,9 +123,7 @@ function tutShell() {
   g.push('<rect class="tView" x="' + (X + 30) + '" y="' + (Y + 46) +
          '" width="' + (W - 190) + '" height="' + (H - 64) + '"/>');
   const cx = X + 30 + (W - 190) / 2;
-  g.push('<circle class="tFig" cx="' + cx + '" cy="' + (Y + 100) + '" r="22"/>');
-  g.push('<rect class="tFig" x="' + (cx - 15) + '" y="' + (Y + 126) +
-         '" width="30" height="64" rx="10"/>');
+  g.push(tutPerson(cx, Y + 130, 126, 'walk'));
   /* docks */
   g.push('<rect class="tSide" x="' + (X + W - 160) + '" y="' + (Y + 46) +
          '" width="160" height="' + (H - 64) + '"/>');
@@ -149,6 +201,28 @@ const TUTORIAL = [
     return '' +
     '<p>Drop a file anywhere on the page, or press <b>Open</b>. Several at ' +
     'once is fine.</p>' +
+    '<figure class="tFigW"><svg viewBox="0 0 620 220" class="tSvg">' +
+      (function () {
+        const o = [];
+        const names = ['body.bin', 'hair.bin', 'jacket.bin'];
+        names.forEach((n, i) => {
+          const y = 18 + i * 46;
+          o.push('<rect class="tBtn" x="14" y="' + y + '" width="104" height="32" rx="4"/>');
+          o.push(tutLabel(24, y + 21, n));
+          o.push(tutArrow(124, y + 16, 212, 92 + (i - 1) * 6, 20 - i * 14));
+        });
+        o.push('<rect class="tWin" x="220" y="16" width="200" height="176" rx="6"/>');
+        o.push('<rect class="tView" x="220" y="16" width="200" height="176"/>');
+        o.push(tutPerson(320, 104, 140, 'stand'));
+        o.push(tutLabel(320, 210, 'dropped together, they line up by themselves', 'middle'));
+        o.push('<rect class="tSide" x="440" y="16" width="166" height="176" rx="6"/>');
+        for (let i = 0; i < 4; i++) {
+          o.push('<rect class="tDock" x="446" y="' + (24 + i * 42) + '" width="154" height="34" rx="3"/>');
+        }
+        o.push(tutArrow(500, 210, 470, 200, 0));
+        return o.join('');
+      })() +
+    '</svg></figure>' +
     '<table class="tTable"><thead><tr><th>extension</th><th>what it is</th>' +
     '<th>what you get</th></tr></thead><tbody>' +
     '<tr><td><code>.bin</code> <code>.MXW</code></td><td>a mesh container</td>' +
@@ -178,8 +252,7 @@ const TUTORIAL = [
     '<figure class="tFigW"><svg viewBox="0 0 580 230" class="tSvg">' +
       '<rect class="tWin" x="10" y="10" width="360" height="200" rx="6"/>' +
       '<rect class="tView" x="10" y="10" width="360" height="200"/>' +
-      '<circle class="tFig" cx="150" cy="70" r="26"/>' +
-      '<rect class="tFig" x="132" y="100" width="36" height="80" rx="12"/>' +
+      tutPerson(150, 108, 150, 'stand') +
       '<rect class="tSide" x="382" y="10" width="188" height="200" rx="6"/>' +
       tutLabel(392, 30, 'View') +
       '<rect class="tBtnOn" x="392" y="38" width="40" height="16" rx="3"/>' +
@@ -230,10 +303,10 @@ const TUTORIAL = [
         return out.join('');
       })() +
       '<rect class="tView" x="300" y="10" width="270" height="230" rx="6"/>' +
-      '<circle class="tFig" cx="435" cy="90" r="46"/>' +
-      '<rect class="tRing" x="410" y="70" width="50" height="34" rx="6"/>' +
-      tutArrow(190, 130, 404, 92, -30) +
-      tutLabel(150, 235, 'the one you click appears on the head', 'start') +
+      tutPerson(435, 130, 170, 'stand') +
+      '<rect class="tRing" x="410" y="58" width="50" height="40" rx="8"/>' +
+      tutArrow(240, 120, 404, 80, -20) +
+      tutLabel(180, 236, 'the one you click appears on the head', 'start') +
     '</svg></figure>' +
     '<p>Under the grid, the <b>UV layout</b> of the faces that use this ' +
     'texture is drawn over it, so you can see where to paint. Two colours ' +
@@ -331,6 +404,29 @@ const TUTORIAL = [
     return '' +
     '<p>Drop a <code>.gra</code> or <code>.spr</code> and the page switches ' +
     'to sprite mode: the frame strip, playback, the colour grid.</p>' +
+    '<figure class="tFigW"><svg viewBox="0 0 620 230" class="tSvg">' +
+      (function () {
+        const o = [];
+        const poses = ['stand', 'walk', 'wave', 'walk', 'stand', 'walk'];
+        poses.forEach((p, i) => {
+          const x = 16 + i * 84;
+          o.push('<rect class="' + (i === 2 ? 'tThumbOn' : 'tThumb') +
+                 '" x="' + x + '" y="14" width="74" height="92" rx="4"/>');
+          o.push(tutPerson(x + 37, 60, 70, p));
+          o.push(tutLabel(x + 37, 120, String(i + 1), 'middle'));
+        });
+        o.push(tutArrow(200, 168, 148, 112, -20));
+        o.push(tutLabel(206, 172, 'the frame you are on', 'start'));
+        o.push('<rect class="tSide" x="330" y="140" width="276" height="76" rx="5"/>');
+        for (let i = 0; i < 18; i++) {
+          o.push('<rect class="tThumb" x="' + (338 + (i % 9) * 30) + '" y="' +
+                 (148 + Math.floor(i / 9) * 30) + '" width="24" height="24" rx="3"/>');
+        }
+        o.push(tutArrow(300, 200, 334, 180, 0));
+        o.push(tutLabel(296, 204, 'every colour in the sheet', 'end'));
+        return o.join('');
+      })() +
+    '</svg></figure>' +
     '<ul class="tList">' +
     '<li><b>Remap a colour</b> or <b>shift hue, saturation and lightness</b> ' +
     'across <i>every frame at once</i>. The frames of one sheet are the same ' +
@@ -381,10 +477,9 @@ const TUTORIAL = [
       '<circle class="tKnob" cx="380" cy="161" r="6"/>' +
       tutLabel(212, 184, 'a slider per axis, for the bone you pick') +
       '<rect class="tView" x="10" y="10" width="180" height="190" rx="6"/>' +
-      '<circle class="tFig" cx="100" cy="60" r="22"/>' +
-      '<rect class="tFig" x="86" y="86" width="28" height="60" rx="9"/>' +
-      tutArrow(120, 175, 100, 150, 0) +
-      tutLabel(120, 192, 'it moves as you scrub', 'middle') +
+      tutPerson(100, 95, 130, 'walk') +
+      tutArrow(100, 188, 100, 168, 0) +
+      tutLabel(100, 200, 'it moves as you scrub', 'middle') +
     '</svg></figure>' +
     '<p>Under the list, <b>Pose a bone</b> gives you a bone by name and a ' +
     'slider per axis. Which axis does what was measured on the rig rather ' +
@@ -423,6 +518,35 @@ const TUTORIAL = [
     '<p>The <b>Create and transform</b> panel builds a card, a box, a ' +
     'cylinder, a cone, a sphere or a ring. Each opens as its own file, so ' +
     'starting something new never costs you what you had open.</p>' +
+    '<figure class="tFigW"><svg viewBox="0 0 620 170" class="tSvg">' +
+      (function () {
+        const o = [];
+        const at = i => 60 + i * 100;
+        /* card */
+        o.push('<rect class="tShape" x="' + (at(0) - 26) + '" y="24" width="52" height="66" rx="2"/>');
+        /* box, drawn as a cube */
+        o.push('<path class="tShape" d="M' + (at(1) - 28) + ' 40h44v44h-44z"/>');
+        o.push('<path class="tShape" d="M' + (at(1) - 28) + ' 40l14-14h44l-14 14z"/>');
+        o.push('<path class="tShape" d="M' + (at(1) + 16) + ' 40l14-14v44l-14 14z"/>');
+        /* cylinder */
+        o.push('<path class="tShape" d="M' + (at(2) - 24) + ' 36v46a24 9 0 0 0 48 0V36z"/>');
+        o.push('<ellipse class="tShape" cx="' + at(2) + '" cy="36" rx="24" ry="9"/>');
+        /* cone */
+        o.push('<path class="tShape" d="M' + at(3) + ' 26L' + (at(3) + 26) + ' 84a26 9 0 0 1-52 0z"/>');
+        /* sphere */
+        o.push('<circle class="tShape" cx="' + at(4) + '" cy="56" r="28"/>');
+        o.push('<ellipse class="tShapeLine" cx="' + at(4) + '" cy="56" rx="28" ry="10"/>');
+        /* ring */
+        o.push('<ellipse class="tShape" cx="' + at(5) + '" cy="56" rx="30" ry="14"/>');
+        o.push('<ellipse class="tShapeHole" cx="' + at(5) + '" cy="56" rx="13" ry="5"/>');
+        ['Card', 'Box', 'Cylinder', 'Cone', 'Sphere', 'Ring'].forEach((n, i) => {
+          o.push(tutLabel(at(i), 108, n, 'middle'));
+        });
+        o.push(tutArrow(300, 150, 300, 120, 0));
+        o.push(tutLabel(300, 164, 'each one opens as its own file, ready to texture', 'middle'));
+        return o.join('');
+      })() +
+    '</svg></figure>' +
     '<p>Sizes are in the units the meshes use, where a body runs about 7090 ' +
     'tall:</p>' +
     '<table class="tTable"><tbody>' +
@@ -465,6 +589,32 @@ const TUTORIAL = [
     '<h4>Save .GIF, which follows what you are looking at</h4>' +
     '<p>One button per mode, and the rule is: <b>whatever is on screen, and ' +
     'if it is one of a set, the whole set</b>.</p>' +
+    '<figure class="tFigW"><svg viewBox="0 0 620 200" class="tSvg">' +
+      (function () {
+        const o = [];
+        /* looking at the model */
+        o.push('<rect class="tView" x="14" y="16" width="130" height="120" rx="5"/>');
+        o.push(tutPerson(79, 76, 96, 'walk'));
+        o.push(tutLabel(79, 152, 'the model, moving', 'middle'));
+        o.push(tutArrow(150, 76, 214, 76, 0));
+        o.push('<rect class="tThumbOn" x="220" y="26" width="86" height="100" rx="5"/>');
+        o.push(tutPerson(263, 76, 82, 'walk'));
+        o.push(tutLabel(263, 152, 'one .gif, transparent', 'middle'));
+        /* looking at a texture */
+        o.push('<rect class="tView" x="344" y="16" width="100" height="100" rx="5"/>');
+        o.push('<circle class="tHeadFlat" cx="394" cy="60" r="30"/>');
+        o.push(tutLabel(394, 132, 'one texture', 'middle'));
+        o.push(tutArrow(450, 66, 496, 66, 0));
+        for (let i = 0; i < 3; i++) {
+          o.push('<rect class="tThumb" x="' + (500 + i * 12) + '" y="' + (26 + i * 8) +
+                 '" width="86" height="86" rx="5"/>');
+        }
+        o.push('<circle class="tHeadFlat" cx="567" cy="77" r="26"/>');
+        o.push(tutLabel(540, 132, 'the whole slot, as frames', 'middle'));
+        o.push(tutLabel(310, 186, 'it asks for a size first, and the model is drawn at that size rather than enlarged', 'middle'));
+        return o.join('');
+      })() +
+    '</svg></figure>' +
     '<table class="tTable"><thead><tr><th>where you are</th>' +
     '<th>what you get</th></tr></thead><tbody>' +
     '<tr><td>the model, a motion loaded</td><td>the motion, transparent, ' +
