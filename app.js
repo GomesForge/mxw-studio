@@ -1710,7 +1710,7 @@ function menuAt(ev, head, items) {
      would otherwise open this one. Either way the answer is the same:
      only button 2, and the keyboard menu key, which arrives as a
      contextmenu event carrying button 0. */
-  if (ev && ev.button === 1) return;
+  if (ev && (ev.button === 1 || (ev.buttons & 4))) return;
   ev.preventDefault();
   ev.stopPropagation();
   const el = $('menu');
@@ -1742,23 +1742,32 @@ function menuWire() {
   addEventListener('mousedown', e => {
     if (!$('menu').contains(e.target)) menuClose();
   }, true);
-  /* Kill the wheel-button default everywhere inside the editor.
+  /* Kill the wheel button's default behaviour, on the document.
 
-     On Windows it opens an autoscroll puck over whatever you clicked,
-     which in a 3D view looks exactly like the application doing
-     something. The 3D canvas already suppressed it; every panel,
-     thumbnail and tab did not. The pixel editor still reads the wheel
-     button itself, for panning, and that is unaffected: suppressing the
-     browser's default does not suppress our own handler. */
-  const shell = $('app');
-  if (shell) {
-    shell.addEventListener('mousedown', e => {
+     It was bound to #app first, which missed everything that is not
+     inside it: the model panel, this guide, the size prompt, the menu
+     itself, the drop overlay. All of those are direct children of the
+     body, so a wheel press over the model panel still opened the
+     browser's autoscroll puck, which is exactly the thing that looks
+     like the application popping up a menu on the model.
+
+     Capture phase, so it runs before anything that might stop the event
+     on the way down. The pixel editor still reads the wheel button for
+     panning: suppressing a default does not suppress a handler. */
+  for (const type of ['pointerdown', 'mousedown', 'auxclick', 'click']) {
+    document.addEventListener(type, e => {
       if (e.button === 1) e.preventDefault();
-    });
-    shell.addEventListener('auxclick', e => {
-      if (e.button === 1) e.preventDefault();
-    });
+    }, true);
   }
+  /* And a context menu that arrives with the wheel button involved is
+     not a right click, whatever the device says it is. */
+  document.addEventListener('contextmenu', e => {
+    if (e.button === 1 || (e.buttons & 4)) {
+      e.preventDefault();
+      e.stopPropagation();
+      menuClose();
+    }
+  }, true);
   addEventListener('keydown', e => { if (e.key === 'Escape') menuClose(); });
   addEventListener('blur', menuClose);
   addEventListener('wheel', menuClose, { passive: true });
