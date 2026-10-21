@@ -18,12 +18,14 @@
        rotation rx = field4, ry = field3, rz = field5
        order    R = Ry * Rx * Rz, which is three.js Euler order 'YXZ'
        local    T(offset) * R,  world = parent * local
-       unit     PI / 2047 radians, so +-2047 is half a turn
+       unit     PI / 2048 radians, so +-2048 is half a turn
 
    See docs/mxw-format.md. Depends on three.js. */
 
-/* +-2047 is half a turn. */
-const BONE_UNIT = Math.PI / 2047;
+/* +-2048 is half a turn: the renderer's sine table has 4096 steps to
+   a turn. This was PI/2047 while the unit was only known from fitting
+   joints to vertices, which cannot separate the two. */
+const BONE_UNIT = Math.PI / 2048;
 
 /* One bone, ready to pose: its rest transform relative to its parent,
    and the children that follow it. */
@@ -88,8 +90,30 @@ function rigMatrices(rig, pose, out) {
   const rootShift = root
     ? new THREE.Matrix4().makeTranslation(root[0] || 0, root[1] || 0, root[2] || 0)
     : null;
+  /* A motion read out of a .bin gives each bone a whole local
+     transform rather than a nudge away from the rest pose: a
+     translation and three rotations, absolute. It composes the same
+     way, so it slots in here rather than needing its own walk of the
+     tree. See docs/motion-format.md. */
+  const native = pose && pose.native;
   for (const i of rig.order) {
     const b = rig.bones[i];
+    if (native) {
+      const n = native[i];
+      if (n) {
+        e.set(n.rot[0] * BONE_UNIT, n.rot[1] * BONE_UNIT, n.rot[2] * BONE_UNIT);
+        q.setFromEuler(e);
+        local.compose(new THREE.Vector3(n.pos[0], n.pos[1], n.pos[2]), q, one);
+      } else {
+        /* a bone the motion says nothing about keeps its rest pose */
+        q.setFromEuler(b.rest);
+        local.compose(b.offset, q, one);
+      }
+      if (b.parent >= 0) m[i].multiplyMatrices(m[b.parent], local);
+      else if (rootShift) m[i].multiplyMatrices(rootShift, local);
+      else m[i].copy(local);
+      continue;
+    }
     q.setFromEuler(b.rest);
     const p = pose && pose[i];
     if (p && (p[0] || p[1] || p[2])) {
@@ -200,7 +224,98 @@ function skinGeometry(geo, src, vertexBone, skinMats) {
    other -- but none has ever surfaced, so nothing here claims to be the
    original animation data. */
 
+/* ------------------------- a motion from a .bin -------------------
+
+   The original motions are a resource of their own, one track per bone:
+
+     u8     bone count
+     u16be  frame count, so keys run 0..count
+     per bone: u8 key count, then that many 20-byte keys
+
+     s16be  frame
+     i32be  x, i32be y, i32be z     an absolute translation
+     s16be  rotation about Y, then X, then Z
+
+   The rotations are the same unit the rest pose uses and compose the
+   same way, R = Ry . Rx . Rz, so a key is a complete local transform
+   and nothing is relative to the rest pose. Between keys the six
+   values are interpolated linearly, and past the last key they hold.
+
+   This reads the MXW3DHUD chunk of an already-unwrapped .bin. */
+
+function parseNativeMotion(buf) {
+  const u8 = new Uint8Array(buf);
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  let p = 0;
+  if (u8.length > 12 && u8[0] === 0x4F && u8[1] === 0x4B &&
+      u8[2] === 0x20 && u8[3] === 0x20) {
+    p = 12;                                   /* skip the envelope */
+  }
+  if (dv.byteLength < p + 20) throw new Error('too short to be a motion');
+  const chunks = dv.getUint32(p, false);
+  const size = dv.getUint32(p + 4, false);
+  const type = String.fromCharCode.apply(null, u8.subarray(p + 8, p + 16));
+  if (type !== 'MXW3DHUD')
+    throw new Error('the first chunk is ' + type + ', not MXW3DHUD');
+  const base = p + 8;                         /* the chunk body */
+  const bones = u8[base + 8];
+  const frames = dv.getInt16(base + 9, false);
+  if (!bones) throw new Error('no tracks in this file');
+  const tracks = [];
+  let o = base + 11;
+  for (let t = 0; t < bones; t++) {
+    const n = u8[o++];
+    const keys = [];
+    for (let k = 0; k < n; k++, o += 20) {
+      if (o + 20 > u8.length) throw new Error('a track runs past the end');
+      keys.push([dv.getInt16(o, false),
+                 dv.getInt32(o + 2, false), dv.getInt32(o + 6, false),
+                 dv.getInt32(o + 10, false),
+                 dv.getInt16(o + 14, false), dv.getInt16(o + 16, false),
+                 dv.getInt16(o + 18, false)]);
+    }
+    tracks.push(keys);
+  }
+  if (o !== base + size)
+    throw new Error('the tracks end at ' + o + ', the chunk at ' + (base + size));
+  return { native: true, bones, frames, tracks, chunks };
+}
+
+/* The six values of one track at a frame. Outside the keys it holds
+   rather than extrapolating, which is what the runtime does. */
+function sampleNative(keys, frame) {
+  if (!keys || !keys.length) return null;
+  const n = keys.length;
+  if (frame <= keys[0][0]) return keys[0];
+  if (frame >= keys[n - 1][0]) return keys[n - 1];
+  for (let i = 0; i < n - 1; i++) {
+    const a = keys[i], b = keys[i + 1];
+    if (frame >= a[0] && frame <= b[0]) {
+      const span = b[0] - a[0];
+      if (!span) return a;
+      const u = (frame - a[0]) / span;
+      const out = [frame];
+      for (let j = 1; j < 7; j++) out.push(a[j] + (b[j] - a[j]) * u);
+      return out;
+    }
+  }
+  return keys[n - 1];
+}
+
+/* The pose a .bin motion holds at a frame, in the shape rigMatrices
+   wants: rot is (x, y, z) because the file stores Y, X, Z. */
+function nativePose(motion, frame) {
+  const native = new Array(motion.tracks.length).fill(null);
+  for (let i = 0; i < motion.tracks.length; i++) {
+    const v = sampleNative(motion.tracks[i], frame);
+    if (!v) continue;
+    native[i] = { pos: [v[1], v[2], v[3]], rot: [v[5], v[4], v[6]] };
+  }
+  return { native };
+}
+
 function motionLength(motion) {
+  if (motion && motion.native) return motion.frames;
   let last = 0;
   for (const k in motion.tracks) {
     const t = motion.tracks[k];
@@ -230,6 +345,7 @@ function sampleTrack(t, frame) {
 }
 
 function motionPose(motion, frame) {
+  if (motion && motion.native) return nativePose(motion, frame);
   const pose = {};
   if (motion.root) {
     const r = sampleTrack(motion.root, frame);

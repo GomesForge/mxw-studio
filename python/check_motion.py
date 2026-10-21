@@ -19,7 +19,7 @@ first version of this looking for a bug in the wrong place.
 import sys, json, math, collections
 from mxw import MXW
 
-BONE_UNIT = math.pi / 2047.0
+BONE_UNIT = math.pi / 2048.0
 DEG = math.pi / 180.0
 
 HEAD, HIPS, NECK, CHEST = 18, 3, 12, 9

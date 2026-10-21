@@ -784,12 +784,14 @@ function esc(s) {
    An item id is [class][4 digits], and the female counterpart of a
    class is that class plus 100 -- jackets are 6xxxx on the boy and
    106xxxx on the girl. The classes were settled by looking at the shop
-   thumbnails in the 4.x client's items.dat, one per class, rather than
-   by reading the texture name: the name carries a global asset counter
-   that only agrees with the id by accident. See
-   docs/items-dat-format.md. */
+   thumbnails in the 4.x client's items.dat, one per class, and then
+   confirmed against the authors' own texture names across 557 recovered
+   meshes: a texture is [Word][NNNN]_[sex][variant], where Word is the
+   class and NNNN is the id's own low four digits. 556 of 558 agree, the
+   two that do not being authoring slips. Class 2 is "Katyusha" in their
+   words, a headband rather than a hat. See docs/items-dat-format.md. */
 const SLOTS = {
-  1: 'hair', 2: 'hat or headband', 4: 'face', 5: 'glasses', 6: 'jacket',
+  1: 'hair', 2: 'headband', 4: 'face', 5: 'glasses', 6: 'jacket',
   7: 'shirt', 8: 'trousers', 9: 'shoes', 10: 'back item', 21: 'body'
 };
 
@@ -1557,10 +1559,11 @@ function renderPosePanel() {
     $('motionList').innerHTML =
       '<div class="moGroup">' + known.join('') + '</div>' +
       '<p class="hint">Those eight are the actions the 2D sprite sets ' +
-      'carry, under the names and frame counts found in those files. ' +
-      'The joint angles are ours: no motion data for the 3D bodies ' +
-      'survives, and a sprite drawn in one projection a few dozen ' +
-      'pixels tall cannot be read back into a skeleton.</p>' +
+      'carry, under the names and frame counts found in those files, ' +
+      'and the joint angles in them are ours rather than original. ' +
+      '24 original motion files have since been recovered from the ' +
+      'client cache; their key layout is not decoded yet, so these ' +
+      'hand-authored ones are still what plays here.</p>' +
       '<div class="moGroup">' + extra.join('') + '</div>';
     $('motionList').querySelectorAll('button').forEach(b =>
       b.onclick = () => playMotion(BUILT_IN_MOTIONS[+b.dataset.mo]));
@@ -1694,11 +1697,24 @@ function poseWire() {
     e.target.value = '';
     if (!f) return;
     try {
-      const m = parseMotion(await f.text());
+      /* Two kinds arrive here: a .json written by hand or by this
+         editor, and an original motion resource, which is a .bin and
+         holds a whole local transform per bone per frame. */
+      let m;
+      if (/\.(bin|mxw)$/i.test(f.name)) {
+        m = parseNativeMotion(await f.arrayBuffer());
+        m.name = f.name.replace(/\.[^.]+$/, '');
+        m.fps = m.fps || 12;
+        m.loop = true;
+      } else {
+        m = parseMotion(await f.text());
+      }
       m.note = 'loaded from ' + f.name;
       playMotion(m);
-      notify('loaded ' + m.name + ', ' + Object.keys(m.tracks).length +
-             ' tracks, ' + motionLength(m) + ' frames');
+      notify('loaded ' + m.name + ', ' +
+             (m.native ? m.bones + ' tracks (original)'
+                       : Object.keys(m.tracks).length + ' tracks') +
+             ', ' + motionLength(m) + ' frames');
     } catch (err) {
       notify(f.name + ': ' + err.message, 1);
     }
@@ -2233,7 +2249,16 @@ function readFiles(files) {
     r.onerror = () => notify('could not read ' + f.name, 1);
     r.onload = () => {
       /* sprites and meshes disagree on almost everything, starting
-         with byte order, so route by extension */
+         with byte order, so route by extension -- except for the one
+         case the extension gets wrong. A stage pack out of a decoded
+         cache is named .bin and is a sprite, so it is sniffed first,
+         by content, which also covers it having been renamed. */
+      const head = sheetPackOffset(r.result);
+      if (head >= 0) {
+        try { spriteOpen(f.name, r.result, head); renderList(); }
+        catch (e) { notify(describeRefusal(f.name, r.result, e), 1); }
+        return;
+      }
       if (isSpriteName(f.name)) {
         try { spriteOpen(f.name, r.result); renderList(); }
         catch (e) { notify(describeRefusal(f.name, r.result, e), 1); }
@@ -2411,6 +2436,8 @@ for (const [name, fn] of [['sprites', () => spriteWire()],
 enableActions();
 menuWire();
 for (const [what, fn] of [['motion panel', poseWire], ['create panel', makeWire],
+                          ['workshop',
+                           typeof creatorWire === 'function' ? creatorWire : () => {}],
                           ['tutorial', typeof tutWire === 'function' ? tutWire : () => {}]]) {
   try { fn(); }
   catch (e) { notify('the ' + what + ' failed to start: ' + e.message, 1); }
