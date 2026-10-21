@@ -122,6 +122,24 @@ Find every 255-byte window with a complete border and the interstitials
 become visible. Then `block.spr`, whose values look packed two per byte
 and may be the appearance table to this file's structure.
 
+## 5b. The Workshop, and what it does not cover yet
+
+The **Workshop** button now walks through a costume, a bomb skin, a map
+and the scenery, and writes the files each one needs; see
+[creating-for-the-server.md](creating-for-the-server.md). What it still
+does not do:
+
+- **Draw a costume.** It builds the spec and checks a painted picture,
+  but it cannot show you the result: the sheets are generated at the
+  other end, from a layout this editor does not have. Showing a real
+  preview means either that layout or a local copy of the generator
+- **Block tiles for a map.** The size rules are written down but there
+  is no editor for the strip
+- **A character.** There is no import for a whole one at the other end,
+  so the Workshop explains the forty files rather than packaging them
+- **Send anything.** Everything stays in the browser and comes out as a
+  file. Handing it over is still a person talking to a person
+
 ## 6. Quality of life
 
 - Undo and redo across every edit
@@ -132,6 +150,16 @@ and may be the appearance table to this file's structure.
 - Tests that round-trip a corpus and fail loudly when a format
   assumption breaks
 
+## Solved since this list was written
+
+- **The effect format.** Eight groups of the same frames, not one group
+  and a mystery. 18 of 18 round-trip byte-identical. What the groups
+  are for is still a guess; see [gra-format.md](gra-format.md)
+- **The client's download cache**, which is where 24 original motion
+  files came from; see [cache-format.md](cache-format.md)
+- **The 4-byte token in the item index**: the CRC-32 of the asset, the
+  same one the cache header carries
+
 ## Things that are genuinely unknown
 
 Listed so nobody burns time rediscovering them:
@@ -139,17 +167,11 @@ Listed so nobody burns time rediscovering them:
 - The six `i16` per bone in the skeleton chunk. The first three read as
   a position in vertex units; the last three are likely a rotation or
   pivot, unconfirmed
-- The 4-byte token in the item index. Not CRC32, not Adler32, not the
-  base32 cache name
 - Item index types `02`, `03` and `05`
 - The encrypted parameter file — see
   [encrypted-parameter-file.md](encrypted-parameter-file.md) for
   everything already ruled out
 - The encrypted texture cache, which uses a different container
-- The section after the first group in an effect file. The first group
-  decodes -- a `u32` frame count, width and height, then frames of
-  `[u32 word count][the same runs a sprite uses]` -- but what follows
-  is 4664 of 5126 bytes in the smallest file and is not another group
 - What the `u32` at `0x07` of a sprite header means. One file in 1422
   carries 71 there; the rest are zero
 - `UI_userdraw.spr`: high entropy from the first byte, no readable

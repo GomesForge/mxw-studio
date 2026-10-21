@@ -268,9 +268,25 @@ mesh and rewritten wrongly.
 - [docs/items-dat-format.md](docs/items-dat-format.md) — the client's
   archive of shop thumbnails, which is what settled the slot of every
   id class
+- [docs/avatar-bin-inventory.md](docs/avatar-bin-inventory.md) — the
+  complete list of all 1306 wearable meshes that ever existed
+  ([docs/itemids.txt](docs/itemids.txt)), which ones survive, and every
+  place the rest are not
+- [docs/cache-format.md](docs/cache-format.md) — the client's download
+  store, decoded: the name is the resource id, the body is a keystream
+  XOR, the tail is random padding. 69 meshes and 24 original motion
+  files came out of it, and the decoder is
+  [python/cache_decode.py](python/cache_decode.py)
 - [docs/encrypted-parameter-file.md](docs/encrypted-parameter-file.md) —
   one encrypted table nobody has opened, and everything already ruled
   out on it
+- [python/avatar_fetch.py](python/avatar_fetch.py) — fetch every avatar
+  part from a live server into ordinary `.bin` files. 575 wearables, 32
+  faces, 2 bodies, 24 motions and 5 cameras, 16 MB
+- [docs/creating-for-the-server.md](docs/creating-for-the-server.md) —
+  what a costume, a bomb skin, a map and the scenery each have to be
+  before they will be accepted: the names, the sizes, the limits and
+  the checks. The **Workshop** button walks through it
 - [docs/shapes.md](docs/shapes.md) — what a mesh built from nothing
   has to contain, and the winding that caught every primitive the
   first time round
