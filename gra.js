@@ -36,7 +36,117 @@
    Each entry is checked against the head of the file. Nothing below is
    decoded -- this only produces a better refusal. */
 
+/* A character sheet, as the client's download store kept it.
+
+   Decoding a cache gives files that all begin "OK  ", because that is
+   the envelope the server put every resource in. Most of them are
+   meshes. 39 of them are not: they are an ordinary sprite behind a
+   20-byte head, 8 frames of 256x256 drawing one character each, and
+   they used to be reported as the item index purely because the item
+   index also starts "OK  ".
+   One of the 39 even satisfies the index's own record-size test by
+   coincidence, so the test for this has to run first and has to be
+   exact rather than a signature match.
+
+   Measured on all 39: the envelope flag is 1, the declared length is
+   right, the 8 bytes after it are a u32le 37 and a second u32le that
+   does not match any length, count or checksum tried, and the sprite
+   at offset 20 parses and writes back byte-identical. The second
+   field is carried through untouched because it is not understood. */
+
+const SHEET_PREFIX = 20;
+
+function sheetPackOffset(buf) {
+  const u8 = new Uint8Array(buf);
+  if (u8.length < SHEET_PREFIX + 24) return -1;
+  if (u8[0] !== 0x4F || u8[1] !== 0x4B || u8[2] !== 0x20 || u8[3] !== 0x20) {
+    return -1;
+  }
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  if (dv.getUint32(4, false) !== 1) return -1;
+  if (dv.getUint32(8, false) !== u8.length - 12) return -1;
+  if (dv.getUint32(12, true) !== 37) return -1;
+  /* the sprite's own two marker bytes, so a stray 37 cannot pass */
+  if (u8[SHEET_PREFIX + 2] !== 1 || u8[SHEET_PREFIX + 3] !== 1) return -1;
+  if (!u8[SHEET_PREFIX + 5]) return -1;
+  return SHEET_PREFIX;
+}
+
+/* ---------------------------- effects ----------------------------
+
+   An effect (.eft) carries the same horizontal runs a sprite does, but
+   behind a different head and laid out in groups:
+
+     u32 frame count N, u32 width, u32 height
+     8 x N x [u32 word count][runs]
+
+   It was documented for a long time as "a first group that decodes and
+   a section after it nobody has identified". That section is simply
+   seven more groups of the same shape. Measured over every effect file
+   available: all 18 distinct ones parse to their last byte as exactly
+   8 groups, and all 18 write back byte-identical.
+
+   What separates the groups is not established. In the flame files
+   each group reaches further across the frame than the one before and
+   its busiest frame moves two places earlier, which is the shape a
+   flame covering more ground would have -- so the leading guess is the
+   blast length, one group per tile of reach. The editor neither
+   assumes nor needs that: it keeps all 8 in order, so a recolour
+   reaches every one of them. */
+
+const EFT_GROUPS = 8;
+
+/* Returns {n, w, h, groups, frames} when the whole file parses, else
+   null. The trial parse is the test: a head that merely looks right is
+   not enough to open a file on. */
+function eftParse(u8) {
+  if (u8.length < 16) return null;
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  const n = dv.getUint32(0, true);
+  const w = dv.getUint32(4, true);
+  const h = dv.getUint32(8, true);
+  if (!n || n > 1024 || !w || !h || w > 4096 || h > 4096) return null;
+  const frames = [];
+  let p = 12;
+  let groups = 0;
+  while (p < u8.length) {
+    for (let i = 0; i < n; i++) {
+      if (p + 4 > u8.length) return null;
+      const words = dv.getUint32(p, true);
+      p += 4;
+      const end = p + 2 * words;
+      if (end > u8.length) return null;
+      const runs = [];
+      while (p + 6 <= end) {
+        const x = dv.getUint16(p, true);
+        const y = dv.getUint16(p + 2, true);
+        const c = dv.getUint16(p + 4, true);
+        p += 6;
+        if (p + 2 * c > end) return null;
+        const px = new Array(c);
+        for (let k = 0; k < c; k++) px[k] = dv.getUint16(p + 2 * k, true);
+        p += 2 * c;
+        runs.push({ x, y, px });
+      }
+      if (p !== end) return null;
+      frames.push(new GraFrame(runs));
+    }
+    groups++;
+    if (groups > 64) return null;
+  }
+  if (p !== u8.length || !groups) return null;
+  return { n, w, h, groups, frames };
+}
+
 const OTHER_FORMATS = [
+  {
+    test: u8 => sheetPackOffset(u8) >= 0,
+    name: 'a character sheet from a decoded cache',
+    note: 'A sprite behind a 20-byte head, 8 frames of 256x256. It opens ' +
+          'in the sprite editor, ' +
+          'and saving writes the head back untouched so the file stays ' +
+          'loadable. See docs/cache-format.md.'
+  },
   {
     /* The server's item index opens with the same "OK  " as a mesh, so
        the signature alone identified every mesh as the index. What
@@ -57,17 +167,16 @@ const OTHER_FORMATS = [
           'reads and rebuilds it.'
   },
   {
-    /* Effects. A 12-byte u32 header, then frames of [u32 words][runs]
-       using the same run encoding as a sprite -- but what follows the
-       first group is a section nobody has identified, so these are not
-       decoded. */
-    test: u8 => u8[2] === 0x00 && u8[3] === 0x00 && u8[0] > 0 && u8[0] < 64 &&
-                u8[1] === 0x00,
-    name: 'an effect file',
-    note: 'Its first group decodes -- a u32 frame count, width and height, ' +
-          'then frames of [u32 word count][the same runs a sprite uses] -- ' +
-          'but a further section after it is undocumented, so it is not ' +
-          'opened rather than opened wrongly. See docs/gra-format.md.'
+    /* An effect file the effect reader could not finish. Effects open
+       normally now, so this only catches a damaged or unusual one. */
+    test: u8 => u8[1] === 0x00 && u8[2] === 0x00 && u8[3] === 0x00 &&
+                u8[0] > 0 && u8[0] < 64 && eftParse(u8) === null,
+    name: 'an effect file that does not come out even',
+    note: 'An effect is a u32 frame count, width and height, then 8 groups ' +
+          'of that many frames, each [u32 word count][the same runs a ' +
+          'sprite uses]. This one does not parse to its last byte, so it ' +
+          'is left closed rather than opened wrongly. ' +
+          'See docs/gra-format.md.'
   },
   {
     /* Map layout: a grid of tile bytes rather than an image. */
@@ -262,6 +371,7 @@ class GRA {
     this.head7 = 0;      /* the u32 at 0x07, preserved */
     this.head15 = 0;     /* the u32 at 0x0F, preserved */
     this.trailing = new Uint8Array(0);   /* bytes past the last frame */
+    this.eft = null;     /* {groups, per} when this is an effect file */
     this.frames = [];
     if (buf) this.read(buf);
   }
@@ -269,6 +379,18 @@ class GRA {
   read(buf) {
     const u8 = new Uint8Array(buf);
     const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    /* An effect has a different head and no frame table, so it is tried
+       first -- by parsing it, not by trusting the head. */
+    if (u8.length >= 16 && u8[1] === 0 && u8[2] === 0 && u8[3] === 0) {
+      const e = eftParse(u8);
+      if (e) {
+        this.eft = { groups: e.groups, per: e.n };
+        this.width = e.w;
+        this.height = e.h;
+        this.frames = e.frames;
+        return;
+      }
+    }
     if (u8.length < 24) throw new Error('too short to be a sprite file');
     if (u8[2] !== 1 || u8[3] !== 1)
       throw new Error('bytes 2-3 are ' + u8[2].toString(16) + ' ' +
@@ -326,7 +448,43 @@ class GRA {
     }
   }
 
+  /* An effect writes its own way: no frame table, no trailing bytes,
+     just the three counts and then every frame in order. The group
+     count comes from the file it was read from, so adding frames keeps
+     the groups even. */
+  writeEFT() {
+    const groups = this.eft.groups;
+    if (this.frames.length % groups)
+      throw new Error('an effect holds ' + groups + ' equal groups, so the ' +
+                      'frame count has to be a multiple of ' + groups +
+                      ' -- it is ' + this.frames.length);
+    const per = this.frames.length / groups;
+    const bodies = this.frames.map(f => {
+      const words = [];
+      for (const r of f.runs) {
+        words.push(r.x, r.y, r.px.length);
+        for (const v of r.px) words.push(v);
+      }
+      return words;
+    });
+    const total = 12 + bodies.length * 4 +
+                  2 * bodies.reduce((s, b) => s + b.length, 0);
+    const out = new Uint8Array(total);
+    const dv = new DataView(out.buffer);
+    dv.setUint32(0, per, true);
+    dv.setUint32(4, this.width, true);
+    dv.setUint32(8, this.height, true);
+    let p = 12;
+    for (const b of bodies) {
+      dv.setUint32(p, b.length, true);
+      p += 4;
+      for (const v of b) { dv.setUint16(p, v, true); p += 2; }
+    }
+    return out;
+  }
+
   write() {
+    if (this.eft) return this.writeEFT();
     const bodies = this.frames.map(f => {
       const words = [];
       for (const r of f.runs) {

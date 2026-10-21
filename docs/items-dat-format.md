@@ -39,7 +39,7 @@ the server's index lists — the shop previewed a subset.
 | class | slot | male | female |
 |-------|------|------|--------|
 | 1 | hair | 30 | 22 |
-| 2 | hat or headband | 19 | 31 |
+| 2 | headband | 19 | 31 |
 | 4 | face — eyes, brows, expression | 12 | 14 |
 | 5 | glasses | 11 | 8 |
 | 6 | jacket | 185 | 160 |
@@ -50,6 +50,47 @@ the server's index lists — the shop previewed a subset.
 
 Class 11, the bodies and the open classes 221 and 222 have no thumbnails
 here at all.
+
+## What the authors called them
+
+The thumbnails settled the slots by eye. The recovered meshes then
+settled them in the authors' own words, because each mesh names its
+texture and the name is built to a rule. Measured over all 557:
+
+```
+[Word][NNNN]_[S][V]        Jacket0033_00, katyusha0004_00, Back0046_10
+Word   the class            Hair Katyusha Glass Jacket Shirt Pants Shoes Back
+NNNN   the id's low four digits
+S      0 male, 1 female
+V      a variant, 0 in every file seen
+```
+
+**556 of 558 names carry the item's own four digits**, and the sex digit
+is right in all 558. The two that miss are plainly authoring slips, a
+texture copied from the neighbouring item and not renamed: id 20025
+ships `katyusha0035_00` and id 60073 ships `Jacket0074_00`. So the name
+is a reliable guide and not an authoritative one, and a tool should read
+the slot from the id.
+
+Two things this corrects:
+
+- **class 2 is a headband, not a hat.** The authors' word is *Katyusha*,
+  which is what a hairband is called in Japanese. Every one of the 36
+  meshes in the class uses it.
+- an earlier note here had the texture name carrying "a global asset
+  counter that only agrees with the id by accident". With 62 meshes in
+  hand that was a fair reading of the two mismatches. With 557 it is
+  simply wrong: the number is the item's.
+
+Capitalisation marks two batches of authoring rather than anything
+structural. The capitalised names average item number 47 and the
+lowercase ones 93, so `Jacket` is the earlier hand and `jacket` the
+later one.
+
+Faces are the odd class: a `faceId` resource carries **one 128x128
+texture and no geometry**, so a face is painted onto the body's head
+rather than modelled. That is why all 26 of the shop's face ids were
+recoverable while jackets sit at 57%.
 
 The first item of a class is often a placeholder reading `DEFAULT`,
 which is the "nothing equipped" entry rather than an item.
@@ -85,3 +126,26 @@ does the work. 1376 occurrences of `BM`, 1116 of them real.
 It carries no names, no prices and no text — only id and picture. And it
 says nothing about motions: there is no class 222 thumbnail, so whatever
 a motion looked like in the shop, it was not previewed from this file.
+
+## How much of it is recovered
+
+Cross-referencing the 1116 ids here against the meshes out of the client
+caches, which is the measure of how complete a dress-up actually is:
+
+| class | slot | in the shop | mesh in hand | cover |
+|-------|------|------------:|-------------:|------:|
+| 1 | hair | 52 | 45 | 87% |
+| 2 | headband | 50 | 33 | 66% |
+| 4 | face | 26 | 26 | **100%** |
+| 5 | glasses | 19 | 13 | 68% |
+| 6 | jacket | 345 | 196 | 57% |
+| 7 | shirt | 200 | 124 | 62% |
+| 8 | trousers | 145 | 40 | 28% |
+| 9 | shoes | 164 | 43 | 26% |
+| 10 | back item | 115 | 42 | 37% |
+| | total | 1116 | 562 | 50% |
+
+A further 26 meshes exist that this shop build does not list at all,
+mostly hair and back items, so the archive is not a strict subset of the
+catalogue in either direction. Split by sex the gap is wider than any
+single class: 70% of the male ids against 32% of the female ones.

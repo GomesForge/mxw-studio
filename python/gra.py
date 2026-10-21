@@ -228,6 +228,69 @@ class Frame:
                      for x, y, px in self.runs]
 
 
+# ---------------------------- effects --------------------------------
+#
+# An effect (.eft) carries the same horizontal runs a sprite does, but
+# behind a different head and laid out in groups:
+#
+#     u32 frame count N, u32 width, u32 height
+#     8 x N x [u32 word count][runs]
+#
+# It was documented for a long time as "a first group that decodes and a
+# section after it nobody has identified". That section is seven more
+# groups of the same shape. Measured over every effect file available:
+# all 18 distinct ones parse to their last byte as exactly 8 groups, and
+# all 18 write back byte-identical.
+#
+# What separates the groups is not established. In the flame files each
+# group reaches further across the frame than the one before and its
+# busiest frame moves two places earlier, which is the shape a flame
+# covering more ground would have, so the leading guess is the blast
+# length. Nothing here depends on that: the groups are kept in order.
+
+EFT_GROUPS = 8
+
+
+def eft_parse(d):
+    """(N, width, height, groups, frames) when the whole file parses as
+    an effect, else None. The trial parse is the test: a head that only
+    looks right is not enough to open a file on."""
+    if len(d) < 16:
+        return None
+    n, w, h = struct.unpack_from('<III', d, 0)
+    if not n or n > 1024 or not w or not h or w > 4096 or h > 4096:
+        return None
+    frames = []
+    p, groups = 12, 0
+    while p < len(d):
+        for _ in range(n):
+            if p + 4 > len(d):
+                return None
+            words = struct.unpack_from('<I', d, p)[0]
+            p += 4
+            end = p + 2 * words
+            if end > len(d):
+                return None
+            runs = []
+            while p + 6 <= end:
+                x, y, c = struct.unpack_from('<HHH', d, p)
+                p += 6
+                if p + 2 * c > end:
+                    return None
+                runs.append((x, y, struct.unpack_from('<%dH' % c, d, p)
+                             if c else ()))
+                p += 2 * c
+            if p != end:
+                return None
+            frames.append(Frame(runs))
+        groups += 1
+        if groups > 64:
+            return None
+    if p != len(d) or not groups:
+        return None
+    return n, w, h, groups, frames
+
+
 class GRA:
     def __init__(self, data=None):
         self.kind = 0x03
@@ -237,11 +300,22 @@ class GRA:
         self.head7 = 0          # the u32 at 0x07, preserved
         self.head15 = 0         # the u32 at 0x0F, preserved
         self.trailing = b''     # bytes past the last frame, preserved
+        self.eft = None         # {'groups': n, 'per': n} for an effect
         self.frames = []
         if data is not None:
             self._read(data)
 
     def _read(self, d):
+        # An effect has a different head and no frame table, so it is
+        # tried first -- by parsing it through, not by trusting the head.
+        if len(d) >= 16 and d[1] == 0 and d[2] == 0 and d[3] == 0:
+            e = eft_parse(d)
+            if e is not None:
+                n, w, h, groups, frames = e
+                self.eft = {'groups': groups, 'per': n}
+                self.width, self.height = w, h
+                self.frames = frames
+                return
         if len(d) < 24:
             raise GRAError('too short to be a sprite file')
         if d[2] != 1 or d[3] != 1:
@@ -295,7 +369,29 @@ class GRA:
                                % (i, end - p))
             self.frames.append(Frame(runs))
 
+    def _write_eft(self):
+        """An effect writes its own way: three counts, then every frame
+        in order with its own word count. No frame table, no trailing
+        bytes."""
+        groups = self.eft['groups']
+        if len(self.frames) % groups:
+            raise GRAError('an effect holds %d equal groups, so the frame '
+                           'count has to be a multiple of %d -- it is %d'
+                           % (groups, groups, len(self.frames)))
+        per = len(self.frames) // groups
+        out = bytearray(struct.pack('<III', per, self.width, self.height))
+        for f in self.frames:
+            body = bytearray()
+            for x, y, px in f.runs:
+                body += struct.pack('<HHH', x, y, len(px))
+                body += struct.pack('<%dH' % len(px), *px)
+            out += struct.pack('<I', len(body) // 2)
+            out += body
+        return bytes(out)
+
     def write(self):
+        if self.eft:
+            return self._write_eft()
         bodies = []
         for f in self.frames:
             o = bytearray()

@@ -44,10 +44,16 @@ function isSpriteName(name) {
   return /\.(gra|spr|eft)$/i.test(name);
 }
 
-function spriteOpen(name, buf) {
+/* Some sprites arrive behind a head that is not sprite data: a stage
+   pack out of a decoded cache carries 20 such bytes. The head is kept
+   verbatim and written back on save, so an edited file stays loadable
+   by whatever reads it. raw stays the whole original, head included,
+   which is what the round-trip indicator has to compare against. */
+function spriteOpen(name, buf, headLen) {
   const raw = new Uint8Array(buf);
-  const gra = new GRA(buf);
-  sprite.entry = { name, raw, gra };
+  const head = headLen ? raw.slice(0, headLen) : new Uint8Array(0);
+  const gra = new GRA(headLen ? raw.slice(headLen).buffer : buf);
+  sprite.entry = { name, raw, gra, head };
   sprite.frame = 0;
   sprite.selected = null;
   document.body.classList.add('sprite-mode');
@@ -271,9 +277,19 @@ function spriteRenderPalette() {
     ? shown.length + ' of ' + pal.length + ' colours' : pal.length + ' colours';
 }
 
+/* the bytes an export would write: the kept head, then the sprite */
+function spriteBytes(e) {
+  const body = e.gra.write();
+  if (!e.head || !e.head.length) return body;
+  const out = new Uint8Array(e.head.length + body.length);
+  out.set(e.head, 0);
+  out.set(body, e.head.length);
+  return out;
+}
+
 function spriteCheckRoundTrip() {
   const e = sprite.entry;
-  const out = e.gra.write();
+  const out = spriteBytes(e);
   let same = out.length === e.raw.length;
   if (same) for (let i = 0; i < out.length; i++) {
     if (out[i] !== e.raw[i]) { same = false; break; }
@@ -603,7 +619,7 @@ function spriteNew(w, h, frames, name) {
 function spriteSave() {
   const e = sprite.entry;
   if (!e) return;
-  saveFile(e.name, e.gra.write(), 'application/octet-stream');
+  saveFile(e.name, spriteBytes(e), 'application/octet-stream');
 }
 
 /* ----------------------------- wiring ---------------------------- */

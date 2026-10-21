@@ -76,8 +76,16 @@ Over the 1611 distinct files available while this was written:
 - **1535 of 1535 sprites round-trip byte-identical**, covering 8732
   frames and 36.9 million pixels
 - **50 of 50 meshes round-trip byte-identical**
+- **18 of 18 effects round-trip byte-identical**
 - every remaining file is classified as another format rather than
   counted as a failure
+
+`test_corpus.py` run over the whole archive as it stands, 2295 distinct
+files: **1635 of 1635 sprites and effects round-trip byte-identical**,
+along with 652 of 652 meshes, covering 10586 frames and 41.0 million
+pixels, of which 9.1 million sit in the reserved ramp. Nothing is
+counted as a failure: the handful that do not open are classified as
+the other formats named below.
 
 Round-tripping only proves the reader and writer agree with each other;
 both could share a wrong assumption. That is what the invariant checks
@@ -108,28 +116,58 @@ means the file both opens and writes back unchanged.
 A table describing **more** than the file holds is still refused — then
 a frame really is missing.
 
-## The 23 files this rejects
+## Effects (`.eft`) — the same runs, in eight groups
+
+An effect is not a sprite with a different head. It is the same
+horizontal runs laid out as **eight groups of the same N frames**:
+
+```
+u32  frame count N
+u32  width
+u32  height
+8 x N x [u32 word count][runs]
+```
+
+An empty frame is a word count of zero. Nothing else is in the file.
+
+This page used to say the opposite: that a first group decoded and what
+followed it was unidentified. The unidentified part is seven more
+groups of exactly the same shape. The mistake was reading the head as
+"a group" rather than as a count that repeats, and then measuring the
+remainder instead of trying the obvious continuation.
+
+Measured over every effect available, 18 distinct files:
+
+| | |
+|---|---|
+| parse to the last byte | **18 of 18** |
+| group count | **8** in every one |
+| write back byte-identical | **18 of 18** |
+
+Frame counts run 4 to 13, at 80x80, 64x64, 48x48, 133x197 and 256x256.
+
+### What the eight groups are
+
+Not established. What is measured, in the flame files, is that each
+group reaches further across the frame than the one before it —
+`flame_ver` goes from x 11..28 in group 0 to x 0..39 in group 4 — and
+that the busiest frame moves two places earlier with each group. That
+is the shape a flame covering more ground would have, so the leading
+guess is the length of the blast, one group per tile of reach. It is a
+guess. The reader keeps all eight in order and does not depend on it,
+and a recolour reaches every one of them, which is what editing a bomb
+skin needs.
+
+The editor shows them as one strip of `8 x N` frames. Adding or
+removing frames has to keep the count a multiple of eight, and the
+writer says so rather than producing a file that loads crooked.
+
+## The 5 files this rejects
 
 These are not broken sprites. They are **other formats sharing the
 extension**, and the reader names them rather than reporting the byte
-that failed. Counting by distinct content, the totals below come to 23;
-the file counts in each heading are the totals including duplicates
-across builds.
-
-### Effects (`.eft`, 18 files)
-
-Bytes 2–3 are `00 00`. The head is a `u32` frame count, a `u32` width
-and a `u32` height — all plausible: 4 to 13 frames at 80x80, 64x64,
-48x48, 133x197 or 256x256. What follows is a chain of
-`[u32 word count][runs]`, using **the same run encoding a sprite uses**,
-with empty frames written as a count of zero. That first group decodes
-cleanly and the pixels come out right.
-
-What is not known is the section **after** that first group. It is
-large — 4664 of 5126 bytes in the smallest file — and reading it as
-another group of the same shape produces nonsense. Until it is
-identified these are refused rather than opened wrongly, since writing
-one back would destroy whatever that section holds.
+that failed. Counting by distinct content there are 5 of them: two map
+layouts, two block files and one interface file.
 
 ### Map layout (`map.spr`, 14 files)
 

@@ -14,6 +14,10 @@ The server admin said as much in a forum thread in April 2010:
 
 The asset server's `/itemids/` path is gone — it 404s and everything
 under it answers with the HTTP-to-HTTPS redirect page. The Internet Archive
+never captured a single `.bin` from it, only its Apache directory listing,
+which is still the complete manifest of 1306 files; see
+[avatar-bin-inventory.md](avatar-bin-inventory.md) and
+[itemids.txt](itemids.txt). Of this file itself the Archive
 has a capture:
 
 ```

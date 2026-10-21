@@ -23,6 +23,41 @@ MESH_EXT = ('.bin', '.mxw')
 SPRITE_EXT = ('.gra', '.spr', '.eft')
 
 
+def is_item_index(raw):
+    """The real test, not just the signature.
+
+    Every resource out of a decoded cache begins "OK  ", because that is
+    the envelope the server wrapped them in, so a signature match called
+    39 character sheets the item index. The index holds 9-byte records
+    and states how many, which is what actually identifies it.
+    """
+    if raw[:4] != b'OK  ':
+        return False
+    body = len(raw) - 8
+    if body <= 0 or body % 9:
+        return False
+    return struct.unpack_from('>I', raw, 4)[0] == body // 9
+
+
+def sheet_pack_offset(raw):
+    """Where the sprite starts in a character sheet, or -1.
+
+    Exact rather than a signature match, and tested before the item
+    index, because one of the 39 sheets satisfies the index's record-size
+    test by coincidence.
+    """
+    if len(raw) < 44 or raw[:4] != b'OK  ':
+        return -1
+    flag, declared = struct.unpack_from('>II', raw, 4)
+    if flag != 1 or declared != len(raw) - 12:
+        return -1
+    if struct.unpack_from('<I', raw, 12)[0] != 37:
+        return -1
+    if raw[22] != 1 or raw[23] != 1 or not raw[25]:
+        return -1
+    return 20
+
+
 class Result:
     def __init__(self):
         self.counts = {}
@@ -153,7 +188,12 @@ def do_mesh(path, raw, r, verbose):
         # not failures, they are other formats sharing an extension.
         if b'GIF8' in raw[:32]:
             r.bump('.bin holding only a texture')
-        elif raw[:4] == b'OK  ':
+        elif sheet_pack_offset(raw) >= 0:
+            # a sprite behind a 20-byte head, stored through the cache,
+            # so it goes through the sprite checks like any other
+            r.bump('character sheet, a sprite behind a 20-byte head')
+            do_sprite(path, raw[sheet_pack_offset(raw):], r, verbose)
+        elif is_item_index(raw):
             r.bump('.bin that is the item index, not a mesh')
         elif os.path.basename(path).lower() == 'layout.bin':
             r.bump('.bin from an installer, not asset data')

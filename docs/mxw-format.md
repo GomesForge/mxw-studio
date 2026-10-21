@@ -198,7 +198,7 @@ looked at.
 | class | slot | male ids | female ids |
 |-------|------|----------|------------|
 | 1 | hair | `1NNNN` | `101NNNN` |
-| 2 | hat or headband (Jp. *katyusha*) | `2NNNN` | `102NNNN` |
+| 2 | headband, *katyusha* in the authors' own texture names | `2NNNN` | `102NNNN` |
 | 4 | **face** — eyes, brows, expression | `4NNNN` | `104NNNN` |
 | 5 | glasses | `5NNNN` | `105NNNN` |
 | 6 | jacket | `6NNNN` | `106NNNN` |
