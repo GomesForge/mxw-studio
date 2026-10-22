@@ -168,42 +168,34 @@ kept, so replacing one is reversible.
 
 ## What the Workshop does with all this
 
-Every page is a **preview on the left and the controls on the right**,
-because a page of rules with no picture is not something a person can
-follow while choosing colours. The first version of this panel was
-prose, and prose was the wrong answer.
+Every page opens with **what to attach**: the files by name, with their
+sizes and limits, and the place to drop them immediately underneath.
+That is the question people arrive with, so it goes first and nothing
+is above it.
 
-What each preview is:
+Then it shows **what arrived**, and only that. An earlier version drew
+a schematic figure from the chosen colours, on the theory that a
+picture beats a paragraph. It does, but not a picture of something
+nobody made: an invented figure standing in for the thing someone is
+building looks like an answer and is not one. So the preview is the
+person's own work or an empty frame saying what will appear there.
 
-- **Costume**: a schematic of the figure, drawn from your choices, with
-  the real parts in the right places and the patterns shown. It is
-  labelled a schematic wherever it appears, because the actual sheets
-  are generated at the other end and this editor has no copy of that
-  generator. It is enough to choose by, which is what it is for.
-- **Bomb skin**: a diagram of one bomb going off, five cells by five,
-  with each file sitting where it draws. Hovering a file name lights up
-  its cell. Files you have dropped in turn green, so the set fills up
-  visibly. Anything you drop is then animated underneath.
-- **Map**: the grid itself, with a legend naming each kind of cell.
+- **Costume**: your painted template, with the four corner squares and
+  the scaling checked before it goes anywhere. A cropped picture is the
+  usual reason a costume comes back wrong.
+- **Bomb skin**: the files you attached, playing, read through the
+  editor's own reader. Each row in the list turns green with its frame
+  count and size as it arrives.
+- **Map**: the grid you are drawing, with a legend naming each kind of
+  cell. This page has nothing to attach, which it says so plainly.
 - **Scenery**: your picture with the arena drawn over the middle of it,
-  so you can see which part will be covered.
-- **Character**: the forty files as a grid, four across per action, with
-  the ones that carry the character marked.
+  so the part that will be covered is obvious rather than described.
+- **Character**: the 35 file names, four per action for the four
+  facings, marked for which ones carry the character; attach the folder
+  and the frames play, which is how you catch a facing that does not
+  agree with the others.
 
-Then the same list, one page at a time, with the checks that catch the
-mistakes people actually make:
-
-- **Costume**: build the spec with the real parts and patterns, see it
-  summarised in words, save `costume.json`. Or drop a painted picture
-  and have the four corner squares checked.
-- **Bomb skin**: a checklist of the twelve names. Drop the files, and
-  each is checked for its name, its size and whether it still parses,
-  then exported as one `.zip`.
-- **Map**: draw the grid, place the starts, set the item counts, and
-  save `map.json` with the layout string already in the right shape.
-  It will not let you wall off the rim or put a start on a block.
-- **Scenery**: drop the picture and have the size checked against the
-  three the server takes.
+The checks that catch the mistakes people actually make:
 
 Nothing is uploaded anywhere. The editor runs entirely in the browser,
 and what comes out is a file you hand over.

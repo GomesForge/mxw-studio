@@ -249,6 +249,48 @@ const I18N = {
     'Portrait': 'Retrato',
     '4 files': '4 arquivos',
     'What you need': 'O que voc\u00ea precisa',
+    'What to attach': 'O que anexar',
+    '35 files': '35 arquivos',
+    'The big one, and <b>all your own artwork</b>. A costume recolours the White and the server draws it; a character is its own drawing in every pose and every facing. Thirty-five files, named for the action and the direction.':
+      'A grande, e <b>tudo arte sua</b>. Uma roupa recolore o Branco e o servidor desenha; um personagem \u00e9 o desenho dele mesmo em cada pose e cada dire\u00e7\u00e3o. Trinta e cinco arquivos, nomeados pela a\u00e7\u00e3o e pela dire\u00e7\u00e3o.',
+    'Attach the painted template': 'Anexe o template pintado',
+    'Attach the files of the set': 'Anexe os arquivos do conjunto',
+    'Attach your scenery': 'Anexe o seu cen\u00e1rio',
+    'Attach the character folder': 'Anexe a pasta do personagem',
+    'none': 'nada',
+    'or': 'ou',
+    '(nothing)': '(nada)',
+    'block tiles': 'pe\u00e7as de bloco',
+    'scenery': 'cen\u00e1rio',
+    'Or set the ten parts by hand': 'Ou escolha as dez partes na m\u00e3o',
+    'Painting the template': 'Pintando o template',
+    'What the check says': 'O que a checagem diz',
+    'Export the folder as a .zip': 'Exportar a pasta em .zip',
+    'nothing': 'nada',
+    'the whole folder': 'a pasta inteira',
+    'Attach the painted template and it appears here, checked before you send it anywhere.':
+      'Anexe o template pintado e ele aparece aqui, conferido antes de voc\u00ea mandar para algu\u00e9m.',
+    'Attach the files and they play here, so you can judge the set moving.':
+      'Anexe os arquivos e eles tocam aqui, para voc\u00ea julgar o conjunto em movimento.',
+    'Attach your scenery and it appears here with the arena drawn over it.':
+      'Anexe o seu cen\u00e1rio e ele aparece aqui com a arena desenhada por cima.',
+    'Attach the folder and the frames play here, so you can see whether the facings agree with one another.':
+      'Anexe a pasta e os quadros tocam aqui, para voc\u00ea ver se as dire\u00e7\u00f5es combinam entre si.',
+    'Attach a picture and this says whether the size is one the server takes, before you send it.':
+      'Anexe uma imagem e isto diz se o tamanho \u00e9 um dos que o servidor aceita, antes de voc\u00ea mandar.',
+    'Your files, playing:': 'Seus arquivos, tocando:',
+    'Your character, playing:': 'Seu personagem, tocando:',
+    'Standing': 'Parado',
+    'Walking': 'Andando',
+    'Punching': 'Socando',
+    'Struck': 'Atingido',
+    'Riding': 'Montado',
+    'Mounted, still': 'Montado, parado',
+    'Mounted, walking': 'Montado, andando',
+    'Mounting': 'Subindo na montaria',
+    'Idle flourish': 'Gracinha parado',
+    'Death': 'Morte',
+    'Portrait': 'Retrato',
     'Loose ends beside the head: a headband, a trailing bandage':
       'Pontas soltas ao lado da cabe\u00e7a: uma bandana, uma atadura solta',
     'Hair under the helmet': 'Cabelo embaixo do capacete',
@@ -334,6 +376,26 @@ const I18N = {
       'A cabe\u00e7a no topo da tela durante a partida.',
 
     /* ---- whole paragraphs, kept with their markup */
+    'A costume is <b>not a drawing of your own</b>. The server keeps ten parts, each with a colour and some of them a pattern, and makes the 37 sheets itself from the White\'s own shape. You paint the template it gives you, or you set the ten parts by hand.':
+      'Uma roupa <b>n\u00e3o \u00e9 um desenho seu</b>. O servidor guarda dez partes, cada uma com uma cor e algumas com um padr\u00e3o, e faz as 37 folhas sozinho a partir da forma do pr\u00f3prio Branco. Voc\u00ea pinta o template que ele d\u00e1, ou escolhe as dez partes na m\u00e3o.',
+    'If you would rather not paint, choose the parts here and hand over <code>costume.json</code> instead. <b>Keep the White\'s</b> leaves a part alone; <b>Colour</b> gives it your own; <b>Same as</b> makes it follow another part.':
+      'Se voc\u00ea preferir n\u00e3o pintar, escolha as partes aqui e entregue <code>costume.json</code> no lugar. <b>Manter a do Branco</b> deixa a parte como est\u00e1; <b>Cor</b> d\u00e1 uma sua; <b>Igual a</b> faz ela seguir outra parte.',
+    'This one <b>is</b> your own artwork, and it is a set: the bomb itself and the flame it makes. The names are fixed. Only <code>bomb.spr</code> is required, so a skin that changes nothing but the bomb is <b>one file</b>.':
+      'Esta <b>\u00e9</b> arte sua, e \u00e9 um conjunto: a bomba e a chama que ela faz. Os nomes s\u00e3o fixos. S\u00f3 <code>bomb.spr</code> \u00e9 obrigat\u00f3rio, ent\u00e3o uma skin que muda s\u00f3 a bomba \u00e9 <b>um arquivo</b>.',
+    'Three are sprites (<code>.spr</code>), nine are effects (<code>.eft</code>), and <b>all twelve open in this editor</b>. Each is capped at 512 kB. Anything left out falls back to the ordinary bomb.':
+      'Tr\u00eas s\u00e3o sprites (<code>.spr</code>), nove s\u00e3o efeitos (<code>.eft</code>), e <b>todos os doze abrem neste editor</b>. Cada um tem limite de 512 kB. O que faltar volta para a bomba comum.',
+    'The one page with <b>nothing to attach</b>: you draw the map here and leave with the file. It is a grid, where people start, and what the breakable blocks hide. The theme decides which tiles draw it, so you are laying out a room rather than painting one.':
+      'A \u00fanica p\u00e1gina <b>sem nada para anexar</b>: voc\u00ea desenha o mapa aqui e sai com o arquivo. \u00c9 uma grade, onde as pessoas come\u00e7am, e o que os blocos quebr\u00e1veis escondem. O tema decide quais pe\u00e7as desenham, ent\u00e3o voc\u00ea est\u00e1 montando uma sala, n\u00e3o pintando uma.',
+    'The picture drawn <b>around</b> the arena. The grid sits on top of it, in the middle, so the part of your picture that shows is the border.':
+      'A imagem desenhada <b>em volta</b> da arena. A grade fica por cima dela, no meio, ent\u00e3o a parte da sua imagem que aparece \u00e9 a moldura.',
+    'One picture per size, and a map uses only the one that matches it. <b>Nothing is scaled</b>: paint at the size it will be shown.':
+      'Uma imagem por tamanho, e um mapa usa s\u00f3 a que combina com ele. <b>Nada \u00e9 redimensionado</b>: pinte no tamanho em que vai aparecer.',
+    'The dark rectangle over your picture is where the arena covers it. Paint outside it.':
+      'O ret\u00e2ngulo escuro sobre a sua imagem \u00e9 onde a arena cobre. Pinte em volta dele.',
+    'The big one, and <b>all your own artwork</b>. A costume recolours the White and the server draws it; a character is its own drawing in every pose and every facing. About forty files, named for the action and the direction.':
+      'A grande, e <b>tudo arte sua</b>. Uma roupa recolore o Branco e o servidor desenha; um personagem \u00e9 o desenho dele mesmo em cada pose e cada dire\u00e7\u00e3o. Uns quarenta arquivos, nomeados pela a\u00e7\u00e3o e pela dire\u00e7\u00e3o.',
+    'Select every file in the folder at once. The rows marked <b>needed</b> are the ones people actually look at: finish only those and the character still works. There is <b>no import for a whole character</b> at the other end yet, so a finished one is handed over as its folder.':
+      'Selecione todos os arquivos da pasta de uma vez. As linhas marcadas <b>preciso</b> s\u00e3o as que as pessoas realmente olham: termine s\u00f3 essas e o personagem j\u00e1 funciona. Ainda <b>n\u00e3o existe importa\u00e7\u00e3o de personagem inteiro</b> do outro lado, ent\u00e3o um pronto \u00e9 entregue como pasta.',
     'A costume is <b>not a drawing</b>. The server keeps ten parts, each with a colour and some of them a pattern, and makes the 37 sheets itself from the White\'s own shape. You choose the parts; it does the rest.':
       'Uma roupa <b>n\u00e3o \u00e9 um desenho</b>. O servidor guarda dez partes, cada uma com uma cor e algumas com um padr\u00e3o, e faz as 37 folhas sozinho a partir da forma do pr\u00f3prio Branco. Voc\u00ea escolhe as partes; ele faz o resto.',
     'This one <b>is</b> real artwork, and it is a set: the bomb itself and the flame it makes. Only <code>bomb.spr</code> is required, so a skin that changes nothing but the bomb is <b>one file</b>.':

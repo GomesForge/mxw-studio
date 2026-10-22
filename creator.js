@@ -1,27 +1,25 @@
 /* creator.js -- the Workshop: make something the server will take.
 
-   The editor can already open and write every format involved. What it
-   could not do is tell you *which* files a given piece of content needs,
-   how big they may be, and what the receiving end checks.
+   Two things this panel has to do, in this order.
 
-   The first version of this panel answered that in prose, and prose is
-   the wrong answer: a page of rules with no picture is not something a
-   person can follow. Every page here now leads with a preview on the
-   left and the controls on the right, so a change shows up as a change
-   rather than as a line of text.
+   Say what to attach. Every page opens with the files it wants, by
+   name, with their sizes and limits, and the place to drop them right
+   there. "To make a bomb skin, attach these twelve" is the question
+   people actually arrive with.
 
-   The costume figure is drawn here rather than loaded, because the real
-   sheets are generated at the other end and this editor has no copy of
-   that generator. It is a schematic: the right parts in the right
-   places with the right colours and patterns, which is what you need
-   while choosing them. It is labelled as a schematic wherever it
-   appears, and the page also takes the real template picture and checks
-   it.
+   Then show what arrived. The preview is the person's own work, not a
+   drawing of ours: their painted template, their sprites playing,
+   their grid, their scenery with the arena over it. An earlier version
+   drew a schematic figure from the chosen colours, and it was the
+   wrong idea -- an invented figure standing in for the thing someone
+   is making is worse than no figure at all, because it looks like an
+   answer and is not one.
 
    The names, sizes and limits below are the receiving end's own, read
    from a live panel rather than guessed.
 
-   ASCII only: these files are served without a charset. */
+   ASCII only: these files are served without a charset. Write the
+   Portuguese normally and run python/ascii_escape.py. */
 
 /* --------------------------- the contract ------------------------ */
 
@@ -44,8 +42,6 @@ const COSTUME_PATTERNS = [
   ['clouds', 'Clouds']
 ];
 
-/* The White's own colour for each part. A part left on "keep" inherits
-   this, which is what a null colour means in the file. */
 const COSTUME_OWN = {
   helmet: '#e0e0e0', suit: '#666666', chest: '#15377d', buckle: '#9a7316',
   face: '#de9c52', eyes: '#000208', pompom: '#f485c7', stem: '#d6e8e9',
@@ -57,37 +53,31 @@ const COSTUME_DEFAULT_2 = {
   gloves: '#eee2c6', boots: '#eee2c6'
 };
 
-/* The five the panel at the other end shows while you work. The save
-   makes 37. */
-const COSTUME_PREVIEWED = ['st_s', 'mo_s', 'mo_e', 'mo_n', 'mo_w'];
 const COSTUME_SHEET_COUNT = 37;
 
-/* The template picture: 432 x 640, with a 16 x 16 pure magenta square
-   set 8 pixels in from each corner. Those four squares are how the
-   receiving end finds the figure, so a picture missing one, or cropped
-   past them, is refused. A larger copy is fine, because it rectifies by
-   the corners, which is why the check measures them rather than the
-   picture. */
+/* The template: 432 x 640, with a 16 x 16 pure magenta square set 8
+   pixels in from each corner. Those four squares are how the receiving
+   end finds the figure, so a picture missing one, or cropped past them,
+   is refused. A larger copy is fine, because it rectifies by the
+   corners. */
 const COSTUME_TEMPLATE = { w: 432, h: 640, mark: 16, inset: 8, key: '#ff00ff' };
 
-/* A bomb skin is real artwork: these file names, nothing else. */
 const SKIN_FILES = [
-  ['bomb.spr', 'The bomb sitting on the ground, and appearing', true, 'bomb'],
-  ['bomb_d.spr', 'The bomb in its last moment, about to go off', false, 'bomb'],
-  ['bomb_s.spr', 'The bomb while it slides after a kick', false, 'bomb'],
-  ['bomb_f.eft', 'The fuse burning on top of it', false, 'bomb'],
-  ['flame_center.eft', 'The blast where the bomb was', false, 'centre'],
-  ['flame_hor.eft', 'The arm running left and right', false, 'hor'],
-  ['flame_ver.eft', 'The arm running up and down', false, 'ver'],
-  ['flame_left.eft', 'The tip of the arm going left', false, 'left'],
-  ['flame_right.eft', 'The tip of the arm going right', false, 'right'],
-  ['flame_up.eft', 'The tip of the arm going up', false, 'up'],
-  ['flame_down.eft', 'The tip of the arm going down', false, 'down'],
-  ['boom_block.eft', 'A breakable block coming apart', false, 'block']
+  ['bomb.spr', 'The bomb sitting on the ground, and appearing', true],
+  ['bomb_d.spr', 'The bomb in its last moment, about to go off', false],
+  ['bomb_s.spr', 'The bomb while it slides after a kick', false],
+  ['bomb_f.eft', 'The fuse burning on top of it', false],
+  ['flame_center.eft', 'The blast where the bomb was', false],
+  ['flame_hor.eft', 'The arm running left and right', false],
+  ['flame_ver.eft', 'The arm running up and down', false],
+  ['flame_left.eft', 'The tip of the arm going left', false],
+  ['flame_right.eft', 'The tip of the arm going right', false],
+  ['flame_up.eft', 'The tip of the arm going up', false],
+  ['flame_down.eft', 'The tip of the arm going down', false],
+  ['boom_block.eft', 'A breakable block coming apart', false]
 ];
 const SKIN_MAX = 524288;
 
-/* Maps. The layout is one character per cell, row by row. */
 const MAP_SIZES = [
   { size: 0, w: 17, h: 15, pw: 800, ph: 600, starts: 6, players: 'up to 6' },
   { size: 1, w: 21, h: 17, pw: 960, ph: 694, starts: 12, players: '7 to 12' },
@@ -112,22 +102,38 @@ const SIDE_SIZES = MAP_SIZES.map(s => ({ w: s.pw, h: s.ph, players: s.players,
   cells: s.w + ' x ' + s.h, cw: s.w, ch: s.h }));
 const SIDE_MAX = 4194304;
 
-/* A character: about forty files, grouped by what they do. */
+/* A character: the actions, whether each is one file or four, and
+   whether it is one of the ones people actually look at. */
 const CHAR_SETS = [
-  ['st', 'Standing', 'It breathes rather than holding still.', true, true],
-  ['mo', 'Walking', 'The longest set, and the one people see most.', true, true],
-  ['pu', 'Punching', 'Hitting a bomb away.', true, true],
-  ['pa', 'Struck', 'Caught by a thrown bomb.', true, true],
-  ['msb_ch', 'Riding', 'On the mount.', true, false],
-  ['rui_st', 'Mounted, still', '', true, false],
-  ['rui_mo', 'Mounted, walking', '', true, false],
-  ['rui_ju', 'Mounting', 'Marked in the original manual as possibly unused.',
-   true, false],
-  ['add', 'Idle flourish', 'Played after standing still for a while.', false, true],
-  ['dd', 'Death', 'Travels a long way across the frame.', false, true],
-  ['face', 'Portrait', 'The head at the top of the screen during a match.',
-   false, true]
+  ['st', 'Standing', true, true],
+  ['mo', 'Walking', true, true],
+  ['pu', 'Punching', true, true],
+  ['pa', 'Struck', true, true],
+  ['msb_ch', 'Riding', true, false],
+  ['rui_st', 'Mounted, still', true, false],
+  ['rui_mo', 'Mounted, walking', true, false],
+  ['rui_ju', 'Mounting', true, false],
+  ['add', 'Idle flourish', false, true],
+  ['dd', 'Death', false, true],
+  ['face', 'Portrait', false, true]
 ];
+
+const CHAR_FACINGS = { e: 'facing east', n: 'facing north',
+                       s: 'facing south', w: 'facing west' };
+
+/* Every file name a character folder may hold. */
+function charFileNames() {
+  const out = [];
+  for (const [key, label, perFacing, core] of CHAR_SETS) {
+    if (perFacing) {
+      for (const d of ['e', 'n', 's', 'w'])
+        out.push([key + '_' + d, label, core, CHAR_FACINGS[d]]);
+    } else {
+      out.push([key, label, core, '']);
+    }
+  }
+  return out;
+}
 
 /* --------------------------- a zip writer ------------------------ */
 
@@ -159,8 +165,8 @@ function zipStore(entries) {
     const dv = new DataView(local.buffer);
     dv.setUint32(0, 0x04034B50, true);
     dv.setUint16(4, 20, true);
-    dv.setUint16(8, 0, true);          /* stored, not deflated */
-    dv.setUint16(12, 0x21, true);      /* a fixed date keeps zips stable */
+    dv.setUint16(8, 0, true);
+    dv.setUint16(12, 0x21, true);
     dv.setUint32(14, crc, true);
     dv.setUint32(18, data.length, true);
     dv.setUint32(22, data.length, true);
@@ -204,9 +210,10 @@ function zipStore(entries) {
 const creator = {
   track: 'costume',
   costume: null,
-  picture: null,       /* {name, url} once one passes the check */
+  picture: null,       /* the attached template, checked */
   skin: {},            /* name -> {bytes, note, ok, gra} */
-  skinPlay: null,
+  chars: {},           /* base name -> {bytes, ok, note, gra} */
+  play: null,          /* the interval animating what was attached */
   map: null,
   side: null
 };
@@ -237,25 +244,6 @@ function crButton(parent, text, fn, cls) {
   return b;
 }
 
-/* Every page is the same shape: a heading, one line saying what the
-   thing is, then preview on the left and controls on the right. */
-function crPage(body, title, lead) {
-  body.appendChild(crEl('h3', '', title));
-  body.appendChild(crHTML('p', 'crLead', lead));
-  const stage = crEl('div', 'crStage');
-  const left = crEl('div', 'crView');
-  const right = crEl('div', 'crSide');
-  stage.appendChild(left);
-  stage.appendChild(right);
-  body.appendChild(stage);
-  return { left, right };
-}
-
-function crSection(parent, title) {
-  parent.appendChild(crEl('h4', '', title));
-  return parent;
-}
-
 function crSteps(parent, steps) {
   const ol = crEl('ol', 'crSteps');
   for (const s of steps) {
@@ -267,217 +255,140 @@ function crSteps(parent, steps) {
   return ol;
 }
 
-/* One row of "this is the file, this is what it is for". */
-function crFileRow(parent, name, what, need) {
-  const row = crEl('div', 'crFile');
-  row.dataset.name = name;
-  row.appendChild(crEl('span', 'crState', need ? 'needed' : 'optional'));
-  row.appendChild(crEl('code', '', name));
-  row.appendChild(crEl('span', 'crWhat', what));
-  parent.appendChild(row);
-  return row;
+/* The first thing on every page: what to attach, and where to put it.
+   One row per file, and the drop zone immediately under them, because
+   the question people arrive with is "what do I send". */
+function crNeeds(body, wants, drop) {
+  const box = crEl('div', 'crNeeds');
+  box.appendChild(crEl('h4', 'crNeedsTitle', 'What to attach'));
+  const list = crEl('div', 'crFiles');
+  for (const w of wants) {
+    const row = crEl('div', 'crFile');
+    if (w.id) row.dataset.name = w.id;
+    row.appendChild(crEl('span', 'crState',
+                         w.tag || (w.need ? 'needed' : 'optional')));
+    row.appendChild(crEl('code', '', w.name));
+    row.appendChild(crEl('span', 'crWhat', w.what));
+    list.appendChild(row);
+  }
+  box.appendChild(list);
+  if (drop) {
+    const d = crEl('div', 'crDrop crDropBig');
+    d.appendChild(crEl('b', '', drop.label));
+    d.appendChild(crEl('span', 'crDropHint', 'drop here, or click to choose'));
+    d.ondragover = e => { e.preventDefault(); d.classList.add('over'); };
+    d.ondragleave = () => d.classList.remove('over');
+    d.ondrop = e => {
+      e.preventDefault();
+      d.classList.remove('over');
+      drop.take(e.dataTransfer.files);
+    };
+    d.onclick = () => {
+      const i = document.createElement('input');
+      i.type = 'file';
+      i.accept = drop.accept;
+      i.multiple = !!drop.multiple;
+      i.onchange = () => drop.take(i.files);
+      i.click();
+    };
+    box.appendChild(d);
+  }
+  body.appendChild(box);
+  return box;
 }
 
-function crDrop(parent, label, accept, multiple, take) {
-  const drop = crEl('div', 'crDrop');
-  drop.appendChild(crEl('b', '', label));
-  drop.appendChild(crEl('span', 'crDropHint', 'drop here, or click to choose'));
-  drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
-  drop.ondragleave = () => drop.classList.remove('over');
-  drop.ondrop = e => {
-    e.preventDefault();
-    drop.classList.remove('over');
-    take(e.dataTransfer.files);
+function crPage(body, title, lead) {
+  body.appendChild(crEl('h3', '', title));
+  body.appendChild(crHTML('p', 'crLead', lead));
+}
+
+function crStage(body) {
+  const stage = crEl('div', 'crStage');
+  const left = crEl('div', 'crView');
+  const right = crEl('div', 'crSide');
+  stage.appendChild(left);
+  stage.appendChild(right);
+  body.appendChild(stage);
+  return { left, right };
+}
+
+/* The preview before anything has been attached: it says what will
+   appear here rather than showing something invented. */
+function crEmpty(parent, text) {
+  const e = crEl('div', 'crEmpty');
+  e.appendChild(crEl('span', '', text));
+  parent.appendChild(e);
+  return e;
+}
+
+function crStopPlay() {
+  if (creator.play) { clearInterval(creator.play); creator.play = null; }
+}
+
+/* Animate the sprites that were attached, side by side. */
+function crPlaySprites(parent, items, caption) {
+  crStopPlay();
+  if (!items.length) return;
+  if (caption) parent.appendChild(crEl('p', 'crCap', caption));
+  const strip = crEl('div', 'crStrip');
+  const live = [];
+  for (const { name, gra } of items) {
+    const cell = crEl('div', 'crStripCell');
+    const cv = crEl('canvas', 'crStripCanvas');
+    const z = Math.max(1, Math.min(4,
+      Math.floor(80 / Math.max(gra.width, gra.height))));
+    cv.width = gra.width * z;
+    cv.height = gra.height * z;
+    cell.appendChild(cv);
+    cell.appendChild(crEl('span', '', name));
+    strip.appendChild(cell);
+    live.push({ gra, cv, f: 0 });
+  }
+  parent.appendChild(strip);
+  const tick = () => {
+    for (const it of live) {
+      const ctx = it.cv.getContext('2d');
+      ctx.clearRect(0, 0, it.cv.width, it.cv.height);
+      const fr = it.gra.frames[it.f % it.gra.frames.length];
+      const img = new ImageData(
+        new Uint8ClampedArray(fr.toRGBA(it.gra.width, it.gra.height)),
+        it.gra.width, it.gra.height);
+      const tmp = document.createElement('canvas');
+      tmp.width = it.gra.width;
+      tmp.height = it.gra.height;
+      tmp.getContext('2d').putImageData(img, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(tmp, 0, 0, it.cv.width, it.cv.height);
+      it.f++;
+    }
   };
-  drop.onclick = () => {
-    const i = document.createElement('input');
-    i.type = 'file';
-    i.accept = accept;
-    i.multiple = !!multiple;
-    i.onchange = () => take(i.files);
-    i.click();
+  tick();
+  creator.play = setInterval(tick, 90);
+}
+
+/* Read an attached sprite or effect through the editor's own reader, so
+   "it opens" means the same here as everywhere else. */
+function crReadSprite(file, done) {
+  const r = new FileReader();
+  r.onload = () => {
+    const bytes = new Uint8Array(r.result);
+    let ok = true, note = '', gra = null;
+    try {
+      gra = new GRA(bytes.buffer.slice(0));
+      note = gra.frames.length + ' fr ' + gra.width + 'x' + gra.height +
+             (gra.eft ? ', ' + gra.eft.groups + ' gr' : '');
+    } catch (e) { ok = false; note = 'does not open'; }
+    done({ bytes, ok, note, gra });
   };
-  parent.appendChild(drop);
-  return drop;
+  r.readAsArrayBuffer(file);
 }
 
-function roundRect(ctx, x, y, w, h, r) {
-  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); return; }
-  const rr = Math.min(r, w / 2, h / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + rr, y);
-  ctx.arcTo(x + w, y, x + w, y + h, rr);
-  ctx.arcTo(x + w, y + h, x, y + h, rr);
-  ctx.arcTo(x, y + h, x, y, rr);
-  ctx.arcTo(x, y, x + w, y, rr);
-  ctx.closePath();
-}
-
-function shade(hex, amount) {
-  const n = parseInt(hex.slice(1), 16);
-  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => {
-    const x = amount > 0 ? v + (255 - v) * amount : v * (1 + amount);
-    return Math.max(0, Math.min(255, Math.round(x)));
-  });
-  return 'rgb(' + c.join(',') + ')';
-}
-
-/* ------------------------- the costume figure -------------------- */
-
-/* Resolve what a part is actually painted in: nothing means the
-   White's own, a name means follow that part. */
 function costumeColour(spec, id, depth) {
   const p = spec.parts[id];
   if (!p || p.colour == null) return COSTUME_OWN[id];
   if (/^#/.test(p.colour)) return p.colour;
   if ((depth || 0) > 3) return COSTUME_OWN[id];
   return costumeColour(spec, p.colour, (depth || 0) + 1);
-}
-
-/* The pattern drawn over a part, clipped to whatever shape is current.
-   These are the seven the receiving end knows; they are drawn here the
-   way they read rather than pixel-for-pixel the way it draws them. */
-function paintPattern(ctx, kind, colour, size, angle, box) {
-  if (!kind || kind === 'plain') return;
-  const s = Math.max(2, 7 * (size || 1));
-  ctx.save();
-  ctx.clip();
-  ctx.globalAlpha = 0.92;
-  ctx.fillStyle = colour;
-  ctx.strokeStyle = colour;
-  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
-  const reach = Math.max(box.w, box.h) * 1.6;
-  ctx.translate(cx, cy);
-  ctx.rotate((angle || 0) * Math.PI / 180);
-  if (kind === 'stripes' || kind === 'bandages') {
-    const gap = kind === 'bandages' ? s * 0.55 : s;
-    ctx.lineWidth = kind === 'bandages' ? s * 1.15 : s * 0.55;
-    ctx.lineCap = 'butt';
-    for (let x = -reach; x < reach; x += s + gap) {
-      ctx.beginPath();
-      ctx.moveTo(x, -reach);
-      ctx.lineTo(x + (kind === 'bandages' ? s * 0.4 : 0), reach);
-      ctx.stroke();
-    }
-  } else if (kind === 'band') {
-    ctx.fillRect(-reach, -s * 0.9, reach * 2, s * 1.8);
-  } else if (kind === 'spots') {
-    for (let y = -reach; y < reach; y += s * 2.1) {
-      for (let x = -reach; x < reach; x += s * 2.1) {
-        ctx.beginPath();
-        ctx.arc(x + ((Math.round(y / (s * 2.1)) % 2) ? s : 0), y, s * 0.52, 0, 7);
-        ctx.fill();
-      }
-    }
-  } else if (kind === 'checks') {
-    for (let y = -reach, j = 0; y < reach; y += s, j++) {
-      for (let x = -reach, i = 0; x < reach; x += s, i++) {
-        if ((i + j) % 2) ctx.fillRect(x, y, s, s);
-      }
-    }
-  } else if (kind === 'clouds') {
-    for (let y = -reach; y < reach; y += s * 2.4) {
-      for (let x = -reach; x < reach; x += s * 2.8) {
-        const o = (Math.round(y / (s * 2.4)) % 2) ? s * 1.4 : 0;
-        ctx.beginPath();
-        ctx.arc(x + o, y, s * 0.7, 0, 7);
-        ctx.arc(x + o + s * 0.7, y - s * 0.25, s * 0.52, 0, 7);
-        ctx.arc(x + o - s * 0.65, y - s * 0.15, s * 0.45, 0, 7);
-        ctx.fill();
-      }
-    }
-  }
-  ctx.restore();
-}
-
-/* Fill the current path with a part's colour and then its pattern. */
-function costumePart(ctx, spec, id, box) {
-  const col = costumeColour(spec, id, 0);
-  const g = ctx.createLinearGradient(0, box.y, 0, box.y + box.h);
-  g.addColorStop(0, shade(col, 0.22));
-  g.addColorStop(0.55, col);
-  g.addColorStop(1, shade(col, -0.26));
-  ctx.save();
-  ctx.fillStyle = g;
-  ctx.fill();
-  ctx.restore();
-  const p = spec.parts[id];
-  if (p && p.pattern && p.pattern !== 'plain') {
-    ctx.save();
-    paintPattern(ctx, p.pattern, p.colour2 || '#ffffff', p.size, p.angle, box);
-    ctx.restore();
-  }
-  ctx.save();
-  ctx.lineWidth = 1.4;
-  ctx.strokeStyle = 'rgba(0,0,0,.38)';
-  ctx.stroke();
-  ctx.restore();
-}
-
-/* A schematic of the figure: the right parts, in the right places, in
-   the colours and patterns chosen. Not the artwork -- the sheets are
-   generated at the other end -- but enough to choose by. */
-function drawCostumeFigure(canvas, spec) {
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-  const s = Math.min(W / 180, H / 250);
-  ctx.save();
-  ctx.translate((W - 180 * s) / 2, (H - 250 * s) / 2);
-  ctx.scale(s, s);
-
-  const has = id => {
-    const p = spec.parts[id];
-    return !(p && p.off);
-  };
-
-  /* legs, then arms, then the body, so the trunk sits on top */
-  for (const x of [62, 96]) {
-    roundRect(ctx, x, 178, 22, 30, 8);
-    costumePart(ctx, spec, 'suit', { x: x, y: 178, w: 22, h: 30 });
-  }
-  for (const x of [70, 110]) {
-    ctx.beginPath();
-    ctx.ellipse(x, 214, 23, 15, 0, 0, 7);
-    costumePart(ctx, spec, 'boots', { x: x - 23, y: 199, w: 46, h: 30 });
-  }
-  for (const x of [26, 128]) {
-    roundRect(ctx, x, 134, 26, 36, 12);
-    costumePart(ctx, spec, 'suit', { x: x, y: 134, w: 26, h: 36 });
-  }
-  for (const x of [36, 144]) {
-    ctx.beginPath();
-    ctx.arc(x, 176, 17, 0, 7);
-    costumePart(ctx, spec, 'gloves', { x: x - 17, y: 159, w: 34, h: 34 });
-  }
-
-  roundRect(ctx, 56, 130, 68, 54, 12);
-  costumePart(ctx, spec, 'suit', { x: 56, y: 130, w: 68, h: 54 });
-  roundRect(ctx, 63, 136, 54, 28, 7);
-  costumePart(ctx, spec, 'chest', { x: 63, y: 136, w: 54, h: 28 });
-  roundRect(ctx, 80, 163, 20, 15, 4);
-  costumePart(ctx, spec, 'buckle', { x: 80, y: 163, w: 20, h: 15 });
-
-  /* the antenna and its pompom sit behind the helmet */
-  if (has('stem')) {
-    roundRect(ctx, 86, 36, 7, 22, 3);
-    costumePart(ctx, spec, 'stem', { x: 86, y: 36, w: 7, h: 22 });
-  }
-  if (has('pompom')) {
-    ctx.beginPath();
-    ctx.arc(90, 24, 16, 0, 7);
-    costumePart(ctx, spec, 'pompom', { x: 74, y: 8, w: 32, h: 32 });
-  }
-
-  roundRect(ctx, 36, 52, 108, 80, 52);
-  costumePart(ctx, spec, 'helmet', { x: 36, y: 52, w: 108, h: 80 });
-  roundRect(ctx, 49, 80, 82, 56, 13);
-  costumePart(ctx, spec, 'face', { x: 49, y: 80, w: 82, h: 56 });
-  for (const x of [66, 104]) {
-    roundRect(ctx, x, 90, 11, 35, 5);
-    costumePart(ctx, spec, 'eyes', { x: x, y: 90, w: 11, h: 35 });
-  }
-  ctx.restore();
 }
 
 /* ------------------------------ costume -------------------------- */
@@ -498,38 +409,34 @@ function costumeBuild(body) {
   if (!creator.costume) creator.costume = costumeBlank();
   const spec = creator.costume;
 
-  const { left, right } = crPage(body, 'A costume',
-    'A costume is <b>not a drawing</b>. The server keeps ten parts, each ' +
-    'with a colour and some of them a pattern, and makes the ' +
+  crPage(body, 'A costume',
+    'A costume is <b>not a drawing of your own</b>. The server keeps ten ' +
+    'parts, each with a colour and some of them a pattern, and makes the ' +
     COSTUME_SHEET_COUNT + ' sheets itself from the White\'s own shape. You ' +
-    'choose the parts; it does the rest.');
+    'paint the template it gives you, or you set the ten parts by hand.');
 
-  /* ---- the preview */
-  const fig = crEl('canvas', 'crCanvas');
-  fig.width = 320; fig.height = 420;
-  left.appendChild(fig);
-  left.appendChild(crEl('p', 'crCap',
-    'A schematic, drawn here from your choices. The real sheets are made ' +
-    'at the other end, so this shows the parts and not the final artwork.'));
+  crNeeds(body, [
+    { name: 'costume-template.png', need: true,
+      what: 'The template, painted. ' + COSTUME_TEMPLATE.w + ' x ' +
+            COSTUME_TEMPLATE.h + ', with the four magenta corner squares ' +
+            'left alone. Ask whoever runs the server for the blank one.' }
+  ], {
+    label: 'Attach the painted template',
+    accept: 'image/*',
+    take: files => costumeTake(files[0])
+  });
 
-  const pic = crEl('div', 'crPicBox');
-  pic.hidden = true;
-  left.appendChild(pic);
+  const { left, right } = crStage(body);
+  const view = crEl('div', 'crViewInner');
+  left.appendChild(view);
+  costumeShow(view);
 
-  const redraw = () => { drawCostumeFigure(fig, spec); costumeSummary(); };
-
-  /* ---- the controls */
-  crSection(right, 'The ten parts');
+  right.appendChild(crEl('h4', '', 'Or set the ten parts by hand'));
   right.appendChild(crHTML('p', 'crHint',
-    'Each row is one part. <b>Keep the White\'s</b> leaves it alone; ' +
-    '<b>Colour</b> gives it your own; <b>Same as</b> makes it follow ' +
-    'another part, which is how a belt and a buckle match.'));
-
-  const head = crEl('div', 'crPart crPartHead');
-  head.appendChild(crEl('span', 'crPartName', 'Part'));
-  head.appendChild(crEl('span', 'crColHead', 'Colour'));
-  head.appendChild(crEl('span', 'crColHead', 'Pattern, its colour, size, angle'));
-  right.appendChild(head);
+    'If you would rather not paint, choose the parts here and hand over ' +
+    '<code>costume.json</code> instead. <b>Keep the White\'s</b> leaves a ' +
+    'part alone; <b>Colour</b> gives it your own; <b>Same as</b> makes it ' +
+    'follow another part.'));
 
   const tbl = crEl('div', 'crParts');
   for (const [id, label, patterned] of COSTUME_PARTS) {
@@ -560,7 +467,7 @@ function costumeBuild(body) {
 
     const sync = () => {
       dot.style.background = costumeColour(spec, id, 0);
-      redraw();
+      costumeSummary();
     };
     mode.onchange = () => {
       if (mode.value === 'keep') p.colour = null;
@@ -593,10 +500,10 @@ function costumeBuild(body) {
       an.type = 'number'; an.step = '15'; an.min = '-180'; an.max = '180';
       an.value = p.angle;
       an.title = 'the angle it runs at, in degrees';
-      pat.onchange = () => { p.pattern = pat.value; redraw(); };
-      pc.oninput = () => { p.colour2 = pc.value; redraw(); };
-      sz.oninput = () => { p.size = Number(sz.value); redraw(); };
-      an.oninput = () => { p.angle = Number(an.value); redraw(); };
+      pat.onchange = () => { p.pattern = pat.value; costumeSummary(); };
+      pc.oninput = () => { p.colour2 = pc.value; costumeSummary(); };
+      sz.oninput = () => { p.size = Number(sz.value); costumeSummary(); };
+      an.oninput = () => { p.angle = Number(an.value); costumeSummary(); };
       row.appendChild(pat); row.appendChild(pc);
       row.appendChild(sz); row.appendChild(an);
     } else {
@@ -606,11 +513,10 @@ function costumeBuild(body) {
   }
   right.appendChild(tbl);
 
-  crSection(right, 'Two extras');
   const ex = crEl('div', 'crParts');
   const r1 = crEl('div', 'crPart');
   const cbe = crEl('input'); cbe.type = 'checkbox'; cbe.checked = spec.ends.on;
-  cbe.onchange = () => { spec.ends.on = cbe.checked; redraw(); };
+  cbe.onchange = () => { spec.ends.on = cbe.checked; costumeSummary(); };
   r1.appendChild(cbe);
   r1.appendChild(crEl('span', '', 'Loose ends beside the head: a headband, ' +
     'a trailing bandage'));
@@ -619,19 +525,15 @@ function costumeBuild(body) {
   const cbh = crEl('input'); cbh.type = 'checkbox'; cbh.checked = spec.hair.on;
   const hc = crEl('input', 'crColour'); hc.type = 'color';
   hc.value = spec.hair.colour;
-  cbh.onchange = () => { spec.hair.on = cbh.checked; redraw(); };
-  hc.oninput = () => { spec.hair.colour = hc.value; redraw(); };
+  cbh.onchange = () => { spec.hair.on = cbh.checked; costumeSummary(); };
+  hc.oninput = () => { spec.hair.colour = hc.value; costumeSummary(); };
   r2.appendChild(cbh);
   r2.appendChild(crEl('span', '', 'Hair under the helmet'));
   r2.appendChild(hc);
   ex.appendChild(r2);
   right.appendChild(ex);
 
-  crSection(right, 'What you hand over');
-  right.appendChild(crHTML('p', 'crHint',
-    'One file, <code>costume.json</code>. It holds the ten parts and ' +
-    'nothing else, so it is small and easy to read before anyone imports ' +
-    'it.'));
+  right.appendChild(crEl('h4', '', 'What you hand over'));
   const out = crEl('pre', 'crOut');
   out.id = 'crCostumeOut';
   right.appendChild(out);
@@ -650,31 +552,60 @@ function costumeBuild(body) {
   });
   right.appendChild(acts);
 
-  /* ---- the other way in */
-  body.appendChild(crEl('h4', '', 'Or paint it instead'));
-  body.appendChild(crHTML('p', 'crHint',
-    'If you would rather paint than pick, the other end reads the colours ' +
-    'back off a picture. <b>You need exactly one file:</b> a PNG based on ' +
-    '<code>costume-template.png</code>, which is <b>' +
-    COSTUME_TEMPLATE.w + ' x ' + COSTUME_TEMPLATE.h + '</b> and comes ' +
-    'from whoever runs the server.'));
+  body.appendChild(crEl('h4', '', 'Painting the template'));
   crSteps(body, [
-    'Paint each part over the template in <b>flat colour</b>. The shading ' +
-      'is added later, so flat reads better than shaded.',
-    'Leave the <b>four magenta squares</b> in the corners alone, and do ' +
-      'not crop. They are how the figure is found. A bigger copy is fine.',
+    'Paint each part over it in <b>flat colour</b>. The shading is added ' +
+      'later, so flat reads better than shaded.',
+    'Leave the <b>four magenta squares</b> alone and do not crop. They are ' +
+      'how the figure is found. A bigger copy is fine.',
     'A part you do not touch stays the White\'s. Erase the pompom or the ' +
       'antenna to leave it off altogether.',
-    'Drop it below. This checks the four squares and the scaling <b>before' +
-      '</b> you send it anywhere, which is the mistake that wastes the ' +
-      'most time.'
+    'A hat, hair or a cape drawn outside the outline is <b>not drawn</b>: ' +
+      'the shape never changes.'
   ]);
-  const picOut = crEl('p', 'crHint');
-  crDrop(body, 'The painted picture', 'image/*', false,
-         files => costumeTakePicture(files[0], picOut, pic));
-  body.appendChild(picOut);
 
-  redraw();
+  costumeSummary();
+}
+
+/* The preview is the attached picture, checked, or nothing. */
+function costumeShow(view) {
+  view.innerHTML = '';
+  const p = creator.picture;
+  if (!p) {
+    crEmpty(view, 'Attach the painted template and it appears here, ' +
+                  'checked before you send it anywhere.');
+    return;
+  }
+  const img = crEl('img', 'crPic');
+  img.src = p.url;
+  view.appendChild(img);
+  const note = crEl('p', 'crCap ' + (p.ok ? 'crOk' : 'crBad'));
+  note.textContent = p.note;
+  view.appendChild(note);
+}
+
+function costumeTake(file) {
+  if (!file) return;
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = () => {
+    const r = costumeCheckPicture(img);
+    creator.picture = {
+      name: file.name, url: url, ok: r.ok,
+      note: r.ok
+        ? file.name + ', ' + r.size + '. The four squares are there' +
+          (Math.abs(r.scale - 1) < 0.01 ? ', at the template\'s own size.'
+            : ', at ' + r.scale.toFixed(2) + ' times the template, which is fine.')
+        : 'This will not import: ' + r.why
+    };
+    const view = document.querySelector('.crViewInner');
+    if (view) {
+      costumeShow(view);
+      if (typeof i18nApply === 'function') i18nApply(view);
+    }
+  };
+  img.onerror = () => notify('that file is not an image this browser can read', 1);
+  img.src = url;
 }
 
 function costumeSummary() {
@@ -748,154 +679,63 @@ function costumeCheckPicture(img) {
   return { ok: true, scale: sx, size: c.width + ' x ' + c.height };
 }
 
-function costumeTakePicture(file, out, box) {
-  if (!file) return;
-  const img = new Image();
-  img.onload = () => {
-    const r = costumeCheckPicture(img);
-    out.className = 'crHint ' + (r.ok ? 'crOk' : 'crBad');
-    out.textContent = r.ok
-      ? 'Good: ' + file.name + ', ' + r.size + ', the four squares are there' +
-        (Math.abs(r.scale - 1) < 0.01 ? ' at the template\'s own size.'
-          : ' at ' + r.scale.toFixed(2) + ' times the template, which is fine.')
-      : 'This will not import: ' + r.why;
-    if (box) {
-      box.hidden = false;
-      box.innerHTML = '';
-      const shown = crEl('img', 'crPic');
-      shown.src = img.src;
-      box.appendChild(shown);
-      box.appendChild(crEl('p', 'crCap',
-        r.ok ? 'Your picture, checked. This is what gets uploaded.'
-             : 'Your picture. It will not import as it stands.'));
-    }
-  };
-  img.onerror = () => {
-    out.className = 'crHint crBad';
-    out.textContent = 'that file is not an image this browser can read';
-  };
-  img.src = URL.createObjectURL(file);
-}
-
 /* ----------------------------- bomb skin ------------------------- */
 
-/* Where each file is drawn when a bomb goes off: the diagram is the
-   explanation. A list of twelve names is not. */
-const SKIN_MAP = {
-  bomb: [2, 2], centre: [2, 2], left: [0, 2], right: [4, 2],
-  up: [2, 0], down: [2, 4], hor: [1, 2], ver: [2, 1], block: [4, 0]
-};
-
-function drawSkinDiagram(canvas, have, hot) {
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-  const cell = Math.min(W, H) / 5.6;
-  const ox = (W - cell * 5) / 2, oy = (H - cell * 5) / 2;
-  const css = getComputedStyle(document.documentElement);
-  const ink = css.getPropertyValue('--ink').trim() || '#fff';
-  const dim = css.getPropertyValue('--dim').trim() || '#889';
-  const edge = css.getPropertyValue('--edge').trim() || '#333';
-
-  for (let y = 0; y < 5; y++) {
-    for (let x = 0; x < 5; x++) {
-      ctx.fillStyle = 'rgba(255,255,255,.03)';
-      ctx.strokeStyle = edge;
-      ctx.lineWidth = 1;
-      ctx.fillRect(ox + x * cell, oy + y * cell, cell - 1, cell - 1);
-      ctx.strokeRect(ox + x * cell, oy + y * cell, cell - 1, cell - 1);
-    }
-  }
-  const paint = (kind, label, colour) => {
-    const spots = kind === 'hor' ? [[1, 2], [3, 2]]
-                : kind === 'ver' ? [[2, 1], [2, 3]]
-                : [SKIN_MAP[kind]];
-    for (const [gx, gy] of spots) {
-      const x = ox + gx * cell, y = oy + gy * cell;
-      ctx.fillStyle = colour;
-      ctx.fillRect(x + 2, y + 2, cell - 5, cell - 5);
-      ctx.fillStyle = '#0b0f18';
-      ctx.font = '600 ' + Math.round(cell * 0.21) + 'px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(label, x + cell / 2, y + cell / 2 + cell * 0.07);
-    }
-  };
-  const colourFor = kind => {
-    const files = SKIN_FILES.filter(f => f[3] === kind);
-    const any = files.some(f => have[f[0]] && have[f[0]].ok);
-    if (hot === kind) return '#ffd166';
-    return any ? '#3ecb8a' : 'rgba(255,255,255,.14)';
-  };
-  paint('block', 'block', colourFor('block'));
-  paint('hor', 'hor', colourFor('hor'));
-  paint('ver', 'ver', colourFor('ver'));
-  paint('left', 'left', colourFor('left'));
-  paint('right', 'right', colourFor('right'));
-  paint('up', 'up', colourFor('up'));
-  paint('down', 'down', colourFor('down'));
-  paint('centre', 'bomb', colourFor('bomb'));
-
-  ctx.fillStyle = dim;
-  ctx.font = '11px system-ui, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('one bomb going off, and which file draws each part',
-               ox, oy + cell * 5 + 16);
-  ctx.fillStyle = ink;
-}
-
 function skinBuild(body) {
-  const { left, right } = crPage(body, 'A bomb skin',
-    'This one <b>is</b> real artwork, and it is a set: the bomb itself and ' +
-    'the flame it makes. Only <code>bomb.spr</code> is required, so a skin ' +
-    'that changes nothing but the bomb is <b>one file</b>.');
+  crPage(body, 'A bomb skin',
+    'This one <b>is</b> your own artwork, and it is a set: the bomb itself ' +
+    'and the flame it makes. The names are fixed. Only ' +
+    '<code>bomb.spr</code> is required, so a skin that changes nothing but ' +
+    'the bomb is <b>one file</b>.');
 
-  const diag = crEl('canvas', 'crCanvas');
-  diag.width = 320; diag.height = 340;
-  left.appendChild(diag);
-  left.appendChild(crEl('p', 'crCap',
-    'Green is a file you have dropped in. Grey is one that falls back to ' +
-    'the ordinary bomb.'));
+  const box = crNeeds(body,
+    SKIN_FILES.map(([name, what, need]) =>
+      ({ id: name, name: name, what: what, need: need })),
+    {
+      label: 'Attach the files of the set',
+      accept: '.spr,.eft',
+      multiple: true,
+      take: files => skinTake(files, refresh)
+    });
+  body.appendChild(crHTML('p', 'crHint',
+    'Three are sprites (<code>.spr</code>), nine are effects ' +
+    '(<code>.eft</code>), and <b>all twelve open in this editor</b>. Each ' +
+    'is capped at ' + Math.round(SKIN_MAX / 1024) + ' kB. Anything left out ' +
+    'falls back to the ordinary bomb.'));
 
-  const playBox = crEl('div', 'crPlay');
-  playBox.hidden = true;
-  left.appendChild(playBox);
+  const { left, right } = crStage(body);
+  const view = crEl('div', 'crViewInner');
+  left.appendChild(view);
 
-  crSection(right, 'The twelve files');
-  right.appendChild(crHTML('p', 'crHint',
-    'The names are fixed: the server looks for exactly these. Three are ' +
-    'sprites (<code>.spr</code>) and nine are effects (<code>.eft</code>), ' +
-    'and <b>all twelve open in this editor</b>. Each is capped at ' +
-    Math.round(SKIN_MAX / 1024) + ' kB.'));
-
-  const grid = crEl('div', 'crFiles');
-  const rows = {};
-  for (const [name, what, need, kind] of SKIN_FILES) {
-    const row = crFileRow(grid, name, what, need);
-    row.onmouseenter = () => drawSkinDiagram(diag, creator.skin, kind);
-    row.onmouseleave = () => drawSkinDiagram(diag, creator.skin, null);
-    rows[name] = row;
-  }
-  right.appendChild(grid);
-
-  crSection(right, 'How to make one');
+  right.appendChild(crEl('h4', '', 'How to make one'));
   crSteps(right, [
     'Open the file of the same name from a copy of the game, with ' +
       '<b>Open...</b> above. Starting from the real one means the frame ' +
       'count and the sizes already match.',
     'Recolour it with <b>Palette</b> in the sprite panel. That changes one ' +
       'colour across every frame at once, which is what a recolour wants.',
-    'Watch the <b>reserved ramp</b>: 64 neutral values are repainted at ' +
-      'run time. The sprite panel says how much of a sheet sits in it.',
-    '<b>Save sprite</b> under the same name, then drop the files here.'
+    'Watch the <b>reserved ramp</b>: 64 neutral values are repainted at run ' +
+      'time. The sprite panel says how much of a sheet sits in it.',
+    '<b>Save sprite</b> under the same name, then attach it above.'
   ]);
 
   const out = crEl('p', 'crHint');
+  right.appendChild(out);
   const acts = crEl('div', 'crActs');
+  const save = crButton(acts, 'Export the set as a .zip', () => {
+    const entries = Object.keys(creator.skin)
+      .filter(n => creator.skin[n].ok)
+      .map(n => ({ name: n, data: creator.skin[n].bytes }));
+    if (!entries.length) { notify('nothing in the set yet', 1); return; }
+    saveFile('bomb-skin.zip', zipStore(entries), 'application/zip');
+  }, 'primary');
+  crButton(acts, 'Clear', () => { creator.skin = {}; creatorRender(); });
+  right.appendChild(acts);
 
-  const refresh = () => {
+  function refresh() {
     let good = 0, bad = 0;
-    for (const [name] of SKIN_FILES) {
-      const e = creator.skin[name], row = rows[name];
+    for (const row of box.querySelectorAll('.crFile')) {
+      const e = creator.skin[row.dataset.name];
       const st = row.firstChild;
       row.classList.toggle('have', !!(e && e.ok));
       row.classList.toggle('bad', !!(e && !e.ok));
@@ -904,107 +744,53 @@ function skinBuild(body) {
         st.title = e.note || '';
         if (e.ok) good++; else bad++;
       } else {
-        st.textContent = SKIN_FILES.find(f => f[0] === name)[2]
-          ? 'needed' : 'optional';
+        const want = SKIN_FILES.find(f => f[0] === row.dataset.name);
+        st.textContent = want && want[2] ? 'needed' : 'optional';
         st.title = '';
       }
     }
     const haveBomb = creator.skin['bomb.spr'] && creator.skin['bomb.spr'].ok;
     out.className = 'crHint ' + (bad ? 'crBad' : (haveBomb ? 'crOk' : ''));
-    out.textContent = good + ' file(s) ready' +
+    out.textContent = good + ' file(s) attached' +
       (bad ? ', ' + bad + ' refused' : '') +
       (haveBomb ? '.' : '. bomb.spr is still missing, and the set needs it.');
     save.disabled = !good;
-    drawSkinDiagram(diag, creator.skin, null);
-    skinShowPlay(playBox);
-  };
 
-  const take = files => {
-    for (const f of files) {
-      const want = SKIN_FILES.find(s => s[0].toLowerCase() === f.name.toLowerCase());
-      if (!want) {
-        notify(f.name + ' is not one of the names a skin uses', 1);
-        continue;
-      }
-      const r = new FileReader();
-      r.onload = () => {
-        const bytes = new Uint8Array(r.result);
-        let ok = true, note = '', g = null;
-        if (bytes.length > SKIN_MAX) {
-          ok = false;
-          note = 'over the ' + SKIN_MAX + ' byte limit';
-        } else {
-          try {
-            g = new GRA(bytes.buffer.slice(0));
-            note = g.frames.length + ' fr ' + g.width + 'x' + g.height;
-          } catch (e) { ok = false; note = 'does not open'; }
-        }
-        creator.skin[want[0]] = { bytes: bytes, ok: ok, note: note, gra: g };
-        refresh();
-      };
-      r.readAsArrayBuffer(f);
-    }
-  };
-
-  crDrop(right, 'The files of the set', '.spr,.eft', true, take);
-  right.appendChild(out);
-
-  const save = crButton(acts, 'Export the set as a .zip', () => {
-    const entries = Object.keys(creator.skin)
-      .filter(n => creator.skin[n].ok)
-      .map(n => ({ name: n, data: creator.skin[n].bytes }));
-    if (!entries.length) { notify('nothing in the set yet', 1); return; }
-    saveFile('bomb-skin.zip', zipStore(entries), 'application/zip');
-  }, 'primary');
-  crButton(acts, 'Clear', () => {
-    creator.skin = {};
-    creatorRender();
-  });
-  right.appendChild(acts);
+    view.innerHTML = '';
+    const items = Object.keys(creator.skin)
+      .filter(n => creator.skin[n].ok && creator.skin[n].gra)
+      .map(n => ({ name: n, gra: creator.skin[n].gra }));
+    if (!items.length)
+      crEmpty(view, 'Attach the files and they play here, so you can judge ' +
+                    'the set moving.');
+    else
+      crPlaySprites(view, items, 'Your files, playing:');
+    if (typeof i18nApply === 'function') i18nApply(view);
+  }
   refresh();
 }
 
-/* Animate whatever has been dropped, so the set can be judged moving
-   rather than as a list of names. */
-function skinShowPlay(box) {
-  if (creator.skinPlay) { clearInterval(creator.skinPlay); creator.skinPlay = null; }
-  const ready = Object.keys(creator.skin).filter(n => creator.skin[n].ok &&
-                                                     creator.skin[n].gra);
-  box.innerHTML = '';
-  if (!ready.length) { box.hidden = true; return; }
-  box.hidden = false;
-  box.appendChild(crEl('p', 'crCap', 'What you dropped, playing:'));
-  const strip = crEl('div', 'crStrip');
-  const items = [];
-  for (const name of ready) {
-    const g = creator.skin[name].gra;
-    const cell = crEl('div', 'crStripCell');
-    const cv = crEl('canvas', 'crStripCanvas');
-    const z = Math.max(1, Math.min(3, Math.floor(72 / Math.max(g.width, g.height))));
-    cv.width = g.width * z; cv.height = g.height * z;
-    cell.appendChild(cv);
-    cell.appendChild(crEl('span', '', name));
-    strip.appendChild(cell);
-    items.push({ g, cv, z, f: 0 });
-  }
-  box.appendChild(strip);
-  const tick = () => {
-    for (const it of items) {
-      const ctx = it.cv.getContext('2d');
-      ctx.clearRect(0, 0, it.cv.width, it.cv.height);
-      const fr = it.g.frames[it.f % it.g.frames.length];
-      const rgba = fr.toRGBA(it.g.width, it.g.height);
-      const img = new ImageData(new Uint8ClampedArray(rgba), it.g.width, it.g.height);
-      const tmp = document.createElement('canvas');
-      tmp.width = it.g.width; tmp.height = it.g.height;
-      tmp.getContext('2d').putImageData(img, 0, 0);
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(tmp, 0, 0, it.cv.width, it.cv.height);
-      it.f++;
+function skinTake(files, done) {
+  let left = files.length;
+  if (!left) return;
+  for (const f of files) {
+    const want = SKIN_FILES.find(s => s[0].toLowerCase() === f.name.toLowerCase());
+    if (!want) {
+      notify(f.name + ' is not one of the names a skin uses', 1);
+      if (!--left) done();
+      continue;
     }
-  };
-  tick();
-  creator.skinPlay = setInterval(tick, 90);
+    if (f.size > SKIN_MAX) {
+      creator.skin[want[0]] = { bytes: new Uint8Array(0), ok: false,
+                                note: 'over the limit' };
+      if (!--left) done();
+      continue;
+    }
+    crReadSprite(f, r => {
+      creator.skin[want[0]] = r;
+      if (!--left) done();
+    });
+  }
 }
 
 /* ------------------------------ a map ---------------------------- */
@@ -1033,11 +819,25 @@ function mapBuild(body) {
   const m = creator.map;
   const s = MAP_SIZES[m.size];
 
-  const { left, right } = crPage(body, 'A map',
-    'A map is a grid, where people start, and what the breakable blocks ' +
-    'hide. <b>There is no artwork in it</b>: the theme decides which set ' +
-    'of tiles draws it, so you are laying out a room, not painting one.');
+  crPage(body, 'A map',
+    'The one page with <b>nothing to attach</b>: you draw the map here and ' +
+    'leave with the file. It is a grid, where people start, and what the ' +
+    'breakable blocks hide. The theme decides which tiles draw it, so you ' +
+    'are laying out a room rather than painting one.');
 
+  crNeeds(body, [
+    { name: '(nothing)', tag: 'none',
+      what: 'Draw the map below. What you hand over is one small .json.' },
+    { name: 'block tiles', tag: 'optional',
+      what: 'A map may bring its own blocks: one picture ' + MAP_LIMITS.blockW +
+            ' wide, rows ' + MAP_LIMITS.blockH[0] + ' to ' +
+            MAP_LIMITS.blockH[1] + ' tall, up to ' +
+            Math.round(MAP_LIMITS.block / 1024) + ' kB.' },
+    { name: 'scenery', tag: 'optional',
+      what: 'And its own border, which is the Scenery page here.' }
+  ], null);
+
+  const { left, right } = crStage(body);
   const grid = crEl('div', 'crGrid');
   grid.style.gridTemplateColumns = 'repeat(' + s.w + ', var(--cell))';
   left.appendChild(grid);
@@ -1054,15 +854,14 @@ function mapBuild(body) {
     it.appendChild(crEl('span', '', what));
     legend.appendChild(it);
   }
-  const st = crEl('span', 'crLegItem');
-  const sd = crEl('i', 'crLegDot crLegStart');
-  st.appendChild(sd);
-  st.appendChild(crEl('b', '', 'Start'));
-  st.appendChild(crEl('span', '', 'Where a player appears. Needs floor.'));
-  legend.appendChild(st);
+  const stIt = crEl('span', 'crLegItem');
+  stIt.appendChild(crEl('i', 'crLegDot crLegStart'));
+  stIt.appendChild(crEl('b', '', 'Start'));
+  stIt.appendChild(crEl('span', '', 'Where a player appears. Needs floor.'));
+  legend.appendChild(stIt);
   left.appendChild(legend);
 
-  crSection(right, 'The room');
+  right.appendChild(crEl('h4', '', 'The room'));
   const bar = crEl('div', 'crBar');
   bar.appendChild(crEl('span', 'crLabel', 'Size'));
   const szSel = crEl('select', 'crMode');
@@ -1073,7 +872,10 @@ function mapBuild(body) {
     szSel.appendChild(op);
   });
   szSel.value = m.size;
-  szSel.onchange = () => { creator.map = mapBlank(Number(szSel.value)); creatorRender(); };
+  szSel.onchange = () => {
+    creator.map = mapBlank(Number(szSel.value));
+    creatorRender();
+  };
   bar.appendChild(szSel);
   bar.appendChild(crEl('span', 'crLabel', 'Theme'));
   const thSel = crEl('select', 'crMode');
@@ -1093,7 +895,7 @@ function mapBuild(body) {
   bar.appendChild(nm);
   right.appendChild(bar);
 
-  crSection(right, 'Draw it');
+  right.appendChild(crEl('h4', '', 'Draw it'));
   let brush = '1';
   const pal = crEl('div', 'crBar');
   const brushBtns = [];
@@ -1114,11 +916,9 @@ function mapBuild(body) {
     pal.appendChild(b);
   }
   const startBtn = crEl('button', 'crBrush');
-  const sdot = crEl('i', 'crLegDot crLegStart');
-  startBtn.appendChild(sdot);
+  startBtn.appendChild(crEl('i', 'crLegDot crLegStart'));
   startBtn.appendChild(document.createTextNode('Start'));
   startBtn.dataset.ch = 'S';
-  startBtn.title = 'click a cell to put one down or take it away';
   startBtn.onclick = () => setBrush('S');
   brushBtns.push(startBtn);
   pal.appendChild(startBtn);
@@ -1128,7 +928,7 @@ function mapBuild(body) {
     'floor under it, so the editor refuses both rather than letting you ' +
     'make a map that will be rejected.'));
 
-  crSection(right, 'What the blocks hide');
+  right.appendChild(crEl('h4', '', 'What the blocks hide'));
   right.appendChild(crHTML('p', 'crHint',
     'These go inside the breakable blocks, so there has to be room for ' +
     'them. At most ' + MAP_LIMITS.item + ' of any one.'));
@@ -1147,16 +947,6 @@ function mapBuild(body) {
     items.appendChild(w);
   });
   right.appendChild(items);
-
-  crSection(right, 'What you hand over');
-  right.appendChild(crHTML('p', 'crHint',
-    'One file, <code>map.json</code>: the layout as a single string of ' +
-    (s.w * s.h) + ' characters, the starts, the item counts and the theme. ' +
-    'A map may also bring its own block tiles, one picture <b>' +
-    MAP_LIMITS.blockW + '</b> wide with rows <b>' + MAP_LIMITS.blockH[0] +
-    ' to ' + MAP_LIMITS.blockH[1] + '</b> tall and at most ' +
-    Math.round(MAP_LIMITS.block / 1024) + ' kB, and its own scenery, which ' +
-    'is the next page.'));
 
   const acts = crEl('div', 'crActs');
   crButton(acts, 'Save map.json', () => {
@@ -1204,7 +994,10 @@ function mapBuild(body) {
     } else {
       const edge = x === 0 || y === 0 || x === s.w - 1 || y === s.h - 1;
       if (edge) { notify('the rim has to stay the outer wall', 1); return; }
-      if (brush === '9') { notify('the outer wall only goes around the rim', 1); return; }
+      if (brush === '9') {
+        notify('the outer wall only goes around the rim', 1);
+        return;
+      }
       m.cells[y][x] = brush;
       const at = m.starts.findIndex(p => p[0] === x && p[1] === y);
       if (at >= 0 && brush !== '0') m.starts.splice(at, 1);
@@ -1229,208 +1022,242 @@ function mapBuild(body) {
 /* ----------------------------- scenery --------------------------- */
 
 function sideBuild(body) {
-  const { left, right } = crPage(body, 'Scenery',
+  crPage(body, 'Scenery',
     'The picture drawn <b>around</b> the arena. The grid sits on top of it, ' +
-    'in the middle, so the part of your picture that shows is the border. ' +
-    '<b>One file</b>, a PNG, at one of three exact sizes.');
+    'in the middle, so the part of your picture that shows is the border.');
 
-  const cv = crEl('canvas', 'crCanvas');
-  cv.width = 340; cv.height = 260;
-  left.appendChild(cv);
-  const cap = crEl('p', 'crCap',
-    'The dark rectangle is where the arena covers your picture. Paint ' +
-    'outside it.');
-  left.appendChild(cap);
-
-  let pick = 0;
-  const draw = img => {
-    const ctx = cv.getContext('2d');
-    const s = SIDE_SIZES[pick];
-    ctx.clearRect(0, 0, cv.width, cv.height);
-    const k = Math.min((cv.width - 20) / s.w, (cv.height - 20) / s.h);
-    const w = s.w * k, h = s.h * k;
-    const ox = (cv.width - w) / 2, oy = (cv.height - h) / 2;
-    if (img) {
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(img, ox, oy, w, h);
-    } else {
-      ctx.fillStyle = 'rgba(255,255,255,.05)';
-      ctx.fillRect(ox, oy, w, h);
-    }
-    ctx.strokeStyle = 'rgba(255,255,255,.35)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(ox + .5, oy + .5, w - 1, h - 1);
-    /* the arena: the cell grid centred in the screen */
-    const cell = Math.min(w / (s.cw + 4), h / (s.ch + 3));
-    const aw = cell * s.cw, ah = cell * s.ch;
-    const ax = ox + (w - aw) / 2, ay = oy + (h - ah) / 2;
-    ctx.fillStyle = 'rgba(6,9,16,.76)';
-    ctx.fillRect(ax, ay, aw, ah);
-    ctx.strokeStyle = '#3ecb8a';
-    ctx.setLineDash([4, 3]);
-    ctx.strokeRect(ax + .5, ay + .5, aw - 1, ah - 1);
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#9aa7bd';
-    ctx.font = '11px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('the arena, ' + s.cells, ax + aw / 2, ay + ah / 2 + 4);
-    ctx.textAlign = 'left';
-    ctx.fillText(s.w + ' x ' + s.h, ox, oy - 6);
-  };
-
-  crSection(right, 'Which size');
-  right.appendChild(crHTML('p', 'crHint',
-    'A map uses only the size that matches it, so make the one you need. ' +
-    'Nothing is scaled: paint at the size it will be shown. Up to ' +
-    Math.round(SIDE_MAX / 1048576) + ' MB.'));
-  const sizes = crEl('div', 'crFiles');
-  const rows = SIDE_SIZES.map((s, i) => {
-    const row = crEl('div', 'crFile' + (i === pick ? ' have' : ''));
-    row.appendChild(crEl('span', 'crState', s.w + ' x ' + s.h));
-    row.appendChild(crEl('code', '', s.cells + ' cells'));
-    row.appendChild(crEl('span', 'crWhat', s.players + ' players'));
-    row.style.cursor = 'pointer';
-    row.onclick = () => {
-      pick = i;
-      rows.forEach((r, j) => r.classList.toggle('have', j === pick));
-      draw(creator.side);
-    };
-    sizes.appendChild(row);
-    return row;
+  crNeeds(body, [
+    { name: '800 x 600', need: true,
+      what: 'For a 17 x 15 map, up to 6 players. Up to ' +
+            Math.round(SIDE_MAX / 1048576) + ' MB.' },
+    { name: '960 x 694', tag: 'or',
+      what: 'For a 21 x 17 map, 7 to 12 players.' },
+    { name: '1120 x 770', tag: 'or',
+      what: 'For a 25 x 19 map.' }
+  ], {
+    label: 'Attach your scenery',
+    accept: 'image/*',
+    take: files => sideTake(files[0])
   });
-  right.appendChild(sizes);
+  body.appendChild(crHTML('p', 'crHint',
+    'One picture per size, and a map uses only the one that matches it. ' +
+    '<b>Nothing is scaled</b>: paint at the size it will be shown.'));
 
-  crSection(right, 'Check it before you send it');
+  const { left, right } = crStage(body);
+  const view = crEl('div', 'crViewInner');
+  left.appendChild(view);
+  sideShow(view);
+
+  right.appendChild(crEl('h4', '', 'What the check says'));
   const out = crEl('p', 'crHint');
-  crDrop(right, 'Your scenery', 'image/*', false, files => {
-    const file = files[0];
-    if (!file) return;
-    const img = new Image();
-    img.onload = () => {
-      const hit = SIDE_SIZES.findIndex(s => s.w === img.width && s.h === img.height);
-      const big = file.size > SIDE_MAX;
-      if (hit >= 0) {
-        pick = hit;
-        rows.forEach((r, j) => r.classList.toggle('have', j === pick));
-      }
-      creator.side = img;
-      draw(img);
-      out.className = 'crHint ' + (hit >= 0 && !big ? 'crOk' : 'crBad');
-      out.textContent = hit >= 0
-        ? (big ? 'The size is right but the file is ' +
-                 (Math.round(file.size / 1048576 * 10) / 10) + ' MB, over the limit.'
-               : 'Good: ' + img.width + ' x ' + img.height + ', the ' +
-                 SIDE_SIZES[hit].cells + ' size, ' +
-                 Math.round(file.size / 1024) + ' kB.')
-        : img.width + ' x ' + img.height + ' is not one of the sizes. It has ' +
-          'to be exactly ' + SIDE_SIZES.map(s => s.w + ' x ' + s.h).join(', ') + '.';
-    };
-    img.onerror = () => {
-      out.className = 'crHint crBad';
-      out.textContent = 'that file is not an image this browser can read';
-    };
-    img.src = URL.createObjectURL(file);
-  });
+  out.id = 'crSideOut';
+  if (creator.side) {
+    out.className = 'crHint ' + (creator.side.ok ? 'crOk' : 'crBad');
+    out.textContent = creator.side.note;
+  } else {
+    out.textContent = 'Attach a picture and this says whether the size is ' +
+                      'one the server takes, before you send it.';
+  }
   right.appendChild(out);
-  draw(creator.side);
+  right.appendChild(crHTML('p', 'crHint',
+    'The dark rectangle over your picture is where the arena covers it. ' +
+    'Paint outside it.'));
+}
+
+function sideShow(view) {
+  view.innerHTML = '';
+  const s = creator.side;
+  if (!s) {
+    crEmpty(view, 'Attach your scenery and it appears here with the arena ' +
+                  'drawn over it.');
+    return;
+  }
+  const cv = crEl('canvas', 'crCanvas');
+  cv.width = 340; cv.height = 262;
+  view.appendChild(cv);
+  const ctx = cv.getContext('2d');
+  const size = SIDE_SIZES[s.pick];
+  const k = Math.min((cv.width - 16) / size.w, (cv.height - 16) / size.h);
+  const w = size.w * k, h = size.h * k;
+  const ox = (cv.width - w) / 2, oy = (cv.height - h) / 2;
+  ctx.drawImage(s.img, ox, oy, w, h);
+  ctx.strokeStyle = 'rgba(255,255,255,.35)';
+  ctx.strokeRect(ox + .5, oy + .5, w - 1, h - 1);
+  const cell = Math.min(w / (size.cw + 4), h / (size.ch + 3));
+  const aw = cell * size.cw, ah = cell * size.ch;
+  const ax = ox + (w - aw) / 2, ay = oy + (h - ah) / 2;
+  ctx.fillStyle = 'rgba(6,9,16,.76)';
+  ctx.fillRect(ax, ay, aw, ah);
+  ctx.strokeStyle = '#3ecb8a';
+  ctx.setLineDash([4, 3]);
+  ctx.strokeRect(ax + .5, ay + .5, aw - 1, ah - 1);
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#9aa7bd';
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(size.cells, ax + aw / 2, ay + ah / 2 + 4);
+  const note = crEl('p', 'crCap ' + (s.ok ? 'crOk' : 'crBad'));
+  note.textContent = s.note;
+  view.appendChild(note);
+}
+
+function sideTake(file) {
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    const hit = SIDE_SIZES.findIndex(s => s.w === img.width && s.h === img.height);
+    const big = file.size > SIDE_MAX;
+    creator.side = {
+      img: img, pick: hit >= 0 ? hit : 0, ok: hit >= 0 && !big,
+      note: hit >= 0
+        ? (big ? 'The size is right but the file is ' +
+                 (Math.round(file.size / 1048576 * 10) / 10) +
+                 ' MB, over the limit.'
+               : img.width + ' x ' + img.height + ', the ' +
+                 SIDE_SIZES[hit].cells + ' size, ' +
+                 Math.round(file.size / 1024) + ' kB. Good.')
+        : img.width + ' x ' + img.height + ' is not one of the sizes. It has ' +
+          'to be exactly ' + SIDE_SIZES.map(s => s.w + ' x ' + s.h).join(', ') + '.'
+    };
+    const view = document.querySelector('.crViewInner');
+    if (view) sideShow(view);
+    const out = $('crSideOut');
+    if (out) {
+      out.className = 'crHint ' + (creator.side.ok ? 'crOk' : 'crBad');
+      out.textContent = creator.side.note;
+    }
+  };
+  img.onerror = () => notify('that file is not an image this browser can read', 1);
+  img.src = URL.createObjectURL(file);
 }
 
 /* ---------------------------- characters ------------------------- */
 
 function charBuild(body) {
-  const { left, right } = crPage(body, 'A character',
-    'The big one. A costume recolours the White and the server draws it; ' +
-    'a character is <b>its own drawing in every pose and every facing</b>. ' +
-    'About forty files, and they all have to agree with one another.');
+  crPage(body, 'A character',
+    'The big one, and <b>all your own artwork</b>. A costume recolours the ' +
+    'White and the server draws it; a character is its own drawing in every ' +
+    'pose and every facing. About forty files, named for the action and the ' +
+    'direction.');
 
-  const cv = crEl('canvas', 'crCanvas');
-  cv.width = 320; cv.height = 300;
-  left.appendChild(cv);
-  left.appendChild(crEl('p', 'crCap',
-    'Each square is one file. Four across means one per facing: east, ' +
-    'north, south, west.'));
-  drawCharMap(cv);
+  const names = charFileNames();
+  const box = crNeeds(body, names.map(([n, label, core, facing]) => ({
+    id: n, name: n + '.gra', need: core,
+    what: label + (facing ? ', ' + facing : '')
+  })), {
+    label: 'Attach the character folder',
+    accept: '.gra,.spr',
+    multiple: true,
+    take: files => charTake(files, refresh)
+  });
+  body.appendChild(crHTML('p', 'crHint',
+    'Select every file in the folder at once. The rows marked ' +
+    '<b>needed</b> are the ones people actually look at: finish only those ' +
+    'and the character still works. There is <b>no import for a whole ' +
+    'character</b> at the other end yet, so a finished one is handed over as ' +
+    'its folder.'));
 
-  crSection(right, 'What the set is');
-  right.appendChild(crHTML('p', 'crHint',
-    'A character is a folder. The name of each file says the action and ' +
-    'the direction, so <code>mo_s</code> is walking while facing south. ' +
-    'Four of these sets are a single file rather than four.'));
+  const { left, right } = crStage(body);
+  const view = crEl('div', 'crViewInner');
+  left.appendChild(view);
 
-  const grid = crEl('div', 'crFiles');
-  for (const [key, label, what, perFacing, core] of CHAR_SETS) {
-    const row = crEl('div', 'crFile' + (core ? ' have' : ''));
-    row.appendChild(crEl('span', 'crState', perFacing ? '4 files' : '1 file'));
-    row.appendChild(crEl('code', '',
-      perFacing ? key + '_e  ' + key + '_n  ' + key + '_s  ' + key + '_w' : key));
-    row.appendChild(crEl('span', 'crWhat', label + (what ? '. ' + what : '')));
-    grid.appendChild(row);
-  }
-  right.appendChild(grid);
-  right.appendChild(crHTML('p', 'crHint',
-    'The rows marked green are the ones people actually look at. If you ' +
-    'only ever finish those, the character still works.'));
-
-  crSection(right, 'Two rules that catch everyone');
+  right.appendChild(crEl('h4', '', 'Two rules that catch everyone'));
   crSteps(right, [
     '<b>Sixty-four colours are not yours.</b> A neutral ramp from black to ' +
-      'white, 64 steps, is repainted at run time with the team colour. ' +
-      'Paint in it on purpose for the parts that should follow the team; ' +
-      'paint in it by accident and that part changes colour in play. The ' +
-      'sprite panel reports how much of a sheet sits in the ramp, and ' +
-      '<b>Nudge off the ramp</b> moves a colour out of it.',
-    '<b>Keep a frame at or under 64 x 80.</b> The original tool reports ' +
-      'the game failing to start on frames much past that, with trouble ' +
-      'around 60 x 100. Files that already ship larger are fine; newly ' +
-      'grown ones may not be.'
+      'white, 64 steps, is repainted at run time with the team colour. Paint ' +
+      'in it on purpose for the parts that should follow the team; paint in ' +
+      'it by accident and that part changes colour in play. The sprite panel ' +
+      'reports how much of a sheet sits in the ramp, and <b>Nudge off the ' +
+      'ramp</b> moves a colour out of it.',
+    '<b>Keep a frame at or under 64 x 80.</b> The original tool reports the ' +
+      'game failing to start on frames much past that, with trouble around ' +
+      '60 x 100. Files that already ship larger are fine; newly grown ones ' +
+      'may not be.'
   ]);
 
-  crSection(right, 'A way in that is not forty files');
+  right.appendChild(crEl('h4', '', 'A way in that is not forty files'));
   crSteps(right, [
     'Open an existing character of a similar build with <b>Open...</b>. ' +
       'Every frame is then already the right size and the ramp is already ' +
       'where it belongs.',
-    'Recolour the whole thing first with <b>Palette</b>, and watch it ' +
-      'move, before touching a single pixel.',
-    'Then repaint the two sets that carry the character: <b>standing</b> ' +
-      'and the <b>portrait</b>. Those decide whether people recognise it.',
+    'Recolour the whole thing first with <b>Palette</b>, and watch it move, ' +
+      'before touching a single pixel.',
+    'Then repaint the two sets that carry the character: <b>standing</b> and ' +
+      'the <b>portrait</b>.',
     'Leave the mounted sets until last. Least seen, fiddliest.'
   ]);
-  right.appendChild(crHTML('p', 'crHint',
-    'There is <b>no import for a whole character</b> at the other end yet, ' +
-    'so a finished one is handed over as its folder. Worth asking before ' +
-    'starting a big one.'));
+
+  const out = crEl('p', 'crHint');
+  right.appendChild(out);
+  const acts = crEl('div', 'crActs');
+  const save = crButton(acts, 'Export the folder as a .zip', () => {
+    const entries = Object.keys(creator.chars)
+      .filter(n => creator.chars[n].ok)
+      .map(n => ({ name: n + '.gra', data: creator.chars[n].bytes }));
+    if (!entries.length) { notify('nothing attached yet', 1); return; }
+    saveFile('character.zip', zipStore(entries), 'application/zip');
+  }, 'primary');
+  crButton(acts, 'Clear', () => { creator.chars = {}; creatorRender(); });
+  right.appendChild(acts);
+
+  function refresh() {
+    let good = 0, bad = 0, core = 0, coreNeed = 0;
+    for (const row of box.querySelectorAll('.crFile')) {
+      const key = row.dataset.name;
+      const want = names.find(n => n[0] === key);
+      if (want && want[2]) coreNeed++;
+      const e = creator.chars[key];
+      const st = row.firstChild;
+      row.classList.toggle('have', !!(e && e.ok));
+      row.classList.toggle('bad', !!(e && !e.ok));
+      if (e) {
+        st.textContent = e.ok ? e.note : 'refused';
+        st.title = e.note || '';
+        if (e.ok) { good++; if (want && want[2]) core++; } else bad++;
+      } else {
+        st.textContent = want && want[2] ? 'needed' : 'optional';
+        st.title = '';
+      }
+    }
+    out.className = 'crHint ' + (bad ? 'crBad' : (good ? 'crOk' : ''));
+    out.textContent = good + ' of ' + names.length + ' attached, ' + core +
+      ' of ' + coreNeed + ' of the ones that matter' +
+      (bad ? ', ' + bad + ' refused' : '') + '.';
+    save.disabled = !good;
+
+    view.innerHTML = '';
+    const items = Object.keys(creator.chars)
+      .filter(n => creator.chars[n].ok && creator.chars[n].gra)
+      .sort()
+      .slice(0, 12)
+      .map(n => ({ name: n, gra: creator.chars[n].gra }));
+    if (!items.length)
+      crEmpty(view, 'Attach the folder and the frames play here, so you can ' +
+                    'see whether the facings agree with one another.');
+    else
+      crPlaySprites(view, items, 'Your character, playing:');
+    if (typeof i18nApply === 'function') i18nApply(view);
+  }
+  refresh();
 }
 
-function drawCharMap(canvas) {
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-  const css = getComputedStyle(document.documentElement);
-  const dim = css.getPropertyValue('--dim').trim() || '#889';
-  const ink = css.getPropertyValue('--ink').trim() || '#fff';
-  const cw = 46, ch = 20, gap = 5;
-  let y = 8;
-  ctx.font = '11px system-ui, sans-serif';
-  for (const [key, label, , perFacing, core] of CHAR_SETS) {
-    const n = perFacing ? 4 : 1;
-    for (let i = 0; i < n; i++) {
-      const x = 96 + i * (cw + gap);
-      ctx.fillStyle = core ? 'rgba(62,203,138,.26)' : 'rgba(255,255,255,.07)';
-      ctx.strokeStyle = core ? 'rgba(62,203,138,.6)' : 'rgba(255,255,255,.16)';
-      ctx.lineWidth = 1;
-      ctx.fillRect(x, y, cw, ch);
-      ctx.strokeRect(x + .5, y + .5, cw - 1, ch - 1);
-      ctx.fillStyle = core ? ink : dim;
-      ctx.textAlign = 'center';
-      ctx.fillText(perFacing ? key + '_' + 'ensw'[i] : key, x + cw / 2, y + 14);
+function charTake(files, done) {
+  const names = charFileNames();
+  let left = files.length;
+  if (!left) return;
+  for (const f of files) {
+    const base = f.name.replace(/\.[^.]+$/, '').toLowerCase();
+    const want = names.find(n => n[0].toLowerCase() === base);
+    if (!want) {
+      notify(f.name + ' is not one of the names a character uses', 1);
+      if (!--left) done();
+      continue;
     }
-    ctx.fillStyle = dim;
-    ctx.textAlign = 'right';
-    ctx.fillText(label, 88, y + 14);
-    y += ch + gap;
+    crReadSprite(f, r => {
+      creator.chars[want[0]] = r;
+      if (!--left) done();
+    });
   }
-  ctx.textAlign = 'left';
 }
 
 /* ----------------------------- the shell ------------------------- */
@@ -1438,23 +1265,22 @@ function drawCharMap(canvas) {
 const CREATOR_TRACKS = [
   ['costume', 'A costume', 'recolour the White', '1 file', costumeBuild],
   ['skin', 'A bomb skin', 'the bomb and its flame', 'up to 12', skinBuild],
-  ['map', 'A map', 'the grid and the items', '1 file', mapBuild],
+  ['map', 'A map', 'the grid and the items', 'nothing', mapBuild],
   ['side', 'Scenery', 'the border around it', '1 file', sideBuild],
-  ['char', 'A character', 'the whole set', 'about 40', charBuild]
+  ['char', 'A character', 'the whole folder', '35 files', charBuild]
 ];
 
 function creatorRender() {
   const nav = $('crNav'), body = $('crBody');
   if (!nav || !body) return;
-  if (creator.skinPlay) { clearInterval(creator.skinPlay); creator.skinPlay = null; }
+  crStopPlay();
   nav.innerHTML = '';
   CREATOR_TRACKS.forEach(([id, title, blurb, count]) => {
     const b = document.createElement('button');
     b.className = id === creator.track ? 'on' : '';
-    const t = crEl('span', 'crT', title);
-    const s = crEl('span', 'crB', blurb);
-    const c = crEl('span', 'crCount', count);
-    b.appendChild(t); b.appendChild(s); b.appendChild(c);
+    b.appendChild(crEl('span', 'crT', title));
+    b.appendChild(crEl('span', 'crB', blurb));
+    b.appendChild(crEl('span', 'crCount', count));
     b.onclick = () => { creator.track = id; creatorRender(); };
     nav.appendChild(b);
   });
@@ -1472,7 +1298,7 @@ function creatorOpen(id) {
 }
 
 function creatorClose() {
-  if (creator.skinPlay) { clearInterval(creator.skinPlay); creator.skinPlay = null; }
+  crStopPlay();
   $('cr').hidden = true;
 }
 
