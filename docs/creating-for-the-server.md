@@ -168,7 +168,29 @@ kept, so replacing one is reversible.
 
 ## What the Workshop does with all this
 
-It is the same list, one page at a time, with the checks that catch the
+Every page is a **preview on the left and the controls on the right**,
+because a page of rules with no picture is not something a person can
+follow while choosing colours. The first version of this panel was
+prose, and prose was the wrong answer.
+
+What each preview is:
+
+- **Costume**: a schematic of the figure, drawn from your choices, with
+  the real parts in the right places and the patterns shown. It is
+  labelled a schematic wherever it appears, because the actual sheets
+  are generated at the other end and this editor has no copy of that
+  generator. It is enough to choose by, which is what it is for.
+- **Bomb skin**: a diagram of one bomb going off, five cells by five,
+  with each file sitting where it draws. Hovering a file name lights up
+  its cell. Files you have dropped in turn green, so the set fills up
+  visibly. Anything you drop is then animated underneath.
+- **Map**: the grid itself, with a legend naming each kind of cell.
+- **Scenery**: your picture with the arena drawn over the middle of it,
+  so you can see which part will be covered.
+- **Character**: the forty files as a grid, four across per action, with
+  the ones that carry the character marked.
+
+Then the same list, one page at a time, with the checks that catch the
 mistakes people actually make:
 
 - **Costume**: build the spec with the real parts and patterns, see it
