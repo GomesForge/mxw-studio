@@ -283,6 +283,7 @@ mesh and rewritten wrongly.
 - [python/avatar_fetch.py](python/avatar_fetch.py) — fetch every avatar
   part from a live server into ordinary `.bin` files. 575 wearables, 32
   faces, 2 bodies, 24 motions and 5 cameras, 16 MB
+- **Settings**, behind the gear in the top right: the interface in English or Portuguese, a light or dark theme or neither, and a couple of things about how it behaves while you work. Everything is kept in this browser and nowhere else
 - [docs/creating-for-the-server.md](docs/creating-for-the-server.md) —
   what a costume, a bomb skin, a map and the scenery each have to be
   before they will be accepted: the names, the sizes, the limits and

@@ -108,7 +108,8 @@ function notify(text, isError) {
   m.className = 'msg ' + (isError ? 'err' : 'warn');
   m.style.display = 'block';
   clearTimeout(notify._t);
-  notify._t = setTimeout(() => { m.style.display = 'none'; }, 7000);
+  notify._t = setTimeout(() => { m.style.display = 'none'; },
+                         window.mxwNoticeMs || 7000);
 }
 
 /* ---------------------------- downloads -------------------------- */
@@ -2438,6 +2439,8 @@ menuWire();
 for (const [what, fn] of [['motion panel', poseWire], ['create panel', makeWire],
                           ['workshop',
                            typeof creatorWire === 'function' ? creatorWire : () => {}],
+                          ['settings',
+                           typeof settingsWire === 'function' ? settingsWire : () => {}],
                           ['tutorial', typeof tutWire === 'function' ? tutWire : () => {}]]) {
   try { fn(); }
   catch (e) { notify('the ' + what + ' failed to start: ' + e.message, 1); }
