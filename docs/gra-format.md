@@ -116,51 +116,72 @@ means the file both opens and writes back unchanged.
 A table describing **more** than the file holds is still refused — then
 a frame really is missing.
 
-## Effects (`.eft`) — the same runs, in eight groups
+## Effects (`.eft`) — frames of eight alpha layers
 
 An effect is not a sprite with a different head. It is the same
-horizontal runs laid out as **eight groups of the same N frames**:
+horizontal runs, grouped differently:
 
 ```
 u32  frame count N
 u32  width
 u32  height
-8 x N x [u32 word count][runs]
+N x 8 x [u32 word count][runs]
 ```
 
-An empty frame is a word count of zero. Nothing else is in the file.
+An empty block is a word count of zero. Nothing else is in the file.
 
-This page used to say the opposite: that a first group decoded and what
-followed it was unidentified. The unidentified part is seven more
-groups of exactly the same shape. The mistake was reading the head as
-"a group" rather than as a count that repeats, and then measuring the
-remainder instead of trying the obvious continuation.
+**A frame is eight layers, and a layer is a transparency level.** The
+game composites all eight of a frame in order, each at a weight from a
+table of eight values on a 0..32 scale, and skips any entry above 32.
+Three tables ship:
+
+| table | weights | used by |
+|-------|---------|---------|
+| standard | 2, 7, 10, 15, 18, 22, 28, 30 | most effects |
+| player | 1, 4, 7, 10, 13, 17, 20, 25 | effects on a player |
+| item | 1, 3, 6, 8, 10, 12, 15, 25 | item effects |
+
+The blend is per channel on 5/6/5, against whatever is already on
+screen — so the backdrop is part of the result, and a flame over the
+dark field is not the same flame over a light one.
+
+One more thing the blit does: it takes **the first source pixel of
+every pair**, so an effect is drawn at half the horizontal resolution
+of its own runs. Leaving that out makes a flame look sharper in an
+editor than it ever does in play.
+
+### This page was wrong twice
+
+First it said a first group decoded and what followed was
+unidentified. Then it said eight groups of N frames, and guessed the
+difference was blast reach: *"each group reaches further across the
+frame than the one before"*. The second reading had the axes swapped.
+Blocks are frame-major and layer-minor — block `f * 8 + l` — not
+`g * N + f`, so the "groups" were windows sliding across frame
+boundaries, and the reach that seemed to grow was an artefact of that.
+
+The byte order is identical either way, which is exactly why a
+round-trip test never caught it: the same blocks come back in the same
+places. A round trip proves a writer, not an interpretation.
+
+Settled from the client's own renderer, which the server serves
+unbundled: `js/game/fb565.js` parses the file and composites it, and
+its `eft()` takes one frame index and walks eight layers.
 
 Measured over every effect available, 18 distinct files:
 
 | | |
 |---|---|
 | parse to the last byte | **18 of 18** |
-| group count | **8** in every one |
+| blocks per frame | **8** in every one |
 | write back byte-identical | **18 of 18** |
 
 Frame counts run 4 to 13, at 80x80, 64x64, 48x48, 133x197 and 256x256.
 
-### What the eight groups are
-
-Not established. What is measured, in the flame files, is that each
-group reaches further across the frame than the one before it —
-`flame_ver` goes from x 11..28 in group 0 to x 0..39 in group 4 — and
-that the busiest frame moves two places earlier with each group. That
-is the shape a flame covering more ground would have, so the leading
-guess is the length of the blast, one group per tile of reach. It is a
-guess. The reader keeps all eight in order and does not depend on it,
-and a recolour reaches every one of them, which is what editing a bomb
-skin needs.
-
-The editor shows them as one strip of `8 x N` frames. Adding or
-removing frames has to keep the count a multiple of eight, and the
-writer says so rather than producing a file that loads crooked.
+The editor keeps the flat block list in file order, so the writer is
+untouched and a recolour still reaches every layer. The frame strip
+shows the layers one at a time, which is what a brush can reach, and a
+separate view composites them, which is what a player sees.
 
 ## The 5 files this rejects
 

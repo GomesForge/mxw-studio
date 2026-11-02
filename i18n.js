@@ -164,6 +164,18 @@ const I18N = {
     'frames': 'quadros',
     'Save as .GIF': 'Salvar como .GIF',
 
+    /* ---- the effect view */
+    'The effect, as the game draws it': 'O efeito, como o jogo desenha',
+    'alpha table': 'tabela de alfa',
+    'behind': 'atr\u00e1s',
+    'Player': 'Jogador',
+    'Item': 'Item',
+    'dark': 'escuro',
+    'light': 'claro',
+    'nothing': 'nada',
+
+    'An effect frame is <b>eight layers</b>, each composited at its own transparency. The frame list below shows those layers one by one, which is what you paint; this is the eight of them together, which is what a player sees. The game also doubles the pixels across, so it is softer here than the runs are.':
+      'Um quadro de efeito tem <b>oito camadas</b>, cada uma composta na sua pr\u00f3pria transpar\u00eancia. A lista de quadros abaixo mostra essas camadas uma a uma, que \u00e9 o que voc\u00ea pinta; aqui est\u00e3o as oito juntas, que \u00e9 o que o jogador v\u00ea. O jogo tamb\u00e9m dobra os pixels na horizontal, ent\u00e3o aqui fica mais suave do que as corridas s\u00e3o.',
     /* ---- the map editor */
     'New map': 'Novo mapa',
     'Save map': 'Salvar mapa',

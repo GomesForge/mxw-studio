@@ -160,9 +160,14 @@ yet:
 
 ## Solved since this list was written
 
-- **The effect format.** Eight groups of the same frames, not one group
-  and a mystery. 18 of 18 round-trip byte-identical. What the groups
-  are for is still a guess; see [gra-format.md](gra-format.md)
+- **The effect format, fully.** Not eight groups of frames: **N frames
+  of eight layers**, and a layer is an alpha level, composited from a
+  table of eight weights on a 0..32 scale. The reach-of-the-blast guess
+  had the axes swapped. 18 of 18 still round-trip byte-identical, which
+  is why the error survived two readings -- a round trip proves a
+  writer, not an interpretation. The editor now shows an effect
+  composited beside its raw layers. See
+  [gra-format.md](gra-format.md)
 - **The client's download cache**, which is where 24 original motion
   files came from; see [cache-format.md](cache-format.md)
 - **The 4-byte token in the item index**: the CRC-32 of the asset, the
