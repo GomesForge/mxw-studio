@@ -100,11 +100,11 @@ plays a motion reads it from somewhere else.
 
 ### Effects
 
-An  opens in sprite mode like any other file, and its frame strip
+An `.eft` opens in sprite mode like any other file, and its frame strip
 shows the raw blocks, because that is what a brush can reach. A frame
 of an effect is **eight layers**, each composited at its own
 transparency, so a single block on its own is usually unrecognisable —
-the first layer of  is an empty frame. A dock above the
+the first layer of `flame_center` is an empty frame. A dock above the
 strip composites the eight the way the game does, with the alpha table
 and the backdrop selectable. The backdrop is not decoration: the blend
 is onto whatever is already on screen.
