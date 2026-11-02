@@ -109,8 +109,6 @@ function settingsRender() {
     settings.lang = v;
     settingsSave();
     settingsApply();
-    if (typeof creatorRender === 'function' && !document.getElementById('cr').hidden)
-      creatorRender();
   });
 
   c = setRow(body, 'Theme', 'Following the system changes with it.');

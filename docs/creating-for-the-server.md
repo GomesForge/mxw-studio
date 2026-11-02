@@ -3,8 +3,7 @@
 A fan who wants to add a costume, a bomb skin, a map or scenery has to
 produce exactly the right files, at the right sizes, with the right
 names. Nothing in the formats says what those are: the receiving end
-does. This page writes that down, and the **Workshop** button in the
-editor walks through it one piece at a time and checks the result.
+does. This page writes that down.
 
 Everything below was read from a live administration panel rather than
 guessed. Where something is an inference it says so.
@@ -84,14 +83,10 @@ the colours back off it.
 - Flat colour reads better than shaded: the shading is added later.
 - Erase the pompom or the antenna to leave it off altogether.
 
-The Workshop checks a painted picture for all four squares and for even
-scaling before you send it anywhere.
-
-### What the panel shows while you work
-
-Five of the 37 sheets: `st_s`, `mo_s`, `mo_e`, `mo_n`, `mo_w`. Standing
-and walking in four directions. Everything else is generated from the
-same spec, so if those five are right the rest follow.
+Five of the 37 sheets carry the work: `st_s`, `mo_s`, `mo_e`,
+`mo_n`, `mo_w` -- standing and walking in four directions.
+Everything else is generated from the same spec, so if those five
+are right the rest follow.
 
 ## Bomb skin
 
@@ -165,37 +160,3 @@ part that shows is the border.
 
 A map uses only the size that matches it. Ten versions of each are
 kept, so replacing one is reversible.
-
-## What the Workshop does with all this
-
-Every page opens with **what to attach**: the files by name, with their
-sizes and limits, and the place to drop them immediately underneath.
-That is the question people arrive with, so it goes first and nothing
-is above it.
-
-Then it shows **what arrived**, and only that. An earlier version drew
-a schematic figure from the chosen colours, on the theory that a
-picture beats a paragraph. It does, but not a picture of something
-nobody made: an invented figure standing in for the thing someone is
-building looks like an answer and is not one. So the preview is the
-person's own work or an empty frame saying what will appear there.
-
-- **Costume**: your painted template, with the four corner squares and
-  the scaling checked before it goes anywhere. A cropped picture is the
-  usual reason a costume comes back wrong.
-- **Bomb skin**: the files you attached, playing, read through the
-  editor's own reader. Each row in the list turns green with its frame
-  count and size as it arrives.
-- **Map**: the grid you are drawing, with a legend naming each kind of
-  cell. This page has nothing to attach, which it says so plainly.
-- **Scenery**: your picture with the arena drawn over the middle of it,
-  so the part that will be covered is obvious rather than described.
-- **Character**: the 35 file names, four per action for the four
-  facings, marked for which ones carry the character; attach the folder
-  and the frames play, which is how you catch a facing that does not
-  agree with the others.
-
-The checks that catch the mistakes people actually make:
-
-Nothing is uploaded anywhere. The editor runs entirely in the browser,
-and what comes out is a file you hand over.

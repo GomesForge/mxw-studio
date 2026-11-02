@@ -122,23 +122,24 @@ Find every 255-byte window with a complete border and the interstitials
 become visible. Then `block.spr`, whose values look packed two per byte
 and may be the appearance table to this file's structure.
 
-## 5b. The Workshop, and what it does not cover yet
+## 5b. What the editor still does not cover
 
-The **Workshop** button now walks through a costume, a bomb skin, a map
-and the scenery, and writes the files each one needs; see
-[creating-for-the-server.md](creating-for-the-server.md). What it still
-does not do:
+[creating-for-the-server.md](creating-for-the-server.md) writes down
+what a costume, a bomb skin, a map and the scenery each have to be
+before the server will take them. What the editor cannot do about it
+yet:
 
-- **Draw a costume.** It builds the spec and checks a painted picture,
-  but it cannot show you the result: the sheets are generated at the
-  other end, from a layout this editor does not have. Showing a real
-  preview means either that layout or a local copy of the generator
-- **Block tiles for a map.** The size rules are written down but there
-  is no editor for the strip
-- **A character.** There is no import for a whole one at the other end,
-  so the Workshop explains the forty files rather than packaging them
-- **Send anything.** Everything stays in the browser and comes out as a
-  file. Handing it over is still a person talking to a person
+- **Draw a costume.** The spec is written down, but the sheets are
+  generated at the other end, from a layout this editor does not
+  have. A real preview means either that layout or a local copy of
+  the generator
+- **Block tiles for a map.** The size rules are written down but
+  there is no editor for the strip
+- **A character, end to end.** There is no import for a whole one at
+  the other end, so the forty files are documented rather than
+  packaged
+- **Send anything.** Everything stays in the browser and comes out as
+  a file. Handing it over is still a person talking to a person
 
 ## 6. Quality of life
 
