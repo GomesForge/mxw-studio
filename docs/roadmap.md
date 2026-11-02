@@ -148,6 +148,59 @@ yet:
 - **Send anything.** Everything stays in the browser and comes out as
   a file. Handing it over is still a person talking to a person
 
+## 5c. What the unbundled client settles, and what to build on it
+
+The server serves its own client **unbundled** — 58 modules with their
+comments — and several of them state a format outright. Two of those
+reads are already in: the map files and the effect layers. The rest is
+written down here so nobody re-derives it.
+
+Each item below names the module it came from. None of it is guessed.
+
+- **A bomb skin is twelve files, and a partial one is legal.**
+  `game/bombskins.js`: `bomb.spr` resting and appearing, `bomb_d.spr`
+  the placing marker, `bomb_s.spr` the shadow, `bomb_f.eft` the fuse
+  spark, seven `flame_*.eft` (centre, hor, ver, right, left, up, down)
+  and `boom_block.eft`. **What a skin lacks stays the game's own**, so
+  most shipped skins carry only `bomb.spr` and `bomb_d.spr`.
+  Worth building: open a folder as one document, say which of the
+  twelve are present, and play the bomb with its flames together. Nine
+  of the twelve are effects, which now composite correctly.
+
+- **Scenery has three exact sizes and a known overlay.**
+  `game/sideart.js`: the picture is `800 + 2 * side` wide by 600 game
+  pixels, and a field's screen is `[40 * w + 120, 38 * h + 48]` — so
+  800 x 600, 960 x 694 and 1120 x 770 for the 17 x 15, 21 x 17 and
+  25 x 19 fields. A design's slot is `design + 9 * size`; a custom
+  map's is `1000 + its id`. Worth building: a canvas at the exact size
+  with the arena rectangle drawn where it really falls, so the part
+  that shows is obvious while painting.
+
+- **Draw the map board the way the game does.** `mapmaker.js` maps
+  designs 1 to 7 to sprite indices in `map/pp.spr` (breakables) and
+  `map/non.spr` (pillars), with a cell at `40 + 40c, 28 + 38r` and 40
+  wide. Both are ordinary sprites this project already reads, so the
+  map editor could drop its flat colours for the real artwork.
+
+- **An outfit is a 52-byte descriptor.** `game/outfits.js`: body `u32`
+  at +4, face `u32` at +8, then eight item `u32` from +12. A body under
+  200000 is not 3D, and 1000 to 1038 are the 2D packs. That is the
+  save-and-share-an-outfit item in section 3, with the real format
+  rather than an invented one.
+
+- **A character is 37 slots in a fixed order.** `game/characters.js`,
+  already used for sprite work. Worth building: open a whole folder as
+  one document, name each slot and facing, and say what is missing —
+  the direction-groups item in section 1, with a vocabulary instead of
+  a guess at the file names.
+
+- **HD sheets exist and this project knows nothing about them.**
+  `game/characters.js` fetches `<base>/hd.json` per character and
+  `game/hdpixels.js` decodes a PNG or WebP to premultiplied RGBA, off
+  the page thread in `hd_worker.js`. A `tools/hd_sheets.py` is
+  referenced. First step is finding out whether a live server actually
+  serves them; the backup captured none.
+
 ## 6. Quality of life
 
 - Undo and redo across every edit
