@@ -23,7 +23,7 @@ Nothing here ships any asset. These are tools; bring your own files.
 | `get_item_list.bin` | the server's index of every item | read + write |
 | `.gra` / `.spr` | 2D sprite frames and animations | read + write |
 | `.obj` | geometry, in and out of any modeller | read + write |
-| `.eft` | effects | first group decoded, not opened |
+| `.eft` | effects | read + write, composited as the game draws them |
 | `block.spr` | the game's own map layouts | read + write |
 | `map.spr` | spawns, gimmicks and item counts per map set | read |
 | custom map `.json` | a map for the server | read + write |
@@ -97,6 +97,17 @@ with a vertex range per bone &mdash; but **no animation**. Both bodies
 parse with no leftover bytes at all, so nothing is being skipped: the
 file holds the hierarchy and the bind pose and stops there. Whatever
 plays a motion reads it from somewhere else.
+
+### Effects
+
+An  opens in sprite mode like any other file, and its frame strip
+shows the raw blocks, because that is what a brush can reach. A frame
+of an effect is **eight layers**, each composited at its own
+transparency, so a single block on its own is usually unrecognisable —
+the first layer of  is an empty frame. A dock above the
+strip composites the eight the way the game does, with the alpha table
+and the backdrop selectable. The backdrop is not decoration: the blend
+is onto whatever is already on screen.
 
 ## Maps
 
