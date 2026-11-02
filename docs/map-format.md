@@ -1,82 +1,133 @@
 # The map files
 
-`Data/map/` holds two files, and neither is an image despite the `.spr`
-extension. This is a partial decode: the tile grid is settled, the rest
-is not.
+`Data/map/` holds two files that are not images despite the `.spr`
+extension. Both are now fully decoded: `block.spr` holds the layouts,
+`map.spr` holds everything else about a map set. An earlier version of
+this page had the two the wrong way round — it read the grid at the
+head of each `map.spr` record and concluded that file held the
+layouts. It holds one layout per set; `block.spr` holds a hundred.
 
-## `map.spr` — tile grids
+Telling them apart from a sprite is easy and worth doing, because a
+sprite extension invites a sprite reader: a real sprite has `01 01` at
+bytes 2-3. `block.spr` starts `99 99`, `map.spr` starts `09 09`, and
+in both cases that is the border tile repeating, not a header.
 
-16649 bytes, identical across every build checked (6 distinct copies of
-the same content).
+## `block.spr` — the layouts
 
-**One byte per tile, 17 columns per row.** Autocorrelation over the
-file peaks at a stride of 34 with harmonics at 17 and 68; laying the
-bytes out at 17 makes the structure plain:
+**46 map sets x 100 variants x 128 bytes**, exactly 588800 bytes. Each
+variant is a 17 x 15 grid of **nibbles, high nibble first**, so 255
+tiles in 127.5 bytes and the last nibble is padding.
+
+| value | tile |
+|-------|------|
+| `0` | floor |
+| `1` | soft block, breakable, hides the items |
+| `2` | hard block, a pillar |
+| `9` | border wall |
 
 ```
-row  0   XXXXXXXXXXXXXXXXX
-row  1   XoooooooooooooooX
-row  2   Xo.............oX
-row  3   Xo.o.o.o.o.o.o.oX
-row  4   Xo.............oX
-row  5   Xo.o.o.o.o.o.o.oX
-   ...
-row 13   XoooooooooooooooX
-row 14   XXXXXXXXXXXXXXXXX
+index  = set * 100 + variant
+offset = index * 128
+tile(i) = i even ? byte[offset + i/2] >> 4
+                 : byte[offset + i/2] & 15
 ```
 
-A solid border, a ring inside it, and alternating cells across the
-interior — the arrangement any tile-based map uses. So a grid is
-**17 x 15 = 255 bytes**, and the file holds a series of them.
+at `i = y * 17 + x`.
 
-### Tile values
+Measured across all 4600 boards: 4500 have a closed border of `9`. The
+hundred that do not are **set 21**, whose left and right edges open at
+two rows — a tunnel map, where walking off one side returns you at the
+other. An editor must not close those automatically.
 
-56 distinct values appear, but four account for 89% of the file:
+Sixteen sets carry one layout repeated a hundred times: 0 to 9, 18,
+27, 36, 43, 44 and 45. The other thirty vary, 64 distinct variants on
+average and up to the full hundred. A match picks a variant, so a set
+is a theme with a hundred rooms, not one room.
 
-| value | share | reads as |
-|-------|-------|----------|
-| `0x00` | 28.0% | open floor |
-| `0x03` | 25.7% | a second block type |
-| `0x09` | 18.5% | the hard border and the interior lattice |
-| `0x02` | 16.6% | the destructible ring |
+## `map.spr` — one record per set
 
-The rest are rare — `0x01` at 1.7%, then `0x06`, `0x07`, `0x04`, `0x0D`
-and `0xFF` around 1% each. Those are likely spawn points, item
-placements and per-tile flags, and are **not** identified.
+46 records, 16649 bytes, consumed exactly with nothing left over.
 
-### What is not settled
+| bytes | what |
+|-------|------|
+| 255 | the legacy grid: 17 x 15, **one byte per tile** |
+| 2 | skipped |
+| 2 | `u16 n`, the object count |
+| 7 x n | the objects, below |
+| 14 | how many of each item the soft blocks hide |
+| 1 | skipped |
+| 24 | six spawn tiles, `{s16 x, s16 y}` each |
+| 2 | skipped |
 
-The grids are not simply concatenated. The first occupies bytes
-`0..254` exactly, and what follows is not another grid: there is a run
-of a single repeated value and then a short stretch that does not look
-like tiles before grids resume. `16649` is not a multiple of 255
-(65 grids would be 16575, leaving 74 bytes), so some interstitial data
-exists and its size is not fixed.
+The 255-byte head is the layout the original executable used, and the
+web client steps over it: `block.spr` supersedes it. It encodes the
+same four tiles **differently** — `0` floor, `2` hard, `3` soft, `9`
+border — so soft and hard swap meaning between the two files. Translate
+it and it matches `block.spr`'s variant 0 in the sixteen sets that have
+only one variant, which is the arrangement you would expect.
 
-Until that is understood the file is **not parsed** — writing one back
-would destroy whatever those stretches hold. The editor identifies it
-by name instead.
+Of the six spawn slots, 246 are in use across the 46 sets and every one
+of them lands inside the board. An unused slot holds a negative x.
 
-Next step: find every offset where a 255-byte window has a complete
-border of `0x09`, list them, and see what sits between. That gives the
-grid count and the shape of the interstitials at the same time.
+### Objects
 
-## `block.spr` — packed values
+Each is `{s16 x, s16 y, s16 param, u8 type}` — a tile position, one
+parameter whose meaning depends on the type, and the type. 407 of them
+across 29 of the 46 sets.
 
-588800 bytes, also identical across builds. Bytes 2-3 are `99 99`, and
-the values look packed two per byte: `0x99` is two nines, `0x22` two
-twos, `0x29` a two then a nine — the same small numbers the tile grid
-uses, at half the width. Nothing else about it is known.
+| type | what it is | param | seen |
+|------|------------|-------|------|
+| `0` | warp, with a destination | the destination | 12 |
+| `1` | warp, no destination | | 9 |
+| `2` | drift sand | | 0 |
+| `3` | conveyor belt | belt type, 0 to 19 | 126 |
+| `4` | direction switch, at most two | | 1 |
+| `6` | arrow, fixed | `& 3` is the facing | 133 |
+| `7` | arrow, rotating | | 51 |
+| `8` | tunnel, or a Soccer goal | | 20 |
+| `9` | cracking ice | | 6 |
+| `12` | speed panel | | 7 |
+| `14` | tunnel, the other kind | | 30 |
+| `15` | drift sand over the whole floor | | 1 |
+| `16` | count tile, at most five | | 4 |
+| `17` | the Hyper Bomb goal and its four drills | | 7 |
 
-If it is a tile *appearance* table to the layout file's *structure*,
-the two should line up once the packing is confirmed.
+Type `8` reads as a Soccer goal on sets 7, 16 and 25 and as a tunnel
+elsewhere; type `14` is always the third kind. The caps — 20 warps, 40
+arrows, 2 switches, 20 ice, 10 panels, 5 count tiles — are the
+client's, not the file's. Type `2` is in the client's dispatch but
+appears nowhere in the shipped file.
 
-## How this was found
+### The item counts
 
-Every file in the archive went through `python/test_corpus.py`, which
-reads, writes, compares byte for byte, and checks the format's
-invariants. These two failed as sprites, which is how they surfaced at
-all — they had been sitting behind a sprite extension.
+Fourteen bytes, one per item, saying how many of that item the set's
+soft blocks hide. 41 of the 46 sets fill them in. The panel names
+thirteen items — Fire, Speed, Bomb, Kick, Glove, Skull, Vest, Full
+fire, Louie, Punch, Line bomb, Pierce bomb, Water bomb — and the
+fourteenth slot is **not identified**; it carries 35 across the file,
+so it is in use.
 
-Work on copies. The originals in an archive are the only ones there
-are, and none of this analysis needs to write to them.
+## The Korean sets
+
+The client loads `kr/map/block.spr` and `kr/map/map.spr` when they are
+there and appends sets 46 to 49, of which 47 to 49 are the Boss Battle
+caves. Same layout, 50 sets instead of 46. A server without those files
+runs on 46 and the client carries on.
+
+## Custom maps are a different thing
+
+A custom map is not either of these files. It is a record the server
+keeps, drawn by the GM panel and served as JSON, and it has its own
+three screens at three sizes. See
+[creating-for-the-server.md](creating-for-the-server.md).
+
+## Where this came from
+
+The server serves the client's modules unbundled, and
+`js/game/mapdata.js` states the layout of both files in its header
+comment and then parses them. Everything above was then measured
+against the files themselves: the sizes, the border survey, the variant
+counts, the object histogram, and a parse of `map.spr` that consumes
+every byte. The spec and the data agree.
+
+Work on copies.

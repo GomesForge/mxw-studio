@@ -24,7 +24,9 @@ Nothing here ships any asset. These are tools; bring your own files.
 | `.gra` / `.spr` | 2D sprite frames and animations | read + write |
 | `.obj` | geometry, in and out of any modeller | read + write |
 | `.eft` | effects | first group decoded, not opened |
-| `map.spr`, `block.spr` | map tile grids | grid decoded, not opened |
+| `block.spr` | the game's own map layouts | read + write |
+| `map.spr` | spawns, gimmicks and item counts per map set | read |
+| custom map `.json` | a map for the server | read + write |
 
 ## The editor
 
@@ -95,6 +97,36 @@ with a vertex range per bone &mdash; but **no animation**. Both bodies
 parse with no leftover bytes at all, so nothing is being skipped: the
 file holds the hierarchy and the bind pose and stops there. Whatever
 plays a motion reads it from somewhere else.
+
+## Maps
+
+Drop `block.spr` and the page switches to map mode. It is the game's
+own layouts: **46 sets of 100 variants**, each a 17 x 15 board packed
+two tiles to a byte. A match picks a variant, so a set is a theme with
+a hundred rooms rather than one room.
+
+- Walk the sets and variants, and see how many of a set's hundred
+  actually differ — sixteen of the 46 repeat one layout a hundred times
+- Paint the four tiles: floor, breakable block, pillar, wall. Drag to
+  paint, right-drag to lay floor
+- Copy one layout across a whole set, or put a single variant back the
+  way it was
+- **Check** compares what is in the editor with the file that was
+  opened. Anything untouched is written back byte for byte
+- Drop `map.spr` as well and each set's **spawn points, gimmicks and
+  item counts** appear on the board and in the panel. That file is read
+  and never written: it carries a fourteenth item slot nobody has
+  identified
+
+**New map** starts a custom map instead — the record the server keeps,
+which is a different thing from either file above. Three screens, one
+per field size (17 x 15, 21 x 17, 25 x 19), a theme, where people
+start and what the breakable blocks hide. It leaves as the JSON the
+panel takes, and the panel says what it would refuse before you get
+there: starts off the floor, two on one tile, more items than there are
+blocks to hide them in.
+
+See [docs/map-format.md](docs/map-format.md).
 
 ## Motion
 
@@ -291,6 +323,9 @@ mesh and rewritten wrongly.
 - [docs/shapes.md](docs/shapes.md) — what a mesh built from nothing
   has to contain, and the winding that caught every primitive the
   first time round
+- [docs/map-format.md](docs/map-format.md) — both map files, decoded
+  and measured: the nibble packing, the per-set records, the gimmick
+  types and the one field still unidentified
 - [docs/motion-format.md](docs/motion-format.md) — the rest pose,
   how it was derived, which axis moves what, and what a motion file
   needs to look like
