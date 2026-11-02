@@ -10,6 +10,8 @@
     --view:#0d1524; --rail:#e7eaf0;
     --help:#6b4fc7; --helpEdge:#5a3fb5; --onHelp:#ffffff;
     --make:#1f8a55; --makeEdge:#197247; --onMake:#ffffff;
+    --mapFloor:#2b3346; --mapSoft:#8a6a3c; --mapHard:#596274;
+    --mapBorder:#11151f;
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   }
   @media (prefers-color-scheme:dark){
@@ -504,6 +506,56 @@
   .setFoot{margin:16px 0 0;font-size:11px;color:var(--ink3)}
   .setActs{display:flex;gap:7px;margin-top:10px}
 
+  /* -------------------------------- the map -------------------------- */
+  /* A board is a grid of four tile kinds, and both documents the map
+     editor opens are that same picture: the game's own block.spr and a
+     custom map for the server. One view, one palette, two writers. */
+  body.map-mode #mapWrap{display:flex}
+  body.map-mode #view>canvas,body.map-mode #tip{display:none!important}
+  body.map-mode #spriteWrap,body.map-mode #paintStage{display:none!important}
+  body.map-mode #actMap{display:flex}
+  body.map-mode #actMesh,body.map-mode #actSprite,
+  body.map-mode #actPaint,body.map-mode #ruleMesh{display:none}
+  body.map-mode #mapPanel{display:block}
+  body.map-mode #makeDock,body.map-mode #poseDock,
+  body.map-mode #meshDock,body.map-mode #texDock,
+  body.map-mode #viewDock,body.map-mode #geoDock,
+  body.map-mode #meshPanel,body.map-mode #texPanel,
+  body.map-mode #skelPanel,body.map-mode #healthPanel,
+  body.map-mode #spritePanel,body.map-mode #paintDock,
+  body.map-mode #fmtDock,
+  body.map-mode #hdr{display:none!important}
+  body.map-mode #statMesh,body.map-mode #spriteStat,
+  body.map-mode #rt,body.map-mode #spriteRt{display:none}
+  body:not(.map-mode) #mapStat,body:not(.map-mode) #mapRt{display:none}
+  #mapWrap{display:none;position:absolute;inset:0;align-items:center;
+    justify-content:center;overflow:auto;padding:12px}
+  #mapView{image-rendering:pixelated;border-radius:4px;
+    box-shadow:0 2px 18px rgba(0,0,0,.45);cursor:crosshair;
+    touch-action:none}
+  #mapPanel{display:none}
+  .mapTile{display:flex;align-items:center;gap:8px;width:100%;
+    height:auto;padding:6px 8px;text-align:left;margin-bottom:3px}
+  .mapTile b{flex:0 0 46px;font-size:11.5px;font-weight:600}
+  .mapTile span{font-size:11px;color:var(--dim);line-height:1.25}
+  .mapTile.on{background:var(--btnOn);color:var(--ink);
+    border-color:var(--edgeStrong)}
+  .mapSw{flex:0 0 auto;width:15px;height:14px;border-radius:3px;
+    border:1px solid rgba(0,0,0,.35)}
+  .mapSw0{background:var(--mapFloor)}
+  .mapSw1{background:var(--mapSoft)}
+  .mapSw2{background:var(--mapHard)}
+  .mapSw9{background:var(--mapBorder)}
+  .mapList{margin:6px 0;display:flex;flex-direction:column;gap:2px}
+  .mapListRow{display:flex;align-items:center;gap:6px;font-size:11.5px;
+    padding:3px 6px;border:1px solid var(--edge);border-radius:6px}
+  .mapListRow b{flex:1 1 auto;font-weight:550}
+  .mapListRow span{font-family:var(--mono);font-size:10.5px;
+    color:var(--dim)}
+  .mapListRow button{height:20px;padding:0 7px;font-size:10.5px}
+  .mapOk{margin:4px 0;font-size:11.5px;color:var(--ok)}
+  .mapBad{margin:4px 0;font-size:11.5px;color:var(--red)}
+
   /* ------------------------------ the tutorial ----------------------- */
   #tut{position:fixed;inset:0;z-index:80;background:rgba(6,9,16,.72);
     display:flex;align-items:center;justify-content:center;padding:22px}
@@ -703,6 +755,7 @@
     <label id="drop" for="file">Open&hellip;</label>
     <input type="file" id="file" multiple>
     <button id="bNewSprite">New sprite</button>
+    <button id="bMapNew">New map</button>
     <button id="bClear">Close all</button>
   </span>
 
@@ -725,6 +778,12 @@
     <button id="bSpriteGif" title="the whole animation, with any frame you are part-way through editing included as it stands">Save .GIF</button>
     <button id="bFrameOut">Save frame .PNG</button>
     <button id="bStripOut">Save strip .PNG</button>
+  </span>
+
+  <span class="actGroup" id="actMap">
+    <button id="bMapSave">Save map</button>
+    <button id="bMapRt" title="compare what is in the editor with the file that was opened">Check</button>
+    <button id="bMapClose">Close map</button>
   </span>
 
   <span class="actGroup" id="actPaint">
@@ -781,6 +840,8 @@
       <dd>meshes &mdash; 3D view, textures, skeleton, dress-up</dd>
       <dt>.gra &middot; .spr</dt>
       <dd>sprites &mdash; frame playback, recolouring, pixel editing</dd>
+      <dt>block.spr &middot; .json</dt>
+      <dd>maps &mdash; the game's own layouts, or a custom map for the server</dd>
       <dt>.obj</dt>
       <dd>geometry &mdash; in and out of any modeller</dd>
     </dl>
@@ -790,6 +851,7 @@
     is uploaded anywhere.</p>
   </label></div>
   <div id="spriteWrap"><canvas id="spriteView"></canvas></div>
+  <div id="mapWrap"><canvas id="mapView"></canvas></div>
   <div id="paintStage"><canvas id="paintCanvas"></canvas></div>
   <div id="tip">drag = orbit &middot; wheel = zoom &middot; ctrl+drag = up and down</div>
   <div id="msg" class="msg"></div>
@@ -1097,7 +1159,7 @@
     </div>
   </details>
 
-  <details class="dock"><summary>Format</summary>
+  <details class="dock" id="fmtDock"><summary>Format</summary>
     <div class="dockBody">
       <dl>
         <dt>0x00</dt><dd>"OK&nbsp;&nbsp;"</dd>
@@ -1114,13 +1176,17 @@
       of that material's texture.</p>
     </div>
   </details>
+
+  <div id="mapPanel"></div>
 </div>
 
 <div id="status">
   <span id="statMesh"></span>
   <span id="spriteStat"></span>
+  <span id="mapStat"></span>
   <span id="statRight">
     <span id="spriteRt" class="rt"></span>
+    <span id="mapRt" class="rt"></span>
     <span id="rt" class="rt"></span>
   </span>
 </div>
@@ -1218,6 +1284,7 @@
 <script src="skin.js?v=21"></script>
 <script src="motions.js?v=20"></script>
 <script src="sprite.js?v=20"></script>
+<script src="map.js?v=1"></script>
 <script src="i18n.js?v=23"></script>
 <script src="settings.js?v=23"></script>
 <script src="tutorial.js?v=20"></script>

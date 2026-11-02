@@ -38,6 +38,11 @@ Ordered by what unblocks the most.
   compare byte for byte, check the format's invariants, simulate edits
   and re-read. It found two real bugs — a header field being
   overwritten with zero, and the item index being accepted as a mesh
+- **The map files**, both of them. `block.spr` is 46 sets x 100
+  variants of a 17 x 15 board packed two tiles to a byte; `map.spr` is
+  one record per set with the spawns, the gimmicks and the item counts.
+  A map editor opens the first, reads the second and writes custom maps
+  for the server. See [map-format.md](map-format.md)
 - **Named viewpoints**, and textures classified by the slot the file
   itself names them in, so an image lands on the right material -- the
   body skin is never offered as a face -- without the camera moving
@@ -110,17 +115,19 @@ Female is the class plus 100. What it needs:
 
 ## 5. Maps
 
-**Grid decoded.** `map.spr` is one byte per tile, **17 columns by 15
-rows** per map — a solid border, a destructible ring, and alternating
-interior cells. Four values cover 89% of the file: open floor, the hard
-border and lattice, the destructible ring, and a second block type.
-See [map-format.md](map-format.md).
+**Done**, and in the editor — see the Done list and
+[map-format.md](map-format.md). What is left is around the edges:
 
-What is left: the grids are not simply concatenated. The first is bytes
-0..254 exactly, then a stretch that is not tiles, then grids resume.
-Find every 255-byte window with a complete border and the interstitials
-become visible. Then `block.spr`, whose values look packed two per byte
-and may be the appearance table to this file's structure.
+- **The fourteenth item slot** in a `map.spr` record. The panel names
+  thirteen items and the file carries fourteen counts. Until that is
+  settled the editor reads the file and refuses to write it
+- **Draw the board the way the game does.** The editor paints flat
+  tiles. The game draws them from the theme's own sprites, `map/pp.spr`
+  for the breakables and `map/non.spr` for the pillars, at 40 x 38 a
+  cell. Both are ordinary sprites this project already reads
+- **The Korean sets.** The client appends sets 46 to 49 from
+  `kr/map/` when a server has them. Nothing stops the editor doing the
+  same; no copy has turned up to test against
 
 ## 5b. What the editor still does not cover
 

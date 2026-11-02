@@ -164,6 +164,77 @@ const I18N = {
     'frames': 'quadros',
     'Save as .GIF': 'Salvar como .GIF',
 
+    /* ---- the map editor */
+    'New map': 'Novo mapa',
+    'Save map': 'Salvar mapa',
+    'Check': 'Conferir',
+    'Close map': 'Fechar mapa',
+    'Set and variant': 'Conjunto e variante',
+    'What map.spr says': 'O que o map.spr diz',
+    'Tiles': 'Pe\u00e7as',
+    'The map': 'O mapa',
+    'Start points': 'Pontos de largada',
+    'What the blocks hide': 'O que os blocos escondem',
+    'Before you hand it over': 'Antes de entregar',
+    'set': 'conjunto',
+    'variant': 'variante',
+    'Name': 'Nome',
+    'Floor': 'Ch\u00e3o',
+    'Block': 'Bloco',
+    'Pillar': 'Pilar',
+    'Wall': 'Parede',
+    'Walkable.': 'D\u00e1 para andar.',
+    'Breaks. The items are hidden in these.':
+      'Quebra. Os itens ficam escondidos nestes.',
+    'Solid. Never breaks, never hides anything.':
+      'Maci\u00e7o. Nunca quebra e nunca esconde nada.',
+    'The outer wall. Normally the rim.':
+      'A parede de fora. Normalmente a borda.',
+    'Copy to every variant': 'Copiar para todas as variantes',
+    'Revert this variant': 'Desfazer esta variante',
+    'Start this screen over': 'Recome\u00e7ar esta tela',
+    'Fill with blocks': 'Encher de blocos',
+    'Clear the blocks': 'Tirar os blocos',
+    'Add a start': 'Adicionar largada',
+    'move': 'mover',
+    'click the board': 'clique no tabuleiro',
+    'Standard': 'Padr\u00e3o',
+    'Pyramid': 'Pir\u00e2mide',
+    'Laboratory': 'Laborat\u00f3rio',
+    'Village': 'Vila',
+    'Iceberg': 'Iceberg',
+    'Road': 'Estrada',
+    'ToyBox': 'Caixa de brinquedos',
+    'Fire': 'Fogo',
+    'Speed': 'Velocidade',
+    'Bomb': 'Bomba',
+    'Kick': 'Chute',
+    'Glove': 'Luva',
+    'Skull': 'Caveira',
+    'Vest': 'Colete',
+    'Full fire': 'Fogo m\u00e1ximo',
+    'Punch': 'Soco',
+    'Line bomb': 'Bomba em linha',
+    'Pierce bomb': 'Bomba perfurante',
+    'Water bomb': 'Bomba d\'\u00e1gua',
+    'Warp, to a destination': 'Portal, com destino',
+    'Warp': 'Portal',
+    'Drift sand': 'Areia movedi\u00e7a',
+    'Conveyor belt': 'Esteira',
+    'Direction switch': 'Chave de dire\u00e7\u00e3o',
+    'Arrow': 'Seta',
+    'Arrow, rotating': 'Seta girat\u00f3ria',
+    'Tunnel or Soccer goal': 'T\u00fanel ou gol de futebol',
+    'Cracking ice': 'Gelo que racha',
+    'Speed panel': 'Painel de velocidade',
+    'Tunnel': 'T\u00fanel',
+    'Drift sand, whole floor': 'Areia movedi\u00e7a no ch\u00e3o inteiro',
+    'Count tile': 'Casa de contagem',
+    'Hyper Bomb goal': 'Gol da Hyper Bomb',
+    'Nothing here would be refused.': 'Nada aqui seria recusado.',
+    'Drag to paint. Right-drag lays floor.':
+      'Arraste para pintar. Com o bot\u00e3o direito, deixa ch\u00e3o.',
+
     /* ---- settings */
     'Language': 'Idioma',
     'Theme': 'Tema',
@@ -193,30 +264,11 @@ const I18N = {
     'settings forgotten': 'configura\u00e7\u00f5es esquecidas',
 
     /* ---- the longer lines people actually read */
-    'The outer wall. It stays around the rim.':
-      'O muro externo. Fica em volta da borda.',
     'Solid. Never breaks, never hides anything.':
       'S\u00f3lido. Nunca quebra, nunca esconde nada.',
     'Breaks. The items are hidden in these.':
       'Quebra. Os itens ficam escondidos nestes.',
     'Walkable.': 'D\u00e1 para andar.',
-    'Where a player appears. Needs floor.':
-      'Onde um jogador aparece. Precisa de ch\u00e3o.',
-    'The bomb sitting on the ground, and appearing':
-      'A bomba parada no ch\u00e3o, e aparecendo',
-    'The bomb in its last moment, about to go off':
-      'A bomba no \u00faltimo instante, prestes a explodir',
-    'The bomb while it slides after a kick':
-      'A bomba deslizando depois de um chute',
-    'The fuse burning on top of it': 'O pavio queimando em cima dela',
-    'The blast where the bomb was': 'A explos\u00e3o onde a bomba estava',
-    'The arm running left and right': 'O bra\u00e7o que corre para os lados',
-    'The arm running up and down': 'O bra\u00e7o que corre para cima e para baixo',
-    'The tip of the arm going left': 'A ponta do bra\u00e7o que vai para a esquerda',
-    'The tip of the arm going right': 'A ponta do bra\u00e7o que vai para a direita',
-    'The tip of the arm going up': 'A ponta do bra\u00e7o que vai para cima',
-    'The tip of the arm going down': 'A ponta do bra\u00e7o que vai para baixo',
-    'A breakable block coming apart': 'Um bloco quebr\u00e1vel se despeda\u00e7ando',
 
   }
 };

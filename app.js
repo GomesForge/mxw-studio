@@ -2260,17 +2260,26 @@ function readFiles(files) {
         catch (e) { notify(describeRefusal(f.name, r.result, e), 1); }
         return;
       }
+      /* block.spr and map.spr wear a sprite extension and are not
+         sprites, so the map sniff goes first. It reads the bytes, not
+         the name: a sprite has 01 01 at bytes 2-3 and these do not. */
+      const asMap = typeof mapSniff === 'function'
+        ? mapSniff(f.name, r.result) : null;
+      if (asMap) { mapOpen(f.name, r.result, asMap); return; }
       if (isSpriteName(f.name)) {
+        if (typeof mapClose === 'function') mapClose();
         try { spriteOpen(f.name, r.result); renderList(); }
         catch (e) { notify(describeRefusal(f.name, r.result, e), 1); }
         return;
       }
       if (/\.obj$/i.test(f.name)) {
         spriteClose();
+        if (typeof mapClose === 'function') mapClose();
         importOBJ(f);
         return;
       }
       spriteClose();
+      if (typeof mapClose === 'function') mapClose();
       addFile(f.name, r.result);
     };
     r.readAsArrayBuffer(f);
@@ -2437,6 +2446,8 @@ for (const [name, fn] of [['sprites', () => spriteWire()],
 enableActions();
 menuWire();
 for (const [what, fn] of [['motion panel', poseWire], ['create panel', makeWire],
+                          ['map editor',
+                           typeof mapWire === 'function' ? mapWire : () => {}],
                           ['settings',
                            typeof settingsWire === 'function' ? settingsWire : () => {}],
                           ['tutorial', typeof tutWire === 'function' ? tutWire : () => {}]]) {
