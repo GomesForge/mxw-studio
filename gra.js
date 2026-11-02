@@ -249,12 +249,22 @@ function tintIndexOf(v) {
 }
 
 /* The nearest non-reserved colour, for when a paint or import lands on
-   a tint value unintentionally. Green is nudged because it has the
-   spare bit. */
+   a tint value unintentionally.
+
+   Nudging green by one looks right and is wrong: a reserved colour has
+   red = blue = green >> 1, and from an EVEN step green + 1 keeps that
+   relation, so it lands on the next reserved step. It failed on 33 of
+   the 64. Moving green by two always breaks the relation, and the two
+   ends of the ramp have to move inward instead of off the end. */
 function avoidTint(v) {
   if (tintIndexOf(v) < 0) return v;
   const g = (v >> 5) & 63;
-  return (v & ~(63 << 5)) | ((g < 63 ? g + 1 : g - 1) << 5);
+  const put = n => (v & ~(63 << 5)) | ((n & 63) << 5);
+  for (const n of [g + 2, g - 2, g + 1, g - 1]) {
+    if (n < 0 || n > 63) continue;
+    if (tintIndexOf(put(n)) < 0) return put(n);
+  }
+  return v;
 }
 
 /* An approximate preview of how a team palette lands on the ramp.

@@ -126,12 +126,22 @@ def tint_index_of(v):
 
 
 def avoid_tint(v):
-    """The nearest non-reserved colour. Green is nudged because it has
-    the spare bit."""
+    """The nearest non-reserved colour.
+
+    Nudging green by one looks right and is wrong: a reserved colour has
+    red = blue = green >> 1, and from an EVEN step green + 1 keeps that
+    relation, so it lands on the next reserved step instead of leaving the
+    set. It failed on 33 of the 64. Two always breaks the relation, and the
+    ends of the ramp move inward rather than off the end.
+    """
     if v not in TINT_INDEX:
         return v
     g = (v >> 5) & 63
-    return (v & ~(63 << 5)) | ((g + 1 if g < 63 else g - 1) << 5)
+    put = lambda n: (v & ~(63 << 5)) | ((n & 63) << 5)
+    for n in (g + 2, g - 2, g + 1, g - 1):
+        if 0 <= n <= 63 and put(n) not in TINT_INDEX:
+            return put(n)
+    return v
 
 
 # The authoring tool truncated when converting 24-bit to 16-bit
