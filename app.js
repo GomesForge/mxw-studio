@@ -2437,8 +2437,6 @@ for (const [name, fn] of [['sprites', () => spriteWire()],
 enableActions();
 menuWire();
 for (const [what, fn] of [['motion panel', poseWire], ['create panel', makeWire],
-                          ['workshop',
-                           typeof creatorWire === 'function' ? creatorWire : () => {}],
                           ['settings',
                            typeof settingsWire === 'function' ? settingsWire : () => {}],
                           ['tutorial', typeof tutWire === 'function' ? tutWire : () => {}]]) {

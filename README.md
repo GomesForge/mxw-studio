@@ -287,7 +287,7 @@ mesh and rewritten wrongly.
 - [docs/creating-for-the-server.md](docs/creating-for-the-server.md) —
   what a costume, a bomb skin, a map and the scenery each have to be
   before they will be accepted: the names, the sizes, the limits and
-  the checks. The **Workshop** button walks through it
+  the checks
 - [docs/shapes.md](docs/shapes.md) — what a mesh built from nothing
   has to contain, and the winding that caught every primitive the
   first time round
