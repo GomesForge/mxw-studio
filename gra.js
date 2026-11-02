@@ -75,24 +75,24 @@ function sheetPackOffset(buf) {
 /* ---------------------------- effects ----------------------------
 
    An effect (.eft) carries the same horizontal runs a sprite does, but
-   behind a different head and laid out in groups:
+   behind a different head:
 
      u32 frame count N, u32 width, u32 height
-     8 x N x [u32 word count][runs]
+     N x 8 x [u32 word count][runs]
 
    It was documented for a long time as "a first group that decodes and
-   a section after it nobody has identified". That section is simply
-   seven more groups of the same shape. Measured over every effect file
-   available: all 18 distinct ones parse to their last byte as exactly
-   8 groups, and all 18 write back byte-identical.
+   a section after it nobody has identified", and after that as eight
+   groups of N frames whose difference was a guess about blast reach.
+   Both were wrong about the shape. The client's own renderer reads it
+   as **N frames of 8 layers**, and a layer is an alpha level: it
+   composites all eight of a frame, each at a weight from a table of
+   eight, skipping any entry above 32. See eftCompositeRGBA below.
 
-   What separates the groups is not established. In the flame files
-   each group reaches further across the frame than the one before and
-   its busiest frame moves two places earlier, which is the shape a
-   flame covering more ground would have -- so the leading guess is the
-   blast length, one group per tile of reach. The editor neither
-   assumes nor needs that: it keeps all 8 in order, so a recolour
-   reaches every one of them. */
+   The byte order is the same either way, which is why the round trip
+   never noticed: all 18 distinct files parse to their last byte and
+   all 18 write back byte-identical. What changed is which block is
+   which. The flat `frames` array stays in file order, so the writer is
+   untouched and a recolour still reaches every layer. */
 
 const EFT_GROUPS = 8;
 
@@ -560,4 +560,66 @@ function graRoundTrips(buf) {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
   return true;
+}
+
+/* --------------------------- effects, composited ------------------ */
+
+/* What separates the eight blocks of an effect frame is now settled,
+   and it is not what this file guessed. The client's own renderer
+   (fb565.js) reads the file as N frames of 8 layers -- not 8 groups of
+   N frames -- and composites all eight of a frame with an alpha from a
+   table, skipping any entry above 32. So a layer is a transparency
+   level, not a tile of blast reach.
+
+   Three tables ship, one per kind of effect. Alpha runs 0..32. */
+const EFT_TABLES = {
+  std:    [2, 7, 10, 15, 18, 22, 28, 30],
+  player: [1, 4, 7, 10, 13, 17, 20, 25],
+  item:   [1, 3, 6, 8, 10, 12, 15, 25]
+};
+
+/* The blend the game uses, per 5/6/5 channel. */
+function eftBlend(d, s, a) {
+  const ia = 32 - a;
+  return (((((d >> 11) * ia) >> 5) + (((s >> 11) * a) >> 5)) << 11)
+    | ((((((d >> 5) & 63) * ia) >> 5) + ((((s >> 5) & 63) * a) >> 5)) << 5)
+    | ((((d & 31) * ia) >> 5) + (((s & 31) * a) >> 5));
+}
+
+/* Display frame f of an effect, as the game draws it: the eight layers
+   over `bg`, in order, each at its table alpha.
+
+   The pixel doubling is the game's, not a mistake here. Its blit takes
+   the first source pixel of every pair (`k & ~1`), so an effect is
+   drawn at half the horizontal resolution of its own runs. Leaving it
+   out makes a flame look sharper here than it ever does in play. */
+function eftCompositeRGBA(gra, f, tableName, bg) {
+  const w = gra.width, h = gra.height;
+  const table = EFT_TABLES[tableName] || EFT_TABLES.std;
+  const back = bg === undefined ? 0 : bg;
+  const field = new Uint16Array(w * h).fill(back);
+  const hit = new Uint8Array(w * h);
+  for (let l = 0; l < 8; l++) {
+    const a = table[l];
+    if (a > 32) continue;
+    const fr = gra.frames[f * 8 + l];
+    if (!fr) continue;
+    for (const r of fr.runs) {
+      if (r.y < 0 || r.y >= h) continue;
+      const row = r.y * w;
+      for (let k = 0; k < r.px.length; k++) {
+        const x = r.x + k;
+        if (x < 0 || x >= w) continue;
+        field[row + x] = eftBlend(field[row + x], r.px[k & ~1], a);
+        hit[row + x] = 1;
+      }
+    }
+  }
+  const out = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    const c = rgb565ToRgb(field[i]);
+    out[i * 4] = c[0]; out[i * 4 + 1] = c[1]; out[i * 4 + 2] = c[2];
+    out[i * 4 + 3] = hit[i] ? 255 : 0;
+  }
+  return out;
 }

@@ -506,6 +506,17 @@
   .setFoot{margin:16px 0 0;font-size:11px;color:var(--ink3)}
   .setActs{display:flex;gap:7px;margin-top:10px}
 
+  /* ------------------------------ the effect ------------------------- */
+  /* Only an .eft has layers to composite, so the dock hides itself for
+     every other file rather than standing there empty. */
+  #eftDock{display:none}
+  body.sprite-mode #eftDock.on{display:block}
+  #eftStage{display:flex;align-items:center;justify-content:center;
+    padding:8px;border:1px solid var(--edge);border-radius:7px;
+    background:repeating-conic-gradient(var(--btnDown) 0% 25%,
+      transparent 0% 50%) 50%/14px 14px}
+  #eftView{image-rendering:pixelated;max-width:100%}
+
   /* -------------------------------- the map -------------------------- */
   /* A board is a grid of four tile kinds, and both documents the map
      editor opens are that same picture: the game's own block.spr and a
@@ -912,6 +923,24 @@
   </div>
 
   <div id="spritePanel">
+    <details class="dock" id="eftDock" open><summary>The effect, as the game draws it</summary>
+      <div class="dockBody">
+        <div id="eftStage"><canvas id="eftView"></canvas></div>
+        <div class="row"><span>alpha table</span>
+          <select id="eftTable">
+            <option value="std">Standard</option>
+            <option value="player">Player</option>
+            <option value="item">Item</option>
+          </select></div>
+        <div class="row"><span>behind</span>
+          <select id="eftBg">
+            <option value="dark">dark</option>
+            <option value="light">light</option>
+            <option value="none">nothing</option>
+          </select></div>
+        <p class="hint" data-i18n-html="An effect frame is <b>eight layers</b>, each composited at its own transparency. The frame list below shows those layers one by one, which is what you paint; this is the eight of them together, which is what a player sees. The game also doubles the pixels across, so it is softer here than the runs are.">An effect frame is <b>eight layers</b>, each composited at its own transparency. The frame list below shows those layers one by one, which is what you paint; this is the eight of them together, which is what a player sees. The game also doubles the pixels across, so it is softer here than the runs are.</p>
+      </div>
+    </details>
     <details class="dock" open><summary>Frames</summary>
       <div class="dockBody">
         <div id="strip"></div>
@@ -1275,7 +1304,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 <script src="mxw.js?v=20"></script>
-<script src="gra.js?v=20"></script>
+<script src="gra.js?v=21"></script>
 <script src="obj.js?v=20"></script>
 <script src="checks.js?v=20"></script>
 <script src="gifenc.js?v=20"></script>
@@ -1283,9 +1312,9 @@
 <script src="shapes.js?v=20"></script>
 <script src="skin.js?v=21"></script>
 <script src="motions.js?v=20"></script>
-<script src="sprite.js?v=20"></script>
+<script src="sprite.js?v=21"></script>
 <script src="map.js?v=1"></script>
-<script src="i18n.js?v=23"></script>
+<script src="i18n.js?v=24"></script>
 <script src="settings.js?v=23"></script>
 <script src="tutorial.js?v=20"></script>
 <script src="app.js?v=22"></script>

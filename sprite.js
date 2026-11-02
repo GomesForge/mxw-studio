@@ -131,7 +131,76 @@ function spriteRenderAll() {
   spriteRenderStrip();
   spriteRenderPalette();
   spriteRenderTint();
+  spriteRenderEft();
   spriteCheckRoundTrip();
+}
+
+/* ---------------------- the effect, composited ------------------- */
+
+/* The frame list shows an effect's layers one at a time, because that
+   is what a brush can reach. It is not what anybody sees in play: the
+   game takes eight layers at a time and composites them. Showing both
+   is the point -- paint a layer on the left, judge the result here.
+
+   This draws, it does not edit, so it is additive: nothing above it
+   changes behaviour for an ordinary sprite. */
+const eft = { frame: 0, timer: 0 };
+
+function spriteEftOn() {
+  const e = sprite.entry;
+  return !!(e && e.gra && e.gra.eft);
+}
+
+function spriteRenderEft() {
+  const dock = $('eftDock');
+  if (!dock) return;
+  dock.classList.toggle('on', spriteEftOn());
+  if (!spriteEftOn()) {
+    clearInterval(eft.timer);
+    eft.timer = 0;
+    return;
+  }
+  const g = sprite.entry.gra;
+  if (eft.frame >= g.eft.per) eft.frame = 0;
+  spriteDrawEft();
+  if (!eft.timer && g.eft.per > 1) {
+    eft.timer = setInterval(() => {
+      if (!spriteEftOn()) { clearInterval(eft.timer); eft.timer = 0; return; }
+      eft.frame = (eft.frame + 1) % sprite.entry.gra.eft.per;
+      spriteDrawEft();
+    }, 90);
+  }
+}
+
+function spriteDrawEft() {
+  const cv = $('eftView');
+  if (!cv || !spriteEftOn()) return;
+  const g = sprite.entry.gra;
+  const table = ($('eftTable') && $('eftTable').value) || 'std';
+  const which = ($('eftBg') && $('eftBg').value) || 'dark';
+  /* The blend is onto what is already on screen, so the backdrop is
+     part of the picture rather than decoration: a flame over the dark
+     field is not the same flame over a light one. */
+  const bg = which === 'light' ? 0xffff : 0x0000;
+  const rgba = eftCompositeRGBA(g, eft.frame, table, bg);
+  if (which === 'none') {
+    /* keep only what the effect actually touched */
+    for (let i = 3; i < rgba.length; i += 4) if (!rgba[i]) rgba[i] = 0;
+  }
+  cv.width = g.width;
+  cv.height = g.height;
+  const scale = Math.max(1, Math.min(4, Math.floor(210 / Math.max(g.width, 1))));
+  cv.style.width = (g.width * scale) + 'px';
+  cv.style.height = (g.height * scale) + 'px';
+  cv.getContext('2d').putImageData(
+    new ImageData(rgba, g.width, g.height), 0, 0);
+}
+
+function spriteEftWire() {
+  for (const id of ['eftTable', 'eftBg']) {
+    const el = $(id);
+    if (el) el.onchange = spriteDrawEft;
+  }
 }
 
 /* How much of this sheet the runtime will recolour, and whether the
@@ -624,6 +693,7 @@ function spriteSave() {
 
 /* ----------------------------- wiring ---------------------------- */
 function spriteWire() {
+  spriteEftWire();
   $('bPlay').onclick = () => sprite.playing ? spritePause() : spritePlay();
   $('bPrev').onclick = () => {
     spritePause();
