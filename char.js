@@ -76,8 +76,8 @@ const CHAR_DIRS = [
 const CHAR_WHY_FIXED = {
   mo: 'the Louie walks on your frame number',
   st: 'the hold on frame 0 counts by your own frame list',
-  rui_mo: 'the rider has to keep up with the Louie’s 8',
-  rui_st: 'the rider has to keep up with the Louie’s 3',
+  rui_mo: 'the rider has to keep up with the Louie\u2019s 8',
+  rui_st: 'the rider has to keep up with the Louie\u2019s 3',
   msb_ch: 'the cart draws frame 0 and never any other',
   face: 'the portrait is pasted as it is into a 40 x 40 slot',
   preview: 'it is a copy of st_s, which has 3'
@@ -392,7 +392,7 @@ function charProblems(name, g) {
   const n = g.frames.length;
   if (sheet.need != null && n !== sheet.need) {
     say('bad', sheet.file + ' needs exactly ' + sheet.need + ' frame' +
-      (sheet.need === 1 ? '' : 's') + ', not ' + n + ' — ' +
+      (sheet.need === 1 ? '' : 's') + ', not ' + n + ' \u2014 ' +
       (CHAR_WHY_FIXED[sheet.anim] || 'the game counts on it') + '.');
   } else if (sheet.want != null) {
     const lo = sheet.min != null ? sheet.min : sheet.want;
@@ -406,7 +406,7 @@ function charProblems(name, g) {
   }
   if ((sheet.anim === 'th' || sheet.anim === 'pu') && n > 7) {
     say('odd', 'while ' + (sheet.anim === 'th' ? 'throwing' : 'punching') +
-      ' the game ignores the player’s direction, so ' + n +
+      ' the game ignores the player\u2019s direction, so ' + n +
       ' frames pins them for ' + (n * (sheet.anim === 'th' ? 60 : 70)) +
       ' ms in the middle of a match.');
   }
@@ -435,7 +435,7 @@ function charProblems(name, g) {
   if (offAxis) {
     say('bad', offAxis + (offAxis === 1 ? ' frame sits' : ' frames sit') +
       ' more than 7 px off the axis. Collision is computed from the ' +
-      'player’s square, never from the pixels, so an off-axis body ' +
+      'player\u2019s square, never from the pixels, so an off-axis body ' +
       'looks like it walks through walls and bombs.');
   }
   const med = charMedianOf(soles);
@@ -463,7 +463,7 @@ function charProblems(name, g) {
   if (sheet.anim === 'dd' && n >= 2) {
     const a = spriteBytesOfFrame(g, n - 1), b = spriteBytesOfFrame(g, n - 2);
     if (a !== b) {
-      say('odd', 'the last frame of a death never reaches the screen — ' +
+      say('odd', 'the last frame of a death never reaches the screen \u2014 ' +
         'the player has already turned into the cart. Draw the end of the ' +
         'fall on the second to last and repeat it on the last.');
     }
@@ -689,7 +689,7 @@ function charRenderWho() {
     return;
   }
   const count = s.need != null ? String(s.need)
-    : s.want + (s.min != null ? ' (' + s.min + '–' + s.max + ')' : '');
+    : s.want + (s.min != null ? ' (' + s.min + '\u2013' + s.max + ')' : '');
   const ms = charTiming(s.anim, e.gra.frames.length);
   const total = ms ? ms.reduce((a, b) => a + b, 0) : 0;
   el.innerHTML =
@@ -702,7 +702,7 @@ function charRenderWho() {
       ' expected</dd>' +
     '<dt>clock</dt><dd>' + (ms
       ? total + ' ms a round' + (charLoops(s.anim) ? ', looping' : ', once')
-      : 'static — the game draws frame 0 and no other') + '</dd>' +
+      : 'static \u2014 the game draws frame 0 and no other') + '</dd>' +
     '</dl>';
 }
 
