@@ -27,6 +27,8 @@ Nothing here ships any asset. These are tools; bring your own files.
 | `block.spr` | the game's own map layouts | read + write |
 | `map.spr` | spawns, gimmicks and item counts per map set | read |
 | custom map `.json` | a map for the server | read + write |
+| `.zip` | a set of exports in one file | write |
+| `.png` / `.gif` / `.json` | frames, strips, contact sheets, animations, measurements | write |
 
 ## The editor
 
@@ -181,6 +183,33 @@ gave the vocabulary and the timing. They could not give the angles: a
 different figure, one projection, a few dozen pixels tall. When a real
 motion file turns up it plays through the same player, because it is
 the same thing &mdash; a rotation per bone per frame.
+
+## Getting things out
+
+**Export&hellip;** opens one window that lists everything that can come
+out of whatever is open. Tick what you want. One tick saves one file;
+several come out as a `.zip`, stored rather than compressed, with a
+folder per source file so a set of numbered frames stays a set.
+
+| open | what it offers |
+|------|----------------|
+| a sprite | the file; the same bytes under the other extension; every frame as a PNG; one strip; a contact sheet; the animation as a GIF; the numbers as JSON |
+| an effect | the above, plus **the eight layers composited** &mdash; per frame as a PNG, or as a GIF &mdash; which is what a player sees rather than what you paint |
+| a model | the container; the geometry as `.obj`; every texture; the UV layout as a PNG; the numbers as JSON |
+| a map | `block.spr`; the set as JSON, deduplicated; what `map.spr` says as JSON; the board on screen as a PNG; a custom map as the panel takes it |
+| anything else still open | every other container, in the same zip |
+
+Modifiers apply to the images: scale 1&times; to 8&times; by nearest
+neighbour, crop to the drawing or keep the sheet&rsquo;s own
+coordinates, burn the character guides in for a reference image, and
+time a GIF by the game&rsquo;s own clock rather than by the slider.
+
+The JSON is for scripts: size, frame count, colours used, and &mdash;
+for a character sheet &mdash; which of the 37 slots it is, the clock,
+every frame measured, and whatever the checks found.
+
+The quick paths on the bar are still there. The desk is for when you
+want more than one thing at once, which is most of the time.
 
 ## Sprites
 
