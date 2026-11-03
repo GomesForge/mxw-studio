@@ -2198,9 +2198,17 @@ async function importOBJ(file) {
 }
 
 function exportOBJ() {
-  const c = current;
+  const text = objTextOf(current);
+  if (text === null) { notify('no mesh to export', 1); return; }
+  saveFile((current.name.replace(/\.[^.]+$/, '') || 'mesh') + '.obj',
+           new TextEncoder().encode(text), 'text/plain');
+}
+
+/* The OBJ as text, so the export desk can put it in a zip beside
+   everything else rather than triggering its own download. */
+function objTextOf(c) {
   const m = c && c.mxw.meshes[c.meshIndex || 0];
-  if (!m) { notify('no mesh to export', 1); return; }
+  if (!m) return null;
   const L = [`# ${m.kind} -> OBJ   ${c.name}   id=0x${c.mxw.meshId.toString(16).toUpperCase()}`,
              `# textures: ${m.textures.join(', ') || '-'}`,
              `# vertices: ${m.nv}   faces: ${m.faces.length}   bones: ${m.bones.length}`];
@@ -2225,8 +2233,7 @@ function exportOBJ() {
       fl.push('f ' + parts.join(' '));
     }
   }
-  saveFile((c.name.replace(/\.[^.]+$/, '') || 'mesh') + '.obj',
-           new TextEncoder().encode(L.concat(fl).join('\n')), 'text/plain');
+  return L.concat(fl).join('\n');
 }
 
 function saveBin() {
@@ -2499,6 +2506,8 @@ for (const [what, fn] of [['motion panel', poseWire], ['create panel', makeWire]
                            typeof mapWire === 'function' ? mapWire : () => {}],
                           ['character guides',
                            typeof charWire === 'function' ? charWire : () => {}],
+                          ['export desk',
+                           typeof xpWire === 'function' ? xpWire : () => {}],
                           ['settings',
                            typeof settingsWire === 'function' ? settingsWire : () => {}],
                           ['tutorial', typeof tutWire === 'function' ? tutWire : () => {}]]) {
