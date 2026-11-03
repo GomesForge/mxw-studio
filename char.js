@@ -415,13 +415,34 @@ function charProblems(name, g) {
 
   /* the drawing itself, frame by frame */
   const env = CHAR_ENVELOPE[sheet.anim];
+  /* Which sheets these two measures are allowed to judge.
+
+     The floor is for a character standing on the ground on its own
+     feet. Throwing, punching, being stunned, dying, winning and
+     warping all lift the body on purpose, and the guide gives
+     per-frame medians for them rather than a floor. Mounted is not on
+     the ground at all -- rui_st and rui_mo are the rider WITHOUT the
+     Louie, sitting where the Louie's back will be, which is why the
+     officials put their soles around 147 to 168 -- and msb_ch is a
+     character in a cart. Judging any of those against 195 was wrong,
+     and said so about thirteen of one official's thirty-seven sheets.
+
+     The axis is the same story from the other side. The measure here
+     is the centre of the box, which is what the guide measured its
+     own band from, over 606 standing frames and 1616 walking ones. It
+     published no such band for an action, and the box centre is the
+     wrong instrument there anyway: the guide's own advice is to
+     centre the body, not the box with the prop in it, and a throw is
+     an outstretched arm. So both are measured on every sheet and
+     shown in the table; only these two judge. */
+  const onFoot = sheet.anim === 'st' || sheet.anim === 'mo';
   let offAxis = 0, border = 0, outside = 0, empty = 0;
   const soles = [];
   g.frames.forEach(f => {
     const m = charMeasure(g, f);
     if (m.empty) { empty++; return; }
     soles.push(m.sole);
-    if (Math.abs(m.cx - CHAR_AXIS) > 7.5) offAxis++;
+    if (onFoot && Math.abs(m.cx - CHAR_AXIS) > 7.5) offAxis++;
     if (m.touches) border++;
     if (env && env.ground &&
         (m.x0 < CHAR_SAFE.x0 || m.x1 > CHAR_SAFE.x1 ||
@@ -439,8 +460,8 @@ function charProblems(name, g) {
       'looks like it walks through walls and bombs.');
   }
   const med = charMedianOf(soles);
-  if (med != null) {
-    const walk = sheet.anim === 'mo' || sheet.anim === 'rui_mo';
+  if (med != null && onFoot) {
+    const walk = sheet.anim === 'mo';
     const want = walk ? CHAR_SOLE_WALK : CHAR_SOLE;
     const lo = walk ? 187 : 190, hi = walk ? 200 : 199;
     if (med < lo || med > hi) {
@@ -498,7 +519,10 @@ function spriteBytesOfFrame(g, i) {
    the animation keeps its own motion and lands on the floor. */
 function charAlignOffset(name, g) {
   const sheet = charSheetOf(name);
-  if (!sheet || sheet.anim === 'face') return null;
+  /* Only a sheet whose character stands on its own feet has a floor
+     to be put on. A rider sits on a Louie that is not in the file, a
+     cart carries one, and an action lifts one -- see charProblems. */
+  if (!sheet || (sheet.anim !== 'st' && sheet.anim !== 'mo')) return null;
   const soles = [], centres = [];
   for (const f of g.frames) {
     const m = charMeasure(g, f);
@@ -668,7 +692,8 @@ function charRenderPanel() {
      aims at is 195 standing and 193 walking. Without a name there is
      no answer, so the button says so by being unavailable. */
   const a = $('bCharAlign'), m = $('bCharMould');
-  if (a) a.disabled = !(on && chr.sheet && chr.sheet.anim !== 'face');
+  if (a) a.disabled = !(on && chr.sheet &&
+    (chr.sheet.anim === 'st' || chr.sheet.anim === 'mo'));
   if (m) m.disabled = !on;
   if (!on) return;
   charRenderWho();
@@ -716,8 +741,10 @@ function charRenderFrames() {
   const s = chr.sheet;
   const med = s ? CHAR_MEDIAN[s.file] : null;
   const ms = s ? charTiming(s.anim, g.frames.length) : null;
-  const walk = s && (s.anim === 'mo' || s.anim === 'rui_mo');
-  const floor = walk ? CHAR_SOLE_WALK : CHAR_SOLE;
+  /* The floor only colours a column where the floor applies: see the
+     note in charProblems about mounted, carted and airborne sheets. */
+  const onFoot = s && (s.anim === 'st' || s.anim === 'mo');
+  const floor = s && s.anim === 'mo' ? CHAR_SOLE_WALK : CHAR_SOLE;
   let html = '<table class="tbl"><thead><tr><th>#</th>' +
     (ms ? '<th>ms</th>' : '') +
     '<th>sole</th><th>axis</th><th>top</th><th>size</th>' +
@@ -746,9 +773,9 @@ function charRenderFrames() {
     }
     html += '<tr' + cur + '><td>' + (i + 1) + '</td>' +
       (ms ? '<td>' + ms[i] + '</td>' : '') +
-      '<td class="' + (Math.abs(m.sole - floor) > 5 ? 'no' : '') + '">' +
+      '<td class="' + (onFoot && Math.abs(m.sole - floor) > 5 ? 'no' : '') + '">' +
       m.sole + '</td>' +
-      '<td class="' + (Math.abs(m.cx - CHAR_AXIS) > 7.5 ? 'no' : '') + '">' +
+      '<td class="' + (onFoot && Math.abs(m.cx - CHAR_AXIS) > 7.5 ? 'no' : '') + '">' +
       m.cx + '</td><td>' + m.top + '</td><td>' + m.w + ' x ' + m.h + '</td>' +
       delta + '</tr>';
   });

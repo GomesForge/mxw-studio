@@ -123,6 +123,32 @@ The editor draws all of this over the artwork, in the sprite view and
 while painting a frame, and measures every frame against the medians
 the officials actually hit.
 
+### The floor is not for every sheet
+
+`y = 195` is where a character standing on its own feet puts them, and
+that is all it is. Three kinds of sheet are not standing on the floor
+at all, and holding them to it is simply wrong:
+
+- **`rui_st` and `rui_mo` are the rider without the Louie.** The mount
+  is a separate file the game draws underneath, so the rider is drawn
+  sitting where its back will be. The officials put those soles around
+  **147 to 168**, and the envelope for both is `y 110` to `186`.
+- **`msb_ch` is a character in a cart**, which carries them.
+- **`th`, `pu`, `pa`, `dd`, `wi` and `wa` lift the body on purpose.**
+  A throw reaches 184 at the sole and a death goes most of the way up
+  the sheet. The guide gives per-frame medians for these rather than a
+  floor, which is the tell.
+
+The same goes for the axis. The 90% band of 120.5 to 134.5 was
+measured over 606 standing frames and 1616 walking ones; no such band
+was published for an action, and the measure behind it is the centre
+of the bounding box, which an outstretched arm moves. The guide's own
+advice is to centre **the body, not the box with the prop in it**.
+
+So the editor measures both on every sheet and shows them, and judges
+them only on `st` and `mo`. Getting this wrong called thirteen of one
+official character's thirty-seven sheets broken.
+
 ## The 37 sheets
 
 A character is **exactly 37 files**, in the game's own order: index =
