@@ -65,6 +65,11 @@ This is the list the rest of the page is measured against.
   one record per set with the spawns, the gimmicks and the item counts.
   A map editor opens the first, reads the second and writes custom maps
   for the server. See [map-format.md](map-format.md)
+- **A folder as one document**: a character or a bomb skin opened as
+  a set, from a folder, a drag or a zip, with every slot the loader
+  asks for listed and the checks that need two files at once -- the
+  missing slot, the preview that drifted from the stand, the capital
+  letter on a case-sensitive server
 - **One export desk**: everything that can come out of whatever is
   open, listed in one window, ticked, and written as a file or as a
   zip. Images scale, crop and can carry the guides; an effect exports
@@ -132,14 +137,11 @@ See [character-sprites.md](character-sprites.md).
 
 **Next**, in the order that helps most:
 
-- **Open a folder as one document.** Name each of the 37 slots, say
-  which are missing, and show the four facings of an action side by
-  side. Everything above is per file today, and the faults that matter
-  most are between files
-- **The seams the player sees.** `preview` has to equal `st_s`, and
-  `wa` frame 0 should equal `st_s` frame 0 or the round’s entrance
-  ends with a jump. Both are cross-file, so only a folder view can
-  check them
+- **The four facings side by side.** The set view lists them; it does
+  not yet show them together, which is how a walk is actually judged
+- **Edit from the set, back into the set.** Opening a sheet from a
+  folder opens a copy: save it and the set does not know. The set
+  should hold the sheets it opened and write the folder back
 - **Mirror a facing.** The officials never mirror — they were
   rendered from both sides — but mirroring is how anybody sane
   works. Mirror `*_e` into `*_w`, and warn about the two things it
@@ -342,6 +344,9 @@ Each item below names the module it came from. None of it is guessed.
 
 ## 12. Quality of life
 
+- **A set that writes itself back.** A character folder in, the same
+  folder out, with whatever was edited in it -- the reading half now
+  exists, the writing half is still per file
 - **Import the way the desk exports.** A zip of frames should go back
   in as a sheet, and a folder of 37 should open as a character. The
   writing half is done; the reading half is still one file at a time
