@@ -433,8 +433,8 @@ function charProblems(name, g) {
       ' empty. The game shows them anyway, as a gap in the animation.');
   }
   if (offAxis) {
-    say('bad', offAxis + ' frame' + (offAxis === 1 ? '' : 's') +
-      ' sit more than 7 px off the axis. Collision is computed from the ' +
+    say('bad', offAxis + (offAxis === 1 ? ' frame sits' : ' frames sit') +
+      ' more than 7 px off the axis. Collision is computed from the ' +
       'player’s square, never from the pixels, so an off-axis body ' +
       'looks like it walks through walls and bombs.');
   }
@@ -450,12 +450,12 @@ function charProblems(name, g) {
     }
   }
   if (border) {
-    say('bad', border + ' frame' + (border === 1 ? '' : 's') +
-      ' touch the edge of the sheet. That is where grid cuts show up.');
+    say('bad', border + (border === 1 ? ' frame touches' : ' frames touch') +
+      ' the edge of the sheet. That is where grid cuts show up.');
   }
   if (outside) {
-    say('odd', outside + ' frame' + (outside === 1 ? '' : 's') +
-      ' leave the safe area (80, 88) to (176, 216). Ground animations ' +
+    say('odd', outside + (outside === 1 ? ' frame leaves' : ' frames leave') +
+      ' the safe area (80, 88) to (176, 216). Ground animations ' +
       'are expected to stay inside it; death and victory are not.');
   }
 
@@ -648,6 +648,13 @@ function charSync() {
   const e = sprite.entry;
   chr.sheet = e ? charSheetOf(e.name) : null;
   charClockStop();
+  /* Closing the sheet does not run the panel renderers, so the dock
+     has to be told itself or it stays switched on for a file that is
+     no longer open. */
+  if (!e) {
+    const d = $('charDock');
+    if (d) d.classList.remove('on');
+  }
 }
 
 function charRenderPanel() {
@@ -657,6 +664,12 @@ function charRenderPanel() {
   const on = !!(e && e.gra && !e.gra.eft &&
     ((e.gra.width === CHAR_SIDE && e.gra.height === CHAR_SIDE) || chr.sheet));
   dock.classList.toggle('on', on);
+  /* Aligning needs to know which sheet this is, because the floor it
+     aims at is 195 standing and 193 walking. Without a name there is
+     no answer, so the button says so by being unavailable. */
+  const a = $('bCharAlign'), m = $('bCharMould');
+  if (a) a.disabled = !(on && chr.sheet && chr.sheet.anim !== 'face');
+  if (m) m.disabled = !on;
   if (!on) return;
   charRenderWho();
   charRenderFrames();
@@ -757,12 +770,12 @@ function charRenderChecks() {
   if (!chr.sheet) { el.innerHTML = ''; return; }
   const probs = charProblems(e.name, e.gra);
   if (!probs.length) {
-    el.innerHTML = '<p class="good">Nothing to flag: the counts, the size, ' +
-      'the axis and the sole all read the way the game wants them.</p>';
+    el.innerHTML = '<p class="note good">Nothing to flag: the counts, the ' +
+      'size, the axis and the sole all read the way the game wants them.</p>';
     return;
   }
   el.innerHTML = probs.map(p =>
-    '<p class="' + (p.level === 'bad' ? 'warn' : 'hint') + '">' +
+    '<p class="note ' + (p.level === 'bad' ? 'bad' : 'warn') + '">' +
     p.text + '</p>').join('');
 }
 

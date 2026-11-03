@@ -337,6 +337,12 @@ function paintDraw() {
 
   ctx.drawImage(paintComposite(), 0, 0, cv.width, cv.height);
 
+  /* The character guides, when what is being painted is a character
+     sheet. They matter most here: the axis and the floor are decided
+     while the pose is being drawn, not after. */
+  if (paint.owner && paint.owner.kind === 'frame' &&
+      typeof charPaint === 'function') charPaint(ctx, z, paint.w, paint.h);
+
   /* the UV layout of the faces that use this texture, so a garment
      can be painted in the right place */
   if (paint.showUV && paint.uv && paint.uv.length) {
