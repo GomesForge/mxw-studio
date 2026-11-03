@@ -20,6 +20,9 @@
    folder again. */
 
 const LIB_KEY = 'mxw.library';
+/* Bumped when the default placement changes, so a position saved from
+   an older default is replaced once rather than outliving it. */
+const LIB_PLACE = 2;
 
 const lib = {
   root: null,
@@ -52,9 +55,11 @@ function libInit() {
   try {
     const saved = JSON.parse(localStorage.getItem(LIB_KEY) || 'null');
     if (saved && typeof saved === 'object') {
-      for (const k of ['x', 'y', 'w', 'h'])
-        if (typeof saved[k] === 'number') lib.pos[k] = saved[k];
-      lib.placed = !!saved.placed;
+      if (saved.v === LIB_PLACE) {
+        for (const k of ['x', 'y', 'w', 'h'])
+          if (typeof saved[k] === 'number') lib.pos[k] = saved[k];
+        lib.placed = !!saved.placed;
+      }
       lib.open = !!saved.open;
       lib.noted = !!saved.noted;
     }
@@ -64,7 +69,8 @@ function libInit() {
 function libSave() {
   try {
     localStorage.setItem(LIB_KEY, JSON.stringify(Object.assign(
-      { placed: lib.placed, open: lib.open, noted: !!lib.noted }, lib.pos)));
+      { v: LIB_PLACE, placed: lib.placed, open: lib.open,
+        noted: !!lib.noted }, lib.pos)));
   } catch (e) { /* fine */ }
 }
 
@@ -133,6 +139,12 @@ function libTakeMany(entries, label) {
   }
   libShow(true);
   libRender();
+  /* The arrows only answer to the tree, so an import hands it the
+     keyboard: the point of a shelf full of sheets is stepping through
+     them, and having to click first to do that is a step nobody asked
+     for. */
+  const tree = $('libTree');
+  if (tree) tree.focus({ preventScroll: true });
 }
 
 function libDescends(id, ofId) {
@@ -236,14 +248,20 @@ function libShow(on) {
   libSave();
 }
 
-/* First time it opens, put it where it will not sit on the artwork.
-   After that it is wherever it was dragged. */
+/* First time it opens, it sits in the top left corner of the work
+   area, against the edge: that corner is empty in every mode, a sheet
+   is drawn from the middle out, and a list is read from the top. After
+   that it is wherever it was dragged. */
 function libPlace() {
   const el = $('lib');
   if (!el) return;
   if (!lib.placed) {
-    lib.pos.x = Math.max(12, Math.round(innerWidth * 0.5 - lib.pos.w - 40));
-    lib.pos.y = 96;
+    const view = $('view');
+    const r = view ? view.getBoundingClientRect() : { left: 0, top: 64 };
+    lib.pos.x = Math.round(r.left);
+    lib.pos.y = Math.round(r.top);
+    lib.pos.w = 280;
+    lib.pos.h = Math.min(505, Math.max(240, innerHeight - lib.pos.y - 40));
     lib.placed = true;
   }
   libClamp();
@@ -346,17 +364,23 @@ function libWireRows(host) {
       lib.sel = id;
       const n = lib.nodes.get(id);
       if (!n) return;
-      if (n.kind === 'folder' && ev.target.classList.contains('tw')) {
-        if (lib.closed.has(id)) lib.closed.delete(id);
-        else lib.closed.add(id);
+      const tree = $('libTree');
+      if (tree) tree.focus({ preventScroll: true });
+      if (n.kind === 'folder') {
+        /* the twisty folds; the name only selects, because a
+           double-click on it renames */
+        if (ev.target.classList.contains('tw')) libFold(id);
+        libRender();
+        return;
       }
-      libRender();
+      /* One click changes file. Browsing a character means looking at
+         thirty-seven sheets in a row, and asking for two clicks each
+         time turns reading into typing. */
+      libOpenNode(id);
     });
     row.addEventListener('dblclick', () => {
       const n = lib.nodes.get(id);
-      if (!n) return;
-      if (n.kind === 'file') libOpenNode(id);
-      else libRenameStart(id);
+      if (n && n.kind === 'folder') libRenameStart(id);
     });
     row.addEventListener('contextmenu', ev => {
       lib.sel = id;
@@ -437,6 +461,101 @@ function libRenameStart(id) {
     ev.stopPropagation();
   });
   input.addEventListener('blur', () => finish(true));
+}
+
+/* ------------------------- walking the tree ---------------------- */
+
+function libFold(id) {
+  if (lib.closed.has(id)) lib.closed.delete(id);
+  else lib.closed.add(id);
+}
+
+/* The rows as they are on screen, in order, with a shut folder's
+   children left out -- which is what an arrow key has to move
+   through, not the tree as it is stored. */
+function libVisible(node, out) {
+  out = out || [];
+  node = node || lib.root;
+  for (const id of node.children) {
+    const n = lib.nodes.get(id);
+    if (!n) continue;
+    out.push(n);
+    if (n.kind === 'folder' && !lib.closed.has(id)) libVisible(n, out);
+  }
+  return out;
+}
+
+function libReveal(id) {
+  const row = $('libTree') && $('libTree').querySelector('[data-id="' + id + '"]');
+  if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+}
+
+/* Moving the selection opens what it lands on, because that is what
+   the arrow keys are for here: stepping through a character's sheets
+   and watching each one. Folders only select; they have no sheet. */
+function libGo(id, open) {
+  if (!id) return;
+  lib.sel = id;
+  const n = lib.nodes.get(id);
+  libRender();
+  libReveal(id);
+  if (open && n && n.kind === 'file') libOpenNode(id);
+}
+
+function libStep(by) {
+  const rows = libVisible();
+  if (!rows.length) return;
+  let at = rows.findIndex(n => n.id === lib.sel);
+  if (at < 0) at = by > 0 ? -1 : rows.length;
+  const next = rows[Math.max(0, Math.min(rows.length - 1, at + by))];
+  if (next) libGo(next.id, true);
+}
+
+function libKeys(ev) {
+  if (!lib.open) return;
+  const el = document.activeElement;
+  if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+  /* Only while the shelf has the keyboard: the arrows belong to
+     whatever else is focused the rest of the time. */
+  const tree = $('libTree');
+  if (!tree || !tree.contains(el)) return;
+  const n = lib.sel && lib.nodes.get(lib.sel);
+
+  switch (ev.key) {
+    case 'ArrowDown': ev.preventDefault(); libStep(1); return;
+    case 'ArrowUp': ev.preventDefault(); libStep(-1); return;
+    case 'Home': ev.preventDefault(); {
+      const rows = libVisible();
+      if (rows.length) libGo(rows[0].id, true);
+      return;
+    }
+    case 'End': ev.preventDefault(); {
+      const rows = libVisible();
+      if (rows.length) libGo(rows[rows.length - 1].id, true);
+      return;
+    }
+    case 'ArrowRight': ev.preventDefault();
+      if (!n) return;
+      if (n.kind === 'folder' && lib.closed.has(n.id)) { libFold(n.id); libRender(); }
+      else if (n.kind === 'folder' && n.children.length) libGo(n.children[0], true);
+      return;
+    case 'ArrowLeft': ev.preventDefault();
+      if (!n) return;
+      if (n.kind === 'folder' && !lib.closed.has(n.id) && n.children.length) {
+        libFold(n.id); libRender();
+      } else if (n.parent && !lib.nodes.get(n.parent).root) {
+        libGo(n.parent, false);
+      }
+      return;
+    case 'Enter': ev.preventDefault();
+      if (!n) return;
+      if (n.kind === 'file') libOpenNode(n.id);
+      else { libFold(n.id); libRender(); }
+      return;
+    case 'F2': ev.preventDefault(); if (lib.sel) libRenameStart(lib.sel); return;
+    case 'Delete': ev.preventDefault(); if (lib.sel) libAsk(lib.sel); return;
+    default: return;
+  }
 }
 
 /* --------------------------- the actions ------------------------- */
@@ -639,15 +758,9 @@ function libWire() {
     libRender();
   });
 
-  /* Delete and F2 on the selected row, which is what a tree is
-     expected to do, but never while something is being typed into. */
-  addEventListener('keydown', ev => {
-    if (!lib.open || !lib.sel) return;
-    const el = document.activeElement;
-    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
-    if (ev.key === 'F2') { ev.preventDefault(); libRenameStart(lib.sel); }
-    else if (ev.key === 'Delete') { ev.preventDefault(); libAsk(lib.sel); }
-  });
+  /* The arrows, Enter, Home, End, F2 and Delete, all of them only
+     while the tree itself has the keyboard. */
+  addEventListener('keydown', libKeys);
 
   if (lib.open) libShow(true);
   libRender();
