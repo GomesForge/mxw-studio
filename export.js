@@ -613,8 +613,64 @@ function xpSetJSON() {
   }, null, 2);
 }
 
+/* A set is the unit somebody actually sends: thirty-seven files that
+   only mean something together, or the handful a bomb skin ships. */
+function xpFolderOutputs() {
+  if (typeof folder === 'undefined' || !folder.kind || !folder.files.size)
+    return [];
+  const dir = folder.name.replace(/[^\w.-]+/g, '_') + '/';
+  return [{
+    id: 'setfiles', on: true,
+    label: 'Every file in the set',
+    note: folder.files.size + ' file(s), exactly as they were opened',
+    make: async () => [...folder.files.values()].map(f => ({
+      name: dir + f.name, data: f.raw
+    }))
+  }, {
+    id: 'setjson', on: false,
+    label: 'What the set is, as JSON',
+    note: 'which slots are filled, the frame counts, and what the ' +
+          'cross-file checks found',
+    make: async () => [{
+      name: dir + 'set.json',
+      data: new TextEncoder().encode(xpFolderJSON())
+    }]
+  }];
+}
+
+function xpFolderJSON() {
+  const slots = folder.kind === 'character'
+    ? CHAR_SHEETS.map(s => {
+        const rec = folderFile(s.file);
+        return {
+          slot: s.slot, file: s.file, shows: s.label, facing: s.dir,
+          present: !!rec,
+          frames: rec && rec.gra ? rec.gra.frames.length : null,
+          expected: s.need != null ? s.need : s.want
+        };
+      })
+    : BOMB_FILES.map(([n, note]) => ({
+        file: n, is: note, present: folder.files.has(n),
+        frames: folder.files.has(n) && folder.files.get(n).gra
+          ? folder.files.get(n).gra.frames.length : null
+      }));
+  return JSON.stringify({
+    name: folder.name, kind: folder.kind,
+    files: folder.files.size,
+    of: folder.kind === 'character' ? 37 : 12,
+    slots,
+    extra: folder.extra,
+    uppercase: folder.caps,
+    colours: folder.report ? folder.report.palette.total : null,
+    findings: (folder.report ? folder.report.problems : [])
+      .map(p => ({ level: p.level, say: p.text }))
+  }, null, 2);
+}
+
 function xpOutputs() {
   const groups = [];
+  const fo = xpFolderOutputs();
+  if (fo.length) groups.push({ title: 'The whole set', items: fo });
   const sp = xpSpriteOutputs();
   if (sp.length) groups.push({ title: 'This sprite', items: sp });
   const me = xpMeshOutputs();
@@ -766,8 +822,10 @@ async function xpRun() {
   }
   /* A zip keeps the names, and the names are the point: a folder of
      frames is only useful if they are still numbered in order. */
-  const name = xpBase(sprite.entry ? sprite.entry.name
-    : current ? current.name : 'export') + '.zip';
+  const name = (typeof folder !== 'undefined' && folder.kind
+    ? folder.name.replace(/[^\w.-]+/g, '_')
+    : xpBase(sprite.entry ? sprite.entry.name
+      : current ? current.name : 'export')) + '.zip';
   const zip = zipBuild(files);
   xpClose();
   saveFile(name, zip, 'application/zip');
