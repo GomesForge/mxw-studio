@@ -144,6 +144,7 @@ function spriteRenderAll() {
   spriteRenderTint();
   spriteRenderEft();
   if (typeof charRenderPanel === 'function') charRenderPanel();
+  if (typeof folderRender === 'function') folderRender();
   spriteCheckRoundTrip();
 }
 

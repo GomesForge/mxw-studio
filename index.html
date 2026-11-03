@@ -554,6 +554,31 @@
   #eftDock{display:none}
   body.sprite-mode #eftDock.on{display:block}
 
+  /* ---------------------------- the set dock ------------------------- */
+  /* A table of contents, not a second editor: each row is the slot the
+     loader will ask for, and clicking it opens that file the usual
+     way. A row for a file that is not there stays in the list, because
+     the gap is the thing worth seeing. */
+  #folderDock{display:none}
+  body.sprite-mode #folderDock.on{display:block}
+  #folderList{display:grid;gap:1px;margin-top:8px}
+  .fRow{display:grid;grid-template-columns:72px 1fr auto;gap:8px;
+    align-items:baseline;width:100%;height:auto;min-height:22px;
+    padding:3px 7px;background:none;border:0;border-radius:4px;
+    text-align:left;justify-content:start;font-size:11px;cursor:pointer}
+  .fRow:hover:not(:disabled){background:var(--btnHover)}
+  .fRow.sel{background:color-mix(in srgb,var(--cyan) 18%,transparent)}
+  .fRow.gone{cursor:default}
+  .fRow b{font-family:var(--mono);font-size:11px;color:var(--ink);
+    font-weight:500}
+  .fRow.gone b{color:var(--dim)}
+  .fRow span{color:var(--dim);font-size:10.5px;overflow:hidden;
+    white-space:nowrap;text-overflow:ellipsis}
+  .fRow i{font-style:normal;font-family:var(--mono);font-size:10px;
+    color:var(--dim)}
+  .fRow.gone i{color:var(--amber)}
+  .fRow i.no{color:var(--red)}
+
   /* ------------------------- the character dock ---------------------- */
   /* Only a sheet the guides apply to turns this on: an effect file and
      a 40 x 40 portrait have nothing to measure against. */
@@ -826,6 +851,8 @@
   <span class="actGroup">
     <label id="drop" for="file">Open&hellip;</label>
     <input type="file" id="file" multiple>
+    <button id="bOpenFolder" type="button" title="a character or a bomb skin as one document; a folder dragged onto the page, or a .zip, does the same">Folder&hellip;</button>
+    <input type="file" id="dirFile" webkitdirectory directory multiple>
     <span class="menuWrap">
       <button class="hasMenu" data-menu="mNew" type="button">New</button>
       <div class="actMenu" id="mNew">
@@ -1009,6 +1036,17 @@
   </div>
 
   <div id="spritePanel">
+    <details class="dock" id="folderDock" open><summary>The whole set</summary>
+      <div class="dockBody">
+        <div id="folderHead"></div>
+        <div id="folderChecks"></div>
+        <div id="folderList"></div>
+        <div class="ctrl" style="margin-top:6px">
+          <button id="bFolderClose">Close the set</button>
+        </div>
+        <p class="hint" data-i18n-html="A character is 37 files that have to agree with each other, and a bomb skin is 12 of which most are meant to be absent. The faults that matter live <b>between</b> files: the slot nobody drew, the preview that drifted from the stand it copies, the name saved in capitals onto a server that cares.">A character is 37 files that have to agree with each other, and a bomb skin is 12 of which most are meant to be absent. The faults that matter live <b>between</b> files: the slot nobody drew, the preview that drifted from the stand it copies, the name saved in capitals onto a server that cares.</p>
+      </div>
+    </details>
     <details class="dock" id="charDock" open><summary>Character sheet</summary>
       <div class="dockBody">
         <div id="charWho"></div>
@@ -1428,11 +1466,12 @@
 <script src="shapes.js?v=20"></script>
 <script src="skin.js?v=21"></script>
 <script src="motions.js?v=20"></script>
-<script src="char.js?v=2"></script>
-<script src="export.js?v=1"></script>
-<script src="sprite.js?v=22"></script>
+<script src="char.js?v=3"></script>
+<script src="folder.js?v=1"></script>
+<script src="export.js?v=2"></script>
+<script src="sprite.js?v=23"></script>
 <script src="map.js?v=1"></script>
-<script src="i18n.js?v=26"></script>
+<script src="i18n.js?v=27"></script>
 <script src="settings.js?v=23"></script>
 <script src="tutorial.js?v=20"></script>
-<script src="app.js?v=24"></script>
+<script src="app.js?v=25"></script>

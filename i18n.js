@@ -180,6 +180,15 @@ const I18N = {
     'New': 'Novo',
     'Export': 'Exportar',
 
+    /* ---- a folder as one document */
+    'Folder\u2026': 'Pasta\u2026',
+    'The whole set': 'O conjunto inteiro',
+    'Close the set': 'Fechar o conjunto',
+    'Every file in the set': 'Todos os arquivos do conjunto',
+    'What the set is, as JSON': 'O que o conjunto \u00e9, em JSON',
+    'A character is 37 files that have to agree with each other, and a bomb skin is 12 of which most are meant to be absent. The faults that matter live <b>between</b> files: the slot nobody drew, the preview that drifted from the stand it copies, the name saved in capitals onto a server that cares.':
+      'Um personagem s\u00e3o 37 arquivos que precisam concordar entre si, e uma skin de bomba s\u00e3o 12 dos quais a maioria deve mesmo faltar. As falhas que importam ficam <b>entre</b> os arquivos: o slot que ningu\u00e9m desenhou, o preview que se afastou do parado que ele copia, o nome salvo em mai\u00fasculas num servidor que liga para isso.',
+
     /* ---- the export desk.
        The notes under each item count what is open, so they are built
        at run time and cannot be keyed; they stay in English, the same

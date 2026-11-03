@@ -2434,12 +2434,32 @@ document.addEventListener('drop', e => {
   dragDepth = 0; showOver(false);
   const dt = e.dataTransfer;
   if (!dt) return;
+  /* A dropped folder is not in dataTransfer.files -- it is an entry,
+     and the entries have to be taken before this handler returns or
+     the browser throws them away. So they are collected first, and the
+     reading happens afterwards. */
+  const dirs = [];
+  if (dt.items && typeof folderFromEntries === 'function') {
+    for (const it of dt.items) {
+      if (it.kind !== 'file' || !it.webkitGetAsEntry) continue;
+      const entry = it.webkitGetAsEntry();
+      if (entry && entry.isDirectory) dirs.push(entry);
+    }
+  }
   let files = dt.files && dt.files.length ? Array.from(dt.files) : [];
   if (!files.length && dt.items) {
     for (const it of dt.items) if (it.kind === 'file') {
       const f = it.getAsFile();
       if (f) files.push(f);
     }
+  }
+  if (dirs.length) { folderFromEntries(dirs); return; }
+  /* A set usually travels as a zip, because that is what somebody can
+     send. It opens as the folder it is, not as a file to inspect. */
+  const zips = files.filter(f => /\.zip$/i.test(f.name));
+  if (zips.length && typeof folderFromZip === 'function') {
+    zips[0].arrayBuffer().then(b => folderFromZip(zips[0].name, b));
+    return;
   }
   if (!files.length) { notify('nothing usable in the drop', 1); return; }
   /* an image dropped while something is open goes into it: the chosen
@@ -2508,6 +2528,8 @@ for (const [what, fn] of [['motion panel', poseWire], ['create panel', makeWire]
                            typeof charWire === 'function' ? charWire : () => {}],
                           ['export desk',
                            typeof xpWire === 'function' ? xpWire : () => {}],
+                          ['folder view',
+                           typeof folderWire === 'function' ? folderWire : () => {}],
                           ['settings',
                            typeof settingsWire === 'function' ? settingsWire : () => {}],
                           ['tutorial', typeof tutWire === 'function' ? tutWire : () => {}]]) {
