@@ -180,6 +180,293 @@ const I18N = {
     'New': 'Novo',
     'Export': 'Exportar',
 
+    /* ---- the words the sheet tables carry, which the panels and the
+       set view both print */
+    'Walk': 'Andando',
+    'Stand': 'Parado',
+    'Throw': 'Arremesso',
+    'Stunned': 'Atordoado',
+    'Death': 'Derrota',
+    'Victory': 'Vit\u00f3ria',
+    'Teleport': 'Teleporte',
+    'Revenge cart': 'Carrinho da vingan\u00e7a',
+    'Louie walk': 'Montado andando',
+    'Louie stand': 'Montado parado',
+    'Room preview': 'Pr\u00e9via da sala',
+    'Portrait': 'Retrato',
+    'front': 'frente',
+    'left': 'esquerda',
+    'back': 'costas',
+    'right': 'direita',
+    'the player moves': 'o jogador se move',
+    'the player is still': 'o jogador est\u00e1 parado',
+    'throwing a bomb with the glove': 'joga a bomba com a luva',
+    'a flying bomb landed on this square':
+      'uma bomba voando caiu nesta casa',
+    'punching the bomb in front': 'soca a bomba da casa da frente',
+    'the player died': 'o jogador morreu',
+    'the player won the round': 'o jogador ganhou a rodada',
+    'entering the round, and teleporting':
+      'entra na rodada e passa por teleporte',
+    'dead, riding the cart around the edge':
+      'morto, andando no carrinho pela borda',
+    'walking while mounted': 'anda montado',
+    'standing while mounted': 'parado montado',
+    'the room card, the profile and the shop':
+      'o cart\u00e3o da sala, o perfil e a loja',
+    'the bar at the top of a match': 'a barra do topo da partida',
+    'facing the player; walks down the screen':
+      'olha para quem joga; anda para baixo na tela',
+    'profile, looking left': 'perfil, olhando para a esquerda',
+    'back turned; walks up the screen': 'de costas; anda para cima na tela',
+    'profile, looking right': 'perfil, olhando para a direita',
+    'the Louie walks on your frame number':
+      'o Louie anda pelo seu n\u00famero de quadro',
+    'the hold on frame 0 counts by your own frame list':
+      'a pausa no quadro 0 conta pela sua pr\u00f3pria lista de quadros',
+    'the rider has to keep up with the Louie\u2019s 8':
+      'o cavaleiro tem de acompanhar os 8 do Louie',
+    'the rider has to keep up with the Louie\u2019s 3':
+      'o cavaleiro tem de acompanhar os 3 do Louie',
+    'the cart draws frame 0 and never any other':
+      'o carrinho desenha o quadro 0 e nenhum outro',
+    'the portrait is pasted as it is into a 40 x 40 slot':
+      'o retrato \u00e9 colado como est\u00e1 num espa\u00e7o de 40 x 40',
+    'it is a copy of st_s, which has 3': '\u00e9 uma c\u00f3pia do st_s, que tem 3',
+    'the game counts on it': 'o jogo conta com isso',
+    'a character': 'um personagem',
+    'a bomb skin': 'uma skin de bomba',
+    'the bomb resting and appearing': 'a bomba parada e aparecendo',
+    'the marker where it is being placed': 'o marcador de onde ela \u00e9 posta',
+    'its shadow': 'a sombra dela',
+    'the fuse spark': 'a fa\u00edsca do pavio',
+    'the fire at the bomb': 'o fogo na bomba',
+    'the fire running across': 'o fogo correndo na horizontal',
+    'the fire running up and down': 'o fogo correndo na vertical',
+    'the right-hand tip': 'a ponta da direita',
+    'the left-hand tip': 'a ponta da esquerda',
+    'the top tip': 'a ponta de cima',
+    'the bottom tip': 'a ponta de baixo',
+    'a block breaking': 'um bloco quebrando',
+    /* ---- the words a panel prints beside a number */
+    'axis': 'eixo',
+    'sole': 'sola',
+    'foot': 'p\u00e9',
+    'top': 'topo',
+    'clock': 'rel\u00f3gio',
+    'plays': 'toca',
+    'facing': 'dire\u00e7\u00e3o',
+    'files': 'arquivos',
+    'colours': 'cores',
+    'empty': 'vazio',
+    'unreadable': 'ileg\u00edvel',
+    'not here': 'n\u00e3o est\u00e1 aqui',
+    'no pixels': 'nenhum pixel',
+    'vs official': 'vs oficial',
+    'slot {n}': 'slot {n}',
+    'frame {i}/{n}': 'quadro {i}/{n}',
+    '{n} runs': '{n} corridas',
+    '{n} px': '{n} px',
+    'bounds x {x0}..{x1} y {y0}..{y1}': 'limites x {x0}..{x1} y {y0}..{y1}',
+    '{n} colours': '{n} cores',
+    '{shown} of {all} colours': '{shown} de {all} cores',
+    '{n} frame': '{n} quadro',
+    '{n} frames': '{n} quadros',
+    '{n}/{want} frames': '{n}/{want} quadros',
+    '{have} of {want}': '{have} de {want}',
+    '{here} here, {want} expected': '{here} aqui, {want} esperados',
+    '{ms} ms a round, looping': '{ms} ms por volta, em la\u00e7o',
+    '{ms} ms a round, once': '{ms} ms, uma vez',
+    'static \u2014 the game draws frame 0 and no other':
+      'est\u00e1tico \u2014 o jogo desenha o quadro 0 e nenhum outro',
+    '{all} across the set, {alone} in one file only':
+      '{all} no conjunto, {alone} em um arquivo s\u00f3',
+    'unchanged -- writes back byte-identical ({n} bytes)':
+      'sem altera\u00e7\u00e3o -- grava de volta byte a byte igual ({n} bytes)',
+    'edited -- {now} bytes, was {before}':
+      'editado -- {now} bytes, era {before}',
+    /* ---- what the sheet checks say */
+    'Nothing to flag: the counts, the size, the axis and the sole all read the way the game wants them.':
+      'Nada a apontar: as contagens, o tamanho, o eixo e a sola est\u00e3o todos do jeito que o jogo quer.',
+    'This is a {w} x {h} sheet, so the guides apply, but the name is not one of the 37 the loader asks for. Rename it and the frame counts, the timings and the measured medians come with it.':
+      'Esta \u00e9 uma folha de {w} x {h}, ent\u00e3o as guias valem, mas o nome n\u00e3o \u00e9 um dos 37 que o carregador pede. Renomeie e as contagens de quadro, os tempos e as medianas medidas v\u00eam junto.',
+    '{file} has to be {side} x {side}; this one is {w} x {h}. The game stamps the whole sheet at a fixed place, so a different size moves the character.':
+      '{file} tem de ser {side} x {side}; esta \u00e9 {w} x {h}. O jogo carimba a folha inteira num lugar fixo, ent\u00e3o um tamanho diferente move o personagem.',
+    '{file} needs exactly {want} frames, not {got} \u2014 {why}.':
+      '{file} precisa de exatamente {want} quadros, n\u00e3o {got} \u2014 {why}.',
+    '{file} usually has {want} frames; this one has {got}. Every frame costs time: the clock is fixed, so more frames is a longer animation, not a slower one.':
+      '{file} costuma ter {want} quadros; esta tem {got}. Cada quadro custa tempo: o rel\u00f3gio \u00e9 fixo, ent\u00e3o mais quadros \u00e9 anima\u00e7\u00e3o mais longa, n\u00e3o mais lenta.',
+    '{file} usually has {want} frames (the officials run {lo} to {hi}); this one has {got}. Every frame costs time: the clock is fixed, so more frames is a longer animation, not a slower one.':
+      '{file} costuma ter {want} quadros (os oficiais v\u00e3o de {lo} a {hi}); esta tem {got}. Cada quadro custa tempo: o rel\u00f3gio \u00e9 fixo, ent\u00e3o mais quadros \u00e9 anima\u00e7\u00e3o mais longa, n\u00e3o mais lenta.',
+    'while throwing the game ignores the player\u2019s direction, so {n} frames pins them for {ms} ms in the middle of a match.':
+      'durante o arremesso o jogo ignora a dire\u00e7\u00e3o do jogador, ent\u00e3o {n} quadros o prendem por {ms} ms em plena partida.',
+    'while punching the game ignores the player\u2019s direction, so {n} frames pins them for {ms} ms in the middle of a match.':
+      'durante o soco o jogo ignora a dire\u00e7\u00e3o do jogador, ent\u00e3o {n} quadros o prendem por {ms} ms em plena partida.',
+    '{n} frame is empty. The game shows it anyway, as a gap in the animation.':
+      '{n} quadro est\u00e1 vazio. O jogo mostra assim mesmo, como um buraco na anima\u00e7\u00e3o.',
+    '{n} frames are empty. The game shows them anyway, as a gap in the animation.':
+      '{n} quadros est\u00e3o vazios. O jogo mostra assim mesmo, como um buraco na anima\u00e7\u00e3o.',
+    '{n} frame sits more than 7 px off the axis. Collision is computed from the player\u2019s square, never from the pixels, so an off-axis body looks like it walks through walls and bombs.':
+      '{n} quadro est\u00e1 a mais de 7 px do eixo. A colis\u00e3o \u00e9 calculada pela casa do jogador, nunca pelos pixels, ent\u00e3o um corpo fora do eixo parece atravessar parede e bomba.',
+    '{n} frames sit more than 7 px off the axis. Collision is computed from the player\u2019s square, never from the pixels, so an off-axis body looks like it walks through walls and bombs.':
+      '{n} quadros est\u00e3o a mais de 7 px do eixo. A colis\u00e3o \u00e9 calculada pela casa do jogador, nunca pelos pixels, ent\u00e3o um corpo fora do eixo parece atravessar parede e bomba.',
+    'the sole sits at {at} on the median frame, and the floor is {want}. Higher and the character floats over the block in front; lower and it sinks into it.':
+      'a sola est\u00e1 em {at} no quadro mediano, e o ch\u00e3o \u00e9 {want}. Mais alto e o personagem flutua sobre o bloco da frente; mais baixo e ele afunda nele.',
+    '{n} frame touches the edge of the sheet. That is where grid cuts show up.':
+      '{n} quadro encosta na borda da folha. \u00c9 ali que os cortes de grade aparecem.',
+    '{n} frames touch the edge of the sheet. That is where grid cuts show up.':
+      '{n} quadros encostam na borda da folha. \u00c9 ali que os cortes de grade aparecem.',
+    '{n} frame leaves the safe area (80, 88) to (176, 216). Ground animations are expected to stay inside it; death and victory are not.':
+      '{n} quadro sai da \u00e1rea segura (80, 88) a (176, 216). Espera-se que as anima\u00e7\u00f5es de ch\u00e3o fiquem dentro dela; derrota e vit\u00f3ria, n\u00e3o.',
+    '{n} frames leave the safe area (80, 88) to (176, 216). Ground animations are expected to stay inside it; death and victory are not.':
+      '{n} quadros saem da \u00e1rea segura (80, 88) a (176, 216). Espera-se que as anima\u00e7\u00f5es de ch\u00e3o fiquem dentro dela; derrota e vit\u00f3ria, n\u00e3o.',
+    'the last frame of a death never reaches the screen \u2014 the player has already turned into the cart. Draw the end of the fall on the second to last and repeat it on the last.':
+      'o \u00faltimo quadro da derrota nunca chega \u00e0 tela \u2014 o jogador j\u00e1 virou carrinho. Desenhe o fim da queda no pen\u00faltimo e repita no \u00faltimo.',
+    'the legs barely change between frames ({d} distinct lower silhouettes, median {med}, largest {max}; a walk passes at 8, 0.12 and 0.20). This is what reads as sliding rather than walking.':
+      'as pernas quase n\u00e3o mudam entre os quadros ({d} silhuetas de baixo distintas, mediana {med}, maior {max}; uma caminhada passa com 8, 0,12 e 0,20). \u00c9 isso que se l\u00ea como deslizar em vez de andar.',
+    'nothing drawn to align': 'n\u00e3o h\u00e1 nada desenhado para alinhar',
+    'already on the axis and the floor': 'j\u00e1 est\u00e1 no eixo e no ch\u00e3o',
+    'moved the whole sheet {dx} across and {dy} down; the sole now sits at {at} on the median frame':
+      'movi a folha inteira {dx} na horizontal e {dy} na vertical; a sola agora est\u00e1 em {at} no quadro mediano',
+    'moved the whole sheet {dx} across and {dy} down; the sole now sits at {at} on the median frame, and {lost} pixels fell off the sheet':
+      'movi a folha inteira {dx} na horizontal e {dy} na vertical; a sola agora est\u00e1 em {at} no quadro mediano, e {lost} pixels ca\u00edram para fora da folha',
+    '<b>{pct}%</b> of this sheet is in the reserved ramp ({used} of 64 steps used), so the runtime recolours it. The preview above is an approximation -- the real substitution tables are not known.':
+      '<b>{pct}%</b> desta folha est\u00e1 na rampa reservada ({used} dos 64 passos usados), ent\u00e3o o jogo a recolore. A pr\u00e9via acima \u00e9 uma aproxima\u00e7\u00e3o -- as tabelas reais de substitui\u00e7\u00e3o n\u00e3o s\u00e3o conhecidas.',
+    'This frame is {w}x{h}. The original authoring tool\'s manual reports a failure on frames around 60x100, and recommends staying at or under {cw}x{ch}. Files this size that shipped with the set are fine; newly grown ones may not be.':
+      'Este quadro \u00e9 {w}x{h}. O manual da ferramenta original relata falha em quadros perto de 60x100, e recomenda ficar em {cw}x{ch} ou abaixo. Arquivos desse tamanho que j\u00e1 vieram com o jogo est\u00e3o bem; os que crescerem agora podem n\u00e3o estar.',
+    /* ---- what the set view says */
+    'The set is complete and the files agree with each other.':
+      'O conjunto est\u00e1 completo e os arquivos concordam entre si.',
+    'no bomb.spr. That one is the skin: without it there is nothing to put on a bomb.':
+      'sem bomb.spr. Esse \u00e9 a skin: sem ele n\u00e3o h\u00e1 o que p\u00f4r numa bomba.',
+    '{n} of the twelve is not here, and that is normal \u2014 what a skin lacks stays the game\u2019s own. Of the forty skins the server ships, every one has bomb.spr, thirty-one have bomb_d.spr, three have the flames and none has bomb_s.spr.':
+      '{n} dos doze n\u00e3o est\u00e1 aqui, e isso \u00e9 normal \u2014 o que falta numa skin continua sendo o do jogo. Das quarenta skins que o servidor serve, todas t\u00eam bomb.spr, trinta e uma t\u00eam bomb_d.spr, tr\u00eas t\u00eam as chamas e nenhuma tem bomb_s.spr.',
+    '{n} of the twelve are not here, and that is normal \u2014 what a skin lacks stays the game\u2019s own. Of the forty skins the server ships, every one has bomb.spr, thirty-one have bomb_d.spr, three have the flames and none has bomb_s.spr.':
+      '{n} dos doze n\u00e3o est\u00e3o aqui, e isso \u00e9 normal \u2014 o que falta numa skin continua sendo o do jogo. Das quarenta skins que o servidor serve, todas t\u00eam bomb.spr, trinta e uma t\u00eam bomb_d.spr, tr\u00eas t\u00eam as chamas e nenhuma tem bomb_s.spr.',
+    'only {n} of the seven flame pieces are here. The fire is drawn from all seven, so a partial set shows this skin\u2019s fire in some directions and the game\u2019s in others.':
+      's\u00f3 {n} das sete pe\u00e7as de chama est\u00e3o aqui. O fogo \u00e9 desenhado com as sete, ent\u00e3o um conjunto parcial mostra o fogo desta skin em algumas dire\u00e7\u00f5es e o do jogo nas outras.',
+    '{n} of the 37 are missing: {names}. The loader asks for every one by name.':
+      '{n} dos 37 est\u00e3o faltando: {names}. O carregador pede cada um pelo nome.',
+    'preview is not a copy of st_s, though frame 0 matches. Of 41 officials, 41 are an exact copy.':
+      'o preview n\u00e3o \u00e9 c\u00f3pia do st_s, embora o quadro 0 bata. De 41 oficiais, 41 s\u00e3o c\u00f3pia exata.',
+    'preview is not a copy of st_s, and frame 0 differs too. This is the card in the room, the profile and the shop \u2014 it should be the stand, exactly.':
+      'o preview n\u00e3o \u00e9 c\u00f3pia do st_s, e o quadro 0 tamb\u00e9m difere. Isto \u00e9 o cart\u00e3o da sala, o perfil e a loja \u2014 deveria ser o parado, exatamente.',
+    'wa frame 0 is not st_s frame 0. Every round ends its entrance on wa frame 0 and the next step draws st_s frame 0, so the difference shows as a jump at the start of every round.':
+      'o quadro 0 do wa n\u00e3o \u00e9 o quadro 0 do st_s. Toda rodada termina a entrada no quadro 0 do wa e o passo seguinte desenha o quadro 0 do st_s, ent\u00e3o a diferen\u00e7a aparece como um tranco no come\u00e7o de cada rodada.',
+    '{n} file has a capital in the name ({names}). The server runs on a filesystem where MO_S.GRA and mo_s.gra are different files, and the client asks for the lowercase one.':
+      '{n} arquivo tem mai\u00fascula no nome ({names}). O servidor roda num sistema de arquivos onde MO_S.GRA e mo_s.gra s\u00e3o arquivos diferentes, e o cliente pede o min\u00fasculo.',
+    '{n} files have a capital in the name ({names}). The server runs on a filesystem where MO_S.GRA and mo_s.gra are different files, and the client asks for the lowercase one.':
+      '{n} arquivos t\u00eam mai\u00fascula no nome ({names}). O servidor roda num sistema de arquivos onde MO_S.GRA e mo_s.gra s\u00e3o arquivos diferentes, e o cliente pede o min\u00fasculo.',
+    '{n} file will not parse: {names}': '{n} arquivo n\u00e3o abre: {names}',
+    '{n} files will not parse: {names}': '{n} arquivos n\u00e3o abrem: {names}',
+    '{n} file here the loader never asks for: {names}.':
+      '{n} arquivo aqui que o carregador nunca pede: {names}.',
+    '{n} files here the loader never asks for: {names}.':
+      '{n} arquivos aqui que o carregador nunca pede: {names}.',
+    'add.gra is the sleep pose of the 2003 game; this client has no such state and the 37-file package has no room for it.':
+      'o add.gra \u00e9 a pose de dormir do jogo de 2003; este cliente n\u00e3o tem esse estado e o pacote de 37 arquivos n\u00e3o tem espa\u00e7o para ele.',
+    '{n} sheet has something the game will show wrong: {names}. Open it to see what.':
+      '{n} folha tem algo que o jogo vai mostrar errado: {names}. Abra para ver o qu\u00ea.',
+    '{n} sheets have something the game will show wrong: {names}. Open one to see what.':
+      '{n} folhas t\u00eam algo que o jogo vai mostrar errado: {names}. Abra uma para ver o qu\u00ea.',
+    'that folder has nothing a character or a bomb skin is made of':
+      'essa pasta n\u00e3o tem nada do que um personagem ou uma skin de bomba s\u00e3o feitos',
+    'nothing in there parsed as a sprite': 'nada ali abriu como sprite',
+    '{name}: {have} of {want} files': '{name}: {have} de {want} arquivos',
+    '{name} will not parse: {why}': '{name} n\u00e3o abre: {why}',
+    'no sprites in that folder': 'nenhum sprite nessa pasta',
+    'no sprites in that zip': 'nenhum sprite nesse zip',
+    'could not read that zip: {why}': 'n\u00e3o consegui ler esse zip: {why}',
+    /* ---- what the export desk says */
+    'nothing is open to export': 'n\u00e3o h\u00e1 nada aberto para exportar',
+    'that produced nothing': 'isso n\u00e3o produziu nada',
+    'export failed: {why}': 'a exporta\u00e7\u00e3o falhou: {why}',
+    '{n} files, {kb} KB': '{n} arquivos, {kb} KB',
+    '{n} frames, {w} x {h}': '{n} quadros, {w} x {h}',
+    '{n} frames, {w} x {h}, an effect': '{n} quadros, {w} x {h}, um efeito',
+    'one format, two extensions \u2014 the loader asks for the name the folder uses':
+      'um formato, duas extens\u00f5es \u2014 o carregador pede o nome que a pasta usa',
+    '{n} files': '{n} arquivos',
+    'drop it back in and it is sliced across the frames again':
+      'solte de volta e ela \u00e9 fatiada entre os quadros de novo',
+    'every frame on a grid, numbered \u2014 for looking at, not for importing back':
+      'cada quadro numa grade, numerado \u2014 para olhar, n\u00e3o para importar de volta',
+    'at the game\u2019s own timing: {ms} ms a round':
+      'no tempo do pr\u00f3prio jogo: {ms} ms por volta',
+    'at {fps} fps, the speed on the slider':
+      'a {fps} fps, a velocidade da barra',
+    '{n} frames, the eight layers together \u2014 what a player sees':
+      '{n} quadros, as oito camadas juntas \u2014 o que o jogador v\u00ea',
+    'the effect playing, the way the game draws it':
+      'o efeito tocando, do jeito que o jogo desenha',
+    'size, frames, the slot it is, the clock, and every frame measured \u2014 for a script to read':
+      'tamanho, quadros, qual slot \u00e9, o rel\u00f3gio, e cada quadro medido \u2014 para um script ler',
+    '{m} mesh(es), {t} texture(s)': '{m} malha(s), {t} textura(s)',
+    '{v} vertices, {f} faces \u2014 opens in any modeller, and comes back in':
+      '{v} v\u00e9rtices, {f} faces \u2014 abre em qualquer modelador, e volta',
+    '{n} file(s), exactly the bytes the container holds':
+      '{n} arquivo(s), exatamente os bytes que o arquivo guarda',
+    'texture {i}, the layout drawn over it \u2014 the guide for painting a garment in the right place':
+      'textura {i}, o mapa desenhado por cima \u2014 o guia para pintar uma roupa no lugar certo',
+    'meshes, vertices, faces, bones, textures and the material bindings':
+      'malhas, v\u00e9rtices, faces, ossos, texturas e as liga\u00e7\u00f5es de material',
+    '{n} screens': '{n} telas',
+    '46 sets x 100 variants, written back byte for byte':
+      '46 conjuntos x 100 variantes, gravado de volta byte a byte',
+    'set {n}: every distinct variant as a row of digits, 0 floor, 1 soft, 2 pillar, 9 wall':
+      'conjunto {n}: cada variante distinta como uma fila de d\u00edgitos, 0 ch\u00e3o, 1 quebr\u00e1vel, 2 pilar, 9 parede',
+    'the spawns, the gimmicks and the item counts, every set':
+      'as largadas, os gimmicks e as contagens de item, de todos os conjuntos',
+    '{n} file(s), exactly as they were opened':
+      '{n} arquivo(s), exatamente como foram abertos',
+    'which slots are filled, the frame counts, and what the cross-file checks found':
+      'quais slots est\u00e3o preenchidos, as contagens de quadro, e o que as confer\u00eancias entre arquivos acharam',
+
+    /* ---- opening files */
+    'no files received': 'nenhum arquivo recebido',
+    'could not read {name}': 'n\u00e3o consegui ler {name}',
+    'an .obj has to come from a file, not from bytes already open':
+      'um .obj tem de vir de um arquivo, n\u00e3o de bytes j\u00e1 abertos',
+
+    /* ---- what the map editor says */
+    'The map has no name.': 'O mapa n\u00e3o tem nome.',
+    'The name is longer than {n} characters.':
+      'O nome \u00e9 mais longo que {n} caracteres.',
+    'fewer than two start points.': 'menos de dois pontos de largada.',
+    '{n} start points, and this size takes {max}.':
+      '{n} pontos de largada, e este tamanho aceita {max}.',
+    'start {n} is off the field.': 'a largada {n} est\u00e1 fora do campo.',
+    'start {n} is not on floor.': 'a largada {n} n\u00e3o est\u00e1 no ch\u00e3o.',
+    'two starts on the same tile.': 'duas largadas na mesma casa.',
+    '{item} is over {max}.': '{item} passa de {max}.',
+    '{items} items but only {soft} breakable blocks to hide them in.':
+      '{items} itens mas s\u00f3 {soft} blocos quebr\u00e1veis para escond\u00ea-los.',
+    'that is not map.spr': 'isso n\u00e3o \u00e9 o map.spr',
+    'map.spr read: {n} sets. Open block.spr to see them':
+      'map.spr lido: {n} conjuntos. Abra o block.spr para v\u00ea-los',
+    'map.spr read: spawns, objects and items for {n} sets':
+      'map.spr lido: largadas, objetos e itens de {n} conjuntos',
+    'that JSON will not parse: {why}': 'esse JSON n\u00e3o abre: {why}',
+    'that JSON is not a custom map': 'esse JSON n\u00e3o \u00e9 um mapa customizado',
+    'set {n}: every variant is now this layout':
+      'conjunto {n}: todas as variantes agora s\u00e3o este tra\u00e7ado',
+    'only block.spr has a round trip':
+      's\u00f3 o block.spr tem volta para conferir',
+
+    /* ---- the labels painted over a sheet. These are drawn onto the
+       canvas, so charLabel asks for them by hand and i18nSetLang
+       redraws; the node sweep cannot reach a canvas. */
+    'this square': 'esta casa',
+    'head 40 x 40': 'cabe\u00e7a 40 x 40',
+    'the name goes here': 'o nome vem aqui',
+    'safe area': '\u00e1rea segura',
+    'shadow': 'sombra',
+    'team ring': 'anel de equipe',
+    'stunned stars': 'estrelas de atordoado',
+    'you marker': 'marcador voc\u00ea',
+    'Hyper Bomb orbit': '\u00f3rbita da Hyper Bomb',
+    'you arrow': 'seta voc\u00ea',
+
     /* ---- a folder as one document */
     'Folder\u2026': 'Pasta\u2026',
     'The whole set': 'O conjunto inteiro',
@@ -396,6 +683,29 @@ function i18nAttrs(el) {
   }
 }
 
+/* A line with numbers in it cannot be keyed as a whole: the key would
+   change every time the data does, so it would never match. The
+   template is the key instead, with {name} where a value goes, and
+   the values are put in after the translation.
+
+   This is what the editor's own findings needed. They were being left
+   in English on the grounds that they are built at run time, which
+   was the wrong conclusion from a true fact: what is built at run
+   time is the number, not the sentence. */
+function tf(template, vars) {
+  let s = t(template);
+  for (const k in (vars || {})) s = s.split('{' + k + '}').join(vars[k]);
+  return s;
+}
+
+/* English has one plural rule and Portuguese happens to agree with it
+   for every count in this interface, so one helper serves both: the
+   caller gives the two forms and the translation keys each on its
+   own. */
+function tn(n, one, many) {
+  return t(n === 1 ? one : many);
+}
+
 function i18nApply(root) {
   if (!root) root = document.body;
   if (!root || i18nBusy) return;
@@ -433,6 +743,11 @@ function i18nSetLang(code) {
   i18nLang = I18N[code] || code === 'en' ? code : 'en';
   document.documentElement.lang = i18nLang === 'pt-BR' ? 'pt-BR' : 'en';
   i18nApply(document.body);
+  /* Text painted onto a canvas is not a node, so the sweep above
+     cannot reach it. The guide labels over a sheet are drawn, not
+     written, and only a redraw puts them in the new language. */
+  for (const fn of ['spriteDraw', 'paintDraw', 'mapDraw'])
+    if (typeof window[fn] === 'function') { try { window[fn](); } catch (e) { /* not open */ } }
 }
 
 /* Most of this interface is built at run time, so new nodes have to be

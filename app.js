@@ -2298,45 +2298,53 @@ function rebuild() {
   build(dress ? loaded : [current]);
 }
 
+/* Open bytes that are already in hand. Routing is by content first and
+   by name second, because the extensions here lie in both directions:
+   a stage pack out of a decoded cache is named .bin and is a sprite,
+   and block.spr and map.spr wear a sprite extension and are not
+   sprites. The sniffs read the bytes, which also covers a file having
+   been renamed.
+
+   Separate from readFiles so that anything holding bytes already -- a
+   zip, a set, whatever comes next -- opens them the same way rather
+   than growing its own idea of what a file is. */
+function openBuffer(name, buf, file) {
+  const head = sheetPackOffset(buf);
+  if (head >= 0) {
+    try { spriteOpen(name, buf, head); renderList(); }
+    catch (e) { notify(describeRefusal(name, buf, e), 1); }
+    return;
+  }
+  const asMap = typeof mapSniff === 'function' ? mapSniff(name, buf) : null;
+  if (asMap) { mapOpen(name, buf, asMap); return; }
+  if (isSpriteName(name)) {
+    if (typeof mapClose === 'function') mapClose();
+    try { spriteOpen(name, buf); renderList(); }
+    catch (e) { notify(describeRefusal(name, buf, e), 1); }
+    return;
+  }
+  if (/\.obj$/i.test(name)) {
+    spriteClose();
+    if (typeof mapClose === 'function') mapClose();
+    /* the OBJ reader wants a File, which only a real drop has */
+    if (file) importOBJ(file);
+    else notify(t('an .obj has to come from a file, not from bytes ' +
+                  'already open'), 1);
+    return;
+  }
+  spriteClose();
+  if (typeof mapClose === 'function') mapClose();
+  addFile(name, buf);
+}
+
 function readFiles(files) {
   const arr = Array.from(files || []);
-  if (!arr.length) { notify('no files received', 1); return; }
+  if (!arr.length) { notify(t('no files received'), 1); return; }
   for (const f of arr) {
     const r = new FileReader();
-    r.onerror = () => notify('could not read ' + f.name, 1);
+    r.onerror = () => notify(tf('could not read {name}', { name: f.name }), 1);
     r.onload = () => {
-      /* sprites and meshes disagree on almost everything, starting
-         with byte order, so route by extension -- except for the one
-         case the extension gets wrong. A stage pack out of a decoded
-         cache is named .bin and is a sprite, so it is sniffed first,
-         by content, which also covers it having been renamed. */
-      const head = sheetPackOffset(r.result);
-      if (head >= 0) {
-        try { spriteOpen(f.name, r.result, head); renderList(); }
-        catch (e) { notify(describeRefusal(f.name, r.result, e), 1); }
-        return;
-      }
-      /* block.spr and map.spr wear a sprite extension and are not
-         sprites, so the map sniff goes first. It reads the bytes, not
-         the name: a sprite has 01 01 at bytes 2-3 and these do not. */
-      const asMap = typeof mapSniff === 'function'
-        ? mapSniff(f.name, r.result) : null;
-      if (asMap) { mapOpen(f.name, r.result, asMap); return; }
-      if (isSpriteName(f.name)) {
-        if (typeof mapClose === 'function') mapClose();
-        try { spriteOpen(f.name, r.result); renderList(); }
-        catch (e) { notify(describeRefusal(f.name, r.result, e), 1); }
-        return;
-      }
-      if (/\.obj$/i.test(f.name)) {
-        spriteClose();
-        if (typeof mapClose === 'function') mapClose();
-        importOBJ(f);
-        return;
-      }
-      spriteClose();
-      if (typeof mapClose === 'function') mapClose();
-      addFile(f.name, r.result);
+      openBuffer(f.name, r.result, f);
     };
     r.readAsArrayBuffer(f);
   }

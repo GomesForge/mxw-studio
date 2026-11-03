@@ -105,15 +105,17 @@ function mapSniff(name, buf) {
 function mapOpen(name, buf, kind) {
   if (kind === 'records') {
     const recs = mapParseRecords(buf);
-    if (!recs) { notify('that is not map.spr', 1); return; }
+    if (!recs) { notify(t('that is not map.spr'), 1); return; }
     map.records = recs;
     /* on its own it is not a document: it describes sets, and a set is
        a thing you look at in block.spr */
     if (map.kind !== 'block') {
-      notify('map.spr read: ' + recs.length + ' sets. Open block.spr to see them');
+      notify(tf('map.spr read: {n} sets. Open block.spr to see them',
+        { n: recs.length }));
       return;
     }
-    notify('map.spr read: spawns, objects and items for ' + recs.length + ' sets');
+    notify(tf('map.spr read: spawns, objects and items for {n} sets',
+      { n: recs.length }));
     mapRenderAll();
     return;
   }
@@ -129,9 +131,10 @@ function mapOpen(name, buf, kind) {
   } else {
     let d;
     try { d = JSON.parse(new TextDecoder().decode(buf)); }
-    catch (e) { notify('that JSON will not parse: ' + e.message, 1); return; }
+    catch (e) { notify(tf('that JSON will not parse: {why}',
+      { why: e.message }), 1); return; }
     const doc = mapAdoptCustom(d);
-    if (!doc) { notify('that JSON is not a custom map', 1); return; }
+    if (!doc) { notify(t('that JSON is not a custom map'), 1); return; }
     map.kind = 'custom';
     map.name = name;
     map.doc = doc;
@@ -329,34 +332,41 @@ function mapCustomJSON() {
    screen attached sends people looking at the wrong one. */
 function mapProblems() {
   const d = map.doc, out = [];
-  if (!d.name.trim()) out.push('The map has no name.');
+  if (!d.name.trim()) out.push(t('The map has no name.'));
   if (d.name.length > MAP_LIMITS.name)
-    out.push('The name is longer than ' + MAP_LIMITS.name + ' characters.');
+    out.push(tf('The name is longer than {n} characters.',
+                { n: MAP_LIMITS.name }));
   d.screens.forEach((s, i) => {
     const z = MAP_SIZES[i], where = z.w + ' x ' + z.h;
-    if (s.starts.length < 2)
-      out.push(where + ': fewer than two start points.');
+    /* Every line names the screen it is about, because three screens
+       of one map produce three sets of these. The translation is asked
+       for at the call rather than inside at(), so that a sweep over
+       this file can see every line it has to carry. */
+    const at = line => out.push(where + ': ' + line);
+    if (s.starts.length < 2) at(t('fewer than two start points.'));
     if (s.starts.length > z.starts)
-      out.push(where + ': ' + s.starts.length + ' start points, and this size takes ' + z.starts + '.');
+      at(tf('{n} start points, and this size takes {max}.',
+            { n: s.starts.length, max: z.starts }));
     s.starts.forEach((p, k) => {
       const v = s.cells[p[1] * z.w + p[0]];
-      if (v === undefined) out.push(where + ': start ' + (k + 1) + ' is off the field.');
-      else if (v !== T_FLOOR)
-        out.push(where + ': start ' + (k + 1) + ' is not on floor.');
+      if (v === undefined) at(tf('start {n} is off the field.', { n: k + 1 }));
+      else if (v !== T_FLOOR) at(tf('start {n} is not on floor.', { n: k + 1 }));
     });
     const dup = new Set();
     for (const p of s.starts) {
       const k = p[0] + ',' + p[1];
-      if (dup.has(k)) { out.push(where + ': two starts on the same tile.'); break; }
+      if (dup.has(k)) { at(t('two starts on the same tile.')); break; }
       dup.add(k);
     }
     const over = s.items.findIndex(n => n > MAP_LIMITS.item);
     if (over >= 0)
-      out.push(where + ': ' + MAP_ITEMS[over] + ' is over ' + MAP_LIMITS.item + '.');
+      at(tf('{item} is over {max}.',
+            { item: t(MAP_ITEMS[over]), max: MAP_LIMITS.item }));
     const soft = s.cells.filter(v => v === T_SOFT).length;
     const items = s.items.reduce((a, b) => a + b, 0);
     if (items > soft)
-      out.push(where + ': ' + items + ' items but only ' + soft + ' breakable blocks to hide them in.');
+      at(tf('{items} items but only {soft} breakable blocks to hide them in.',
+            { items: items, soft: soft }));
   });
   return out;
 }
@@ -828,7 +838,8 @@ function mapCopyAcrossSet() {
   for (let v = 0; v < MAP_VARIANTS; v++)
     map.blocks.set(one, (map.set * MAP_VARIANTS + v) * MAP_VAR_BYTES);
   map.dirty = true;
-  notify('set ' + map.set + ': every variant is now this layout');
+  notify(tf('set {n}: every variant is now this layout',
+    { n: map.set }));
   mapRenderStatus();
 }
 
@@ -899,7 +910,9 @@ function mapSave() {
    and compare. Nothing has been edited yet means the bytes have to
    come back identical. */
 function mapCheckRoundTrip() {
-  if (map.kind !== 'block') { notify('only block.spr has a round trip'); return; }
+  if (map.kind !== 'block') {
+    notify(t('only block.spr has a round trip')); return;
+  }
   notify(mapSameAsLoaded()
     ? 'byte for byte the file that was opened'
     : 'edited -- ' + mapChangedCount() + ' variant(s) differ from the file as loaded');

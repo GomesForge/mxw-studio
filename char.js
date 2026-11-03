@@ -48,7 +48,7 @@ const CHAR_GROUPS = [
   { anim: 'wi',     slot: 21, dirs: false, want: 11, min: 8, max: 37,
     label: 'Victory', when: 'the player won the round' },
   { anim: 'wa',     slot: 22, dirs: false, want: 18, min: 13, max: 23,
-    label: 'Warp', when: 'entering the round, and teleporting' },
+    label: 'Teleport', when: 'entering the round, and teleporting' },
   { anim: 'msb_ch', slot: 23, dirs: true,  need: 1,  label: 'Revenge cart',
     when: 'dead, riding the cart around the edge' },
   { anim: 'rui_mo', slot: 27, dirs: true,  need: 8,  label: 'Louie walk',
@@ -57,7 +57,7 @@ const CHAR_GROUPS = [
     when: 'standing while mounted' },
   { anim: 'preview', slot: 35, dirs: false, need: 3, label: 'Room preview',
     when: 'the room card, the profile and the shop' },
-  { anim: 'face',   slot: 36, dirs: false, need: 1, label: 'Face',
+  { anim: 'face',   slot: 36, dirs: false, need: 1, label: 'Portrait',
     when: 'the bar at the top of a match', side: CHAR_FACE }
 ];
 
@@ -383,32 +383,38 @@ function charProblems(name, g) {
 
   const side = sheet.side || CHAR_SIDE;
   if (g.width !== side || g.height !== side) {
-    say('bad', sheet.file + ' has to be ' + side + ' x ' + side +
-      '; this one is ' + g.width + ' x ' + g.height +
-      '. The game stamps the whole sheet at a fixed place, so a ' +
-      'different size moves the character.');
+    say('bad', tf('{file} has to be {side} x {side}; this one is {w} x {h}. ' +
+      'The game stamps the whole sheet at a fixed place, so a different ' +
+      'size moves the character.',
+      { file: sheet.file, side: side, w: g.width, h: g.height }));
   }
 
   const n = g.frames.length;
   if (sheet.need != null && n !== sheet.need) {
-    say('bad', sheet.file + ' needs exactly ' + sheet.need + ' frame' +
-      (sheet.need === 1 ? '' : 's') + ', not ' + n + ' \u2014 ' +
-      (CHAR_WHY_FIXED[sheet.anim] || 'the game counts on it') + '.');
+    say('bad', tf('{file} needs exactly {want} frames, not {got} \u2014 {why}.',
+      { file: sheet.file, want: sheet.need, got: n,
+        why: t(CHAR_WHY_FIXED[sheet.anim] || 'the game counts on it') }));
   } else if (sheet.want != null) {
     const lo = sheet.min != null ? sheet.min : sheet.want;
     const hi = sheet.max != null ? sheet.max : sheet.want;
     if (n < lo || n > hi) {
-      say('odd', sheet.file + ' usually has ' + sheet.want + ' frames' +
-        (lo === hi ? '' : ' (the officials run ' + lo + ' to ' + hi + ')') +
-        '; this one has ' + n + '. Every frame costs time: the clock is ' +
-        'fixed, so more frames is a longer animation, not a slower one.');
+      say('odd', tf(lo === hi
+        ? '{file} usually has {want} frames; this one has {got}. Every frame ' +
+          'costs time: the clock is fixed, so more frames is a longer ' +
+          'animation, not a slower one.'
+        : '{file} usually has {want} frames (the officials run {lo} to {hi}); ' +
+          'this one has {got}. Every frame costs time: the clock is fixed, ' +
+          'so more frames is a longer animation, not a slower one.',
+        { file: sheet.file, want: sheet.want, got: n, lo: lo, hi: hi }));
     }
   }
   if ((sheet.anim === 'th' || sheet.anim === 'pu') && n > 7) {
-    say('odd', 'while ' + (sheet.anim === 'th' ? 'throwing' : 'punching') +
-      ' the game ignores the player\u2019s direction, so ' + n +
-      ' frames pins them for ' + (n * (sheet.anim === 'th' ? 60 : 70)) +
-      ' ms in the middle of a match.');
+    say('odd', tf(sheet.anim === 'th'
+      ? 'while throwing the game ignores the player\u2019s direction, so ' +
+        '{n} frames pins them for {ms} ms in the middle of a match.'
+      : 'while punching the game ignores the player\u2019s direction, so ' +
+        '{n} frames pins them for {ms} ms in the middle of a match.',
+      { n: n, ms: n * (sheet.anim === 'th' ? 60 : 70) }));
   }
 
   if (sheet.anim === 'face') return out;   /* 40 x 40, no guides apply */
@@ -450,14 +456,20 @@ function charProblems(name, g) {
   });
 
   if (empty) {
-    say('bad', empty + ' frame' + (empty === 1 ? ' is' : 's are') +
-      ' empty. The game shows them anyway, as a gap in the animation.');
+    say('bad', tf(empty === 1
+      ? '{n} frame is empty. The game shows it anyway, as a gap in the animation.'
+      : '{n} frames are empty. The game shows them anyway, as a gap in the ' +
+        'animation.', { n: empty }));
   }
   if (offAxis) {
-    say('bad', offAxis + (offAxis === 1 ? ' frame sits' : ' frames sit') +
-      ' more than 7 px off the axis. Collision is computed from the ' +
-      'player\u2019s square, never from the pixels, so an off-axis body ' +
-      'looks like it walks through walls and bombs.');
+    say('bad', tf(offAxis === 1
+      ? '{n} frame sits more than 7 px off the axis. Collision is computed ' +
+        'from the player\u2019s square, never from the pixels, so an ' +
+        'off-axis body looks like it walks through walls and bombs.'
+      : '{n} frames sit more than 7 px off the axis. Collision is computed ' +
+        'from the player\u2019s square, never from the pixels, so an ' +
+        'off-axis body looks like it walks through walls and bombs.',
+      { n: offAxis }));
   }
   const med = charMedianOf(soles);
   if (med != null && onFoot) {
@@ -465,38 +477,44 @@ function charProblems(name, g) {
     const want = walk ? CHAR_SOLE_WALK : CHAR_SOLE;
     const lo = walk ? 187 : 190, hi = walk ? 200 : 199;
     if (med < lo || med > hi) {
-      say('bad', 'the sole sits at ' + med + ' on the median frame, and the ' +
-        'floor is ' + want + '. Higher and the character floats over the ' +
-        'block in front; lower and it sinks into it.');
+      say('bad', tf('the sole sits at {at} on the median frame, and the floor ' +
+        'is {want}. Higher and the character floats over the block in front; ' +
+        'lower and it sinks into it.', { at: med, want: want }));
     }
   }
   if (border) {
-    say('bad', border + (border === 1 ? ' frame touches' : ' frames touch') +
-      ' the edge of the sheet. That is where grid cuts show up.');
+    say('bad', tf(border === 1
+      ? '{n} frame touches the edge of the sheet. That is where grid cuts ' +
+        'show up.'
+      : '{n} frames touch the edge of the sheet. That is where grid cuts ' +
+        'show up.', { n: border }));
   }
   if (outside) {
-    say('odd', outside + (outside === 1 ? ' frame leaves' : ' frames leave') +
-      ' the safe area (80, 88) to (176, 216). Ground animations ' +
-      'are expected to stay inside it; death and victory are not.');
+    say('odd', tf(outside === 1
+      ? '{n} frame leaves the safe area (80, 88) to (176, 216). Ground ' +
+        'animations are expected to stay inside it; death and victory are not.'
+      : '{n} frames leave the safe area (80, 88) to (176, 216). Ground ' +
+        'animations are expected to stay inside it; death and victory are not.',
+      { n: outside }));
   }
 
   /* the seams the player actually sees, where one file can show them */
   if (sheet.anim === 'dd' && n >= 2) {
     const a = spriteBytesOfFrame(g, n - 1), b = spriteBytesOfFrame(g, n - 2);
     if (a !== b) {
-      say('odd', 'the last frame of a death never reaches the screen \u2014 ' +
-        'the player has already turned into the cart. Draw the end of the ' +
-        'fall on the second to last and repeat it on the last.');
+      say('odd', t('the last frame of a death never reaches the screen ' +
+        '\u2014 the player has already turned into the cart. Draw the end ' +
+        'of the fall on the second to last and repeat it on the last.'));
     }
   }
   if (sheet.anim === 'mo' && n === 8) {
     const s = charStride(g);
     if (s && !s.pass) {
-      say('odd', 'the legs barely change between frames (' +
-        s.distinct + ' distinct lower silhouettes, median ' +
-        s.median.toFixed(2) + ', largest ' + s.max.toFixed(2) +
-        '; a walk passes at 8, 0.12 and 0.20). This is what reads as ' +
-        'sliding rather than walking.');
+      say('odd', tf('the legs barely change between frames ({d} distinct ' +
+        'lower silhouettes, median {med}, largest {max}; a walk passes at ' +
+        '8, 0.12 and 0.20). This is what reads as sliding rather than ' +
+        'walking.', { d: s.distinct, med: s.median.toFixed(2),
+                      max: s.max.toFixed(2) }));
     }
   }
   return out;
@@ -623,9 +641,14 @@ function charPaintOne(ctx, z, d) {
   ctx.setLineDash([]);
 }
 
-/* A label the artwork cannot swallow: dark plate, light text. */
+/* A label the artwork cannot swallow: dark plate, light text.
+
+   Painted, not written, so the interface sweep that translates nodes
+   never sees it -- the translation has to be asked for here, and
+   i18nSetLang redraws so a language change reaches the canvas. */
 function charLabel(ctx, text, x, y, colour) {
   if (!text || !chr.labels) return;
+  if (typeof t === 'function') text = t(text);
   const w = ctx.measureText(text).width;
   ctx.globalAlpha = 0.72;
   ctx.fillStyle = '#0b1120';
@@ -707,10 +730,10 @@ function charRenderWho() {
   if (!el || !e) return;
   const s = chr.sheet;
   if (!s) {
-    el.innerHTML = '<p class="hint">This is a ' + e.gra.width + ' x ' +
-      e.gra.height + ' sheet, so the guides apply, but the name is not ' +
-      'one of the 37 the loader asks for. Rename it and the frame counts, ' +
-      'the timings and the measured medians come with it.</p>';
+    el.innerHTML = '<p class="hint">' + tf('This is a {w} x {h} sheet, so ' +
+      'the guides apply, but the name is not one of the 37 the loader asks ' +
+      'for. Rename it and the frame counts, the timings and the measured ' +
+      'medians come with it.', { w: e.gra.width, h: e.gra.height }) + '</p>';
     return;
   }
   const count = s.need != null ? String(s.need)
@@ -719,15 +742,17 @@ function charRenderWho() {
   const total = ms ? ms.reduce((a, b) => a + b, 0) : 0;
   el.innerHTML =
     '<dl class="what">' +
-    '<dt>slot ' + s.slot + '</dt><dd>' + s.label +
-      (s.dir ? ', ' + s.dirName : '') + '</dd>' +
-    '<dt>plays</dt><dd>' + s.when + '</dd>' +
-    (s.dir ? '<dt>facing</dt><dd>' + s.dirHow + '</dd>' : '') +
-    '<dt>frames</dt><dd>' + e.gra.frames.length + ' here, ' + count +
-      ' expected</dd>' +
-    '<dt>clock</dt><dd>' + (ms
-      ? total + ' ms a round' + (charLoops(s.anim) ? ', looping' : ', once')
-      : 'static \u2014 the game draws frame 0 and no other') + '</dd>' +
+    '<dt>' + tf('slot {n}', { n: s.slot }) + '</dt><dd>' + t(s.label) +
+      (s.dir ? ', ' + t(s.dirName) : '') + '</dd>' +
+    '<dt>' + t('plays') + '</dt><dd>' + t(s.when) + '</dd>' +
+    (s.dir ? '<dt>' + t('facing') + '</dt><dd>' + t(s.dirHow) + '</dd>' : '') +
+    '<dt>' + t('frames') + '</dt><dd>' +
+      tf('{here} here, {want} expected',
+         { here: e.gra.frames.length, want: count }) + '</dd>' +
+    '<dt>' + t('clock') + '</dt><dd>' + (ms
+      ? tf(charLoops(s.anim) ? '{ms} ms a round, looping'
+                             : '{ms} ms a round, once', { ms: total })
+      : t('static \u2014 the game draws frame 0 and no other')) + '</dd>' +
     '</dl>';
 }
 
@@ -747,14 +772,15 @@ function charRenderFrames() {
   const floor = s && s.anim === 'mo' ? CHAR_SOLE_WALK : CHAR_SOLE;
   let html = '<table class="tbl"><thead><tr><th>#</th>' +
     (ms ? '<th>ms</th>' : '') +
-    '<th>sole</th><th>axis</th><th>top</th><th>size</th>' +
-    (med ? '<th>vs official</th>' : '') + '</tr></thead><tbody>';
+    '<th>' + t('sole') + '</th><th>' + t('axis') + '</th><th>' + t('top') +
+    '</th><th>' + t('size') + '</th>' +
+    (med ? '<th>' + t('vs official') + '</th>' : '') + '</tr></thead><tbody>';
   g.frames.forEach((f, i) => {
     const m = charMeasure(g, f);
     const cur = i === sprite.frame ? ' class="hot"' : '';
     if (m.empty) {
       html += '<tr' + cur + '><td>' + (i + 1) + '</td><td colspan="' +
-        (4 + (ms ? 1 : 0) + (med ? 1 : 0)) + '">empty</td></tr>';
+        (4 + (ms ? 1 : 0) + (med ? 1 : 0)) + '">' + t('empty') + '</td></tr>';
       return;
     }
     let delta = '';
@@ -762,11 +788,11 @@ function charRenderFrames() {
       const parts = [];
       if (med.sole && med.sole[i] != null) {
         const d = m.sole - med.sole[i];
-        parts.push('sole ' + (d > 0 ? '+' : '') + d);
+        parts.push(t('sole') + ' ' + (d > 0 ? '+' : '') + d);
       }
       if (med.foot != null) {
         const d = +(m.foot - med.foot).toFixed(1);
-        parts.push('foot ' + (d > 0 ? '+' : '') + d);
+        parts.push(t('foot') + ' ' + (d > 0 ? '+' : '') + d);
       }
       delta = '<td class="' + charDeltaClass(m, med, i) + '">' +
         parts.join(', ') + '</td>';
@@ -797,8 +823,9 @@ function charRenderChecks() {
   if (!chr.sheet) { el.innerHTML = ''; return; }
   const probs = charProblems(e.name, e.gra);
   if (!probs.length) {
-    el.innerHTML = '<p class="note good">Nothing to flag: the counts, the ' +
-      'size, the axis and the sole all read the way the game wants them.</p>';
+    el.innerHTML = '<p class="note good">' + t('Nothing to flag: the counts, ' +
+      'the size, the axis and the sole all read the way the game wants ' +
+      'them.') + '</p>';
     return;
   }
   el.innerHTML = probs.map(p =>
@@ -827,14 +854,17 @@ function charAlign() {
   const e = sprite.entry;
   if (!e || !chr.sheet) return;
   const off = charAlignOffset(e.name, e.gra);
-  if (!off) { notify('nothing drawn to align', 1); return; }
-  if (!off.dx && !off.dy) { notify('already on the axis and the floor'); return; }
+  if (!off) { notify(t('nothing drawn to align'), 1); return; }
+  if (!off.dx && !off.dy) { notify(t('already on the axis and the floor')); return; }
   const lost = charApplyOffset(e.gra, off.dx, off.dy);
   spriteRenderAll();
   spriteDraw();
-  notify('moved the whole sheet ' + off.dx + ' across and ' + off.dy +
-    ' down; the sole now sits at ' + off.target + ' on the median frame' +
-    (lost ? ', and ' + lost + ' pixels fell off the sheet' : ''));
+  notify(tf(lost
+    ? 'moved the whole sheet {dx} across and {dy} down; the sole now sits ' +
+      'at {at} on the median frame, and {lost} pixels fell off the sheet'
+    : 'moved the whole sheet {dx} across and {dy} down; the sole now sits ' +
+      'at {at} on the median frame',
+    { dx: off.dx, dy: off.dy, at: off.target, lost: lost }));
 }
 
 /* ----------------------------- wiring ---------------------------- */
