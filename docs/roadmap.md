@@ -65,6 +65,10 @@ This is the list the rest of the page is measured against.
   one record per set with the spawns, the gimmicks and the item counts.
   A map editor opens the first, reads the second and writes custom maps
   for the server. See [map-format.md](map-format.md)
+- **A shelf**: a movable window holding everything opened, in folders
+  you make, name, nest, drag between and throw out, with one command
+  that files a character's sheets by animation and another that saves
+  any folder of it as a zip
 - **A folder as one document**: a character or a bomb skin opened as
   a set, from a folder, a drag or a zip, with every slot the loader
   asks for listed and the checks that need two files at once -- the
@@ -344,6 +348,11 @@ Each item below names the module it came from. None of it is guessed.
 
 ## 12. Quality of life
 
+- **The shelf should survive a reload.** Only where the window sits is
+  remembered; the bytes are not, because a few hundred megabytes do
+  not belong in browser storage. The File System Access API would let
+  a folder be re-opened by permission rather than re-imported, which
+  is the honest version of persistence
 - **A set that writes itself back.** A character folder in, the same
   folder out, with whatever was edited in it -- the reading half now
   exists, the writing half is still per file

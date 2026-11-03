@@ -184,6 +184,37 @@ different figure, one projection, a few dozen pixels tall. When a real
 motion file turns up it plays through the same player, because it is
 the same thing &mdash; a rotation per bone per frame.
 
+## The shelf
+
+Thirty-seven files for one character and twelve for a bomb skin, and
+that is one of each. Somebody working on a character has the walk, the
+throw, the old version of the throw, three faces and a scratch sheet
+open at once; a row of tabs is the wrong shape for that, because the
+work is a tree.
+
+**Library** opens a window you can put where you want. Everything you
+open is shelved in it, a folder or a zip keeps the folders it came in,
+and from there it is yours to arrange:
+
+- **folders and subfolders**, as deep as you like, named by you
+- **drag a row onto a folder** to move it; a folder cannot be dropped
+  inside itself or inside something it contains
+- **double-click** a file to open it, a folder to rename it; **F2**
+  renames the selection and **Delete** removes it
+- **right-click** for the rest: open, open the folder as a set, file
+  by animation, new folder inside, rename, save as `.zip`, remove
+- **File by animation** does the one piece of arranging a person
+  should not have to: a character's sheets go into a folder each for
+  Walk, Stand, Throw, Stunned, Punch and the rest, which is the shape
+  the drawing actually has
+- **Save .zip** writes whatever is selected, with its folders intact
+
+The window remembers where it was and how big, and whether it was
+open. The files do not: the shelf lives in this page, so closing the
+tab loses the arrangement, not the files. A shelf whose contents could
+not be rebuilt from the files on your own disk would be a filing
+system pretending to be a panel, and this is a panel.
+
 ## A folder as one document
 
 **Folder&hellip;** opens a character or a bomb skin as the set it is.

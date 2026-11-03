@@ -409,6 +409,7 @@ async function folderFromFileList(files) {
     entries.push({ path, buf: await f.arrayBuffer() });
   }
   if (!entries.length) { notify(t('no sprites in that folder'), 1); return false; }
+  if (typeof libTakeMany === 'function') libTakeMany(entries);
   return folderOpen(label || 'folder', entries);
 }
 
@@ -466,6 +467,7 @@ async function folderFromZip(name, buf) {
     { why: e.message }), 1); return false; }
   const keep = entries.filter(e => /\.(gra|spr|eft)$/i.test(e.path));
   if (!keep.length) { notify(t('no sprites in that zip'), 1); return false; }
+  if (typeof libTakeMany === 'function') libTakeMany(keep);
   return folderOpen(name.replace(/\.zip$/i, ''), keep);
 }
 
@@ -501,6 +503,7 @@ async function folderFromEntries(items) {
     entries.push({ path, buf: await f.arrayBuffer() });
   }
   if (!entries.length) return false;
+  if (typeof libTakeMany === 'function') libTakeMany(entries);
   return folderOpen(label || 'folder', entries);
 }
 
