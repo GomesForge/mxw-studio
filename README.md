@@ -207,8 +207,13 @@ What you can do with what is on the shelf:
 - **folders and subfolders**, as deep as you like, named by you
 - **drag a row onto a folder** to move it; a folder cannot be dropped
   inside itself or inside something it contains
-- **double-click** a file to open it, a folder to rename it; **F2**
-  renames the selection and **Delete** removes it
+- **one click opens a file**, and the **arrow keys walk the list** and
+  open what they land on &mdash; browsing a character means looking at
+  thirty-seven sheets in a row, and asking for two clicks each time
+  turns reading into typing. Left and right fold a folder or step into
+  it, Home and End jump to the ends
+- **double-click** a folder to rename it; **F2** renames the selection
+  and **Delete** removes it
 - **right-click** for the rest: open, open the folder as a set, file
   by animation, new folder inside, rename, save as `.zip`, remove
 - **File by animation** does the one piece of arranging a person
@@ -217,8 +222,11 @@ What you can do with what is on the shelf:
   the drawing actually has
 - **Save .zip** writes whatever is selected, with its folders intact
 
-The window remembers where it was and how big, and whether it was
-open. The files do not: the shelf lives in this page, so closing the
+It opens in the top left corner of the work area, against the edge:
+that corner is empty in every mode, a sheet is drawn from the middle
+out and a list is read from the top. Drag it anywhere else and it
+stays there &mdash; the window remembers where it was and how big, and
+whether it was open. The files do not: the shelf lives in this page, so closing the
 tab loses the arrangement, not the files. A shelf whose contents could
 not be rebuilt from the files on your own disk would be a filing
 system pretending to be a panel, and this is a panel.

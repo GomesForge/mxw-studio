@@ -455,8 +455,8 @@ const I18N = {
       'Tirar "{name}" e os {n} arquivos dentro? Eles continuam no seu disco; isto s\u00f3 limpa a estante.',
     'Clear the shelf? {n} files go, and they stay on your disk either way.':
       'Limpar a estante? {n} arquivos saem, e continuam no seu disco de qualquer jeito.',
-    'Drag a row onto a folder to move it. <b>Double-click</b> a file to open it, a folder to rename it. Right-click for the rest. The shelf lives in this page: closing the tab loses the arrangement, not the files.':
-      'Arraste uma linha para dentro de uma pasta para mov\u00ea-la. <b>Dois cliques</b> num arquivo abre, numa pasta renomeia. O resto est\u00e1 no bot\u00e3o direito. A estante vive nesta p\u00e1gina: fechar a aba perde a arruma\u00e7\u00e3o, n\u00e3o os arquivos.',
+    'Drag a row onto a folder to move it. <b>One click</b> opens a file and the <b>arrow keys</b> walk the list. Double-click a folder to rename it; right-click for the rest. The shelf lives in this page: closing the tab loses the arrangement, not the files.':
+      'Arraste uma linha para dentro de uma pasta para mov\u00ea-la. <b>Um clique</b> abre um arquivo e as <b>setinhas</b> andam pela lista. Dois cliques numa pasta renomeia; o resto est\u00e1 no bot\u00e3o direito. A estante vive nesta p\u00e1gina: fechar a aba perde a arruma\u00e7\u00e3o, n\u00e3o os arquivos.',
 
     /* ---- what the map editor says */
     'The map has no name.': 'O mapa n\u00e3o tem nome.',

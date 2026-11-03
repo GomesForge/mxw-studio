@@ -516,7 +516,13 @@
     border-bottom:1px solid var(--edge);flex-wrap:wrap}
   #libBar button{height:20px;padding:0 7px;font-size:10.5px}
   #libTree{flex:1 1 auto;overflow:auto;padding:4px 4px 6px;
-    font-family:var(--mono);font-size:11px}
+    font-family:var(--mono);font-size:11px;outline:0}
+  /* The tree takes the keyboard when it is clicked, and says so: the
+     arrows belong to whatever is focused, so which that is has to be
+     visible. */
+  #libTree:focus-visible,#libTree:focus{box-shadow:inset 0 0 0 1px
+    color-mix(in srgb,var(--cyan) 45%,transparent)}
+  #libTree:focus .libRow.sel{background:color-mix(in srgb,var(--cyan) 30%,transparent)}
   #libNote{flex:0 0 auto;margin:0;padding:6px 10px 8px;
     border-top:1px solid var(--edge)}
   #libGrip{position:absolute;right:0;bottom:0;width:14px;height:14px;
@@ -1455,8 +1461,8 @@
     <button id="bLibZip" title="what is selected, as a zip, with its folders">Save .zip</button>
     <button id="bLibClear" title="empty the shelf; the files stay on your disk">Clear</button>
   </div>
-  <div id="libTree"></div>
-  <p class="hint" id="libNote"><button id="libNoteX" title="hide this">&times;</button><span data-i18n-html="Drag a row onto a folder to move it. <b>Double-click</b> a file to open it, a folder to rename it. Right-click for the rest. The shelf lives in this page: closing the tab loses the arrangement, not the files.">Drag a row onto a folder to move it. <b>Double-click</b> a file to open it, a folder to rename it. Right-click for the rest. The shelf lives in this page: closing the tab loses the arrangement, not the files.</span></p>
+  <div id="libTree" tabindex="0"></div>
+  <p class="hint" id="libNote"><button id="libNoteX" title="hide this">&times;</button><span data-i18n-html="Drag a row onto a folder to move it. <b>One click</b> opens a file and the <b>arrow keys</b> walk the list. Double-click a folder to rename it; right-click for the rest. The shelf lives in this page: closing the tab loses the arrangement, not the files.">Drag a row onto a folder to move it. <b>One click</b> opens a file and the <b>arrow keys</b> walk the list. Double-click a folder to rename it; right-click for the rest. The shelf lives in this page: closing the tab loses the arrangement, not the files.</span></p>
   <div id="libGrip" title="resize"></div>
 </div>
 
@@ -1541,11 +1547,11 @@
 <script src="motions.js?v=20"></script>
 <script src="char.js?v=4"></script>
 <script src="folder.js?v=3"></script>
-<script src="library.js?v=2"></script>
+<script src="library.js?v=3"></script>
 <script src="export.js?v=3"></script>
 <script src="sprite.js?v=24"></script>
 <script src="map.js?v=2"></script>
-<script src="i18n.js?v=30"></script>
+<script src="i18n.js?v=31"></script>
 <script src="settings.js?v=23"></script>
 <script src="tutorial.js?v=20"></script>
 <script src="app.js?v=28"></script>
