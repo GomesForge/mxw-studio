@@ -428,6 +428,33 @@ const I18N = {
     'an .obj has to come from a file, not from bytes already open':
       'um .obj tem de vir de um arquivo, n\u00e3o de bytes j\u00e1 abertos',
 
+    /* ---- the library */
+    'Library': 'Estante',
+    'New folder': 'Nova pasta',
+    'New folder inside': 'Nova pasta dentro',
+    'File by animation': 'Organizar por anima\u00e7\u00e3o',
+    'Save .zip': 'Salvar .zip',
+    'Save as .zip': 'Salvar como .zip',
+    'Clear': 'Limpar',
+    'Open': 'Abrir',
+    'Open as a set': 'Abrir como conjunto',
+    'Rename': 'Renomear',
+    'Remove from the shelf': 'Tirar da estante',
+    'will not open': 'n\u00e3o abre',
+    '{n} KB': '{n} KB',
+    '{n} files filed by animation': '{n} arquivos organizados por anima\u00e7\u00e3o',
+    'nothing here is one of the 37 sheets': 'nada aqui \u00e9 uma das 37 folhas',
+    'nothing in there to save': 'n\u00e3o h\u00e1 nada ali para salvar',
+    'nothing in there to open': 'n\u00e3o h\u00e1 nada ali para abrir',
+    'Nothing here yet. Everything you open is shelved, and a folder or a zip keeps the folders it came in.':
+      'Nada aqui ainda. Tudo o que voc\u00ea abrir vai para a estante, e uma pasta ou um zip mant\u00eam as pastas em que vieram.',
+    'Remove "{name}" and the {n} files in it? They stay on your disk; this only clears the shelf.':
+      'Tirar "{name}" e os {n} arquivos dentro? Eles continuam no seu disco; isto s\u00f3 limpa a estante.',
+    'Clear the shelf? {n} files go, and they stay on your disk either way.':
+      'Limpar a estante? {n} arquivos saem, e continuam no seu disco de qualquer jeito.',
+    'Drag a row onto a folder to move it. <b>Double-click</b> a file to open it, a folder to rename it. Right-click for the rest. The shelf lives in this page: closing the tab loses the arrangement, not the files.':
+      'Arraste uma linha para dentro de uma pasta para mov\u00ea-la. <b>Dois cliques</b> num arquivo abre, numa pasta renomeia. O resto est\u00e1 no bot\u00e3o direito. A estante vive nesta p\u00e1gina: fechar a aba perde a arruma\u00e7\u00e3o, n\u00e3o os arquivos.',
+
     /* ---- what the map editor says */
     'The map has no name.': 'O mapa n\u00e3o tem nome.',
     'The name is longer than {n} characters.':
