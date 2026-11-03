@@ -27,7 +27,7 @@ Nothing here ships any asset. These are tools; bring your own files.
 | `block.spr` | the game's own map layouts | read + write |
 | `map.spr` | spawns, gimmicks and item counts per map set | read |
 | custom map `.json` | a map for the server | read + write |
-| `.zip` | a set of exports in one file | write |
+| `.zip` | a set of exports in one file | read + write |
 | `.png` / `.gif` / `.json` | frames, strips, contact sheets, animations, measurements | write |
 
 ## The editor
@@ -183,6 +183,43 @@ gave the vocabulary and the timing. They could not give the angles: a
 different figure, one projection, a few dozen pixels tall. When a real
 motion file turns up it plays through the same player, because it is
 the same thing &mdash; a rotation per bone per frame.
+
+## A folder as one document
+
+**Folder&hellip;** opens a character or a bomb skin as the set it is.
+Dragging the folder onto the page does the same, and so does dropping
+a `.zip`, which is how one of these usually travels.
+
+The panel lists every slot the loader will ask for &mdash; all 37 for
+a character, all 12 for a bomb skin &mdash; says which are present and
+how many frames each has, and clicking a row opens that file the usual
+way, with the guides and the measurements. It is a table of contents,
+not a second editor.
+
+What it is for is the faults that live **between** files, which no
+single file can show:
+
+- a slot nobody drew, named
+- `preview` that is not an exact copy of `st_s`, which it is supposed
+  to be &mdash; 41 of 41 officials are
+- `wa` frame 0 that differs from `st_s` frame 0, which shows as a jump
+  at the start of every round
+- a name saved with a capital in it, onto a server whose filesystem
+  thinks `MO_S.GRA` and `mo_s.gra` are different files
+- files the loader never asks for, with `add.gra` called out by name:
+  it is the sleep pose of the 2003 game and this client has no such
+  state
+- how many colours the set uses, and how many of them appear in only
+  one file
+
+A bomb skin is held to a different standard on purpose. **Missing is
+normal**: what a skin lacks stays the game's own, and of the forty the
+server ships, every one has `bomb.spr`, thirty-one have `bomb_d.spr`,
+three have the flames and none has `bomb_s.spr`. The panel says so
+rather than marking eleven gaps as errors.
+
+The export desk gains the set: every file as it was opened, and a JSON
+of which slots are filled, the frame counts and what the checks found.
 
 ## Getting things out
 
