@@ -100,11 +100,14 @@ function spriteDraw() {
   if (typeof charPaint === 'function') charPaint(ctx, z, g.width, g.height);
 
   const bb = f.bbox();
-  $('spriteStat').textContent = e.name + '  frame ' + (sprite.frame + 1) +
-    '/' + g.frames.length + '  ' + g.width + 'x' + g.height +
-    '  ' + f.runs.length + ' runs  ' + f.pixelCount + ' px' +
-    (bb ? '  bounds x ' + bb[0] + '..' + bb[2] + ' y ' + bb[1] + '..' + bb[3]
-        : '  empty');
+  $('spriteStat').textContent = e.name + '  ' +
+    tf('frame {i}/{n}', { i: sprite.frame + 1, n: g.frames.length }) + '  ' +
+    g.width + 'x' + g.height + '  ' +
+    tf('{n} runs', { n: f.runs.length }) + '  ' +
+    tf('{n} px', { n: f.pixelCount }) + '  ' +
+    (bb ? tf('bounds x {x0}..{x1} y {y0}..{y1}',
+             { x0: bb[0], x1: bb[2], y0: bb[1], y1: bb[3] })
+        : t('empty'));
 }
 
 /* ----------------------------- playback -------------------------- */
@@ -232,11 +235,11 @@ function spriteRenderTint() {
     }
   }
   $('tintStat').innerHTML = total
-    ? '<b>' + (100 * tinted / total).toFixed(1) + '%</b> of this sheet is in the '
-      + 'reserved ramp (' + steps.size + ' of 64 steps used), so the runtime '
-      + 'recolours it. The preview above is an approximation -- the real '
-      + 'substitution tables are not known.'
-    : 'no pixels';
+    ? tf('<b>{pct}%</b> of this sheet is in the reserved ramp ({used} of 64 ' +
+         'steps used), so the runtime recolours it. The preview above is an ' +
+         'approximation -- the real substitution tables are not known.',
+         { pct: (100 * tinted / total).toFixed(1), used: steps.size })
+    : t('no pixels');
 
   /* the same health notes the mesh side gets */
   let rep = null;
@@ -252,11 +255,11 @@ function spriteRenderTint() {
   const cap = [64, 80];
   if (g.width > cap[0] || g.height > cap[1]) {
     warn.style.display = 'block';
-    warn.textContent = "This frame is " + g.width + "x" + g.height +
-      ". The original authoring tool's manual reports a failure on " +
-      "frames around 60x100, and recommends staying at or under " +
-      cap[0] + "x" + cap[1] + ". Files this size that shipped with the " +
-      "set are fine; newly grown ones may not be.";
+    warn.textContent = tf("This frame is {w}x{h}. The original authoring " +
+      "tool's manual reports a failure on frames around 60x100, and " +
+      "recommends staying at or under {cw}x{ch}. Files this size that " +
+      "shipped with the set are fine; newly grown ones may not be.",
+      { w: g.width, h: g.height, cw: cap[0], ch: cap[1] });
   } else {
     warn.style.display = 'none';
   }
@@ -356,7 +359,8 @@ function spriteRenderPalette() {
     spriteRenderPalette();
   });
   $('palCount').textContent = pal.length > shown.length
-    ? shown.length + ' of ' + pal.length + ' colours' : pal.length + ' colours';
+    ? tf('{shown} of {all} colours', { shown: shown.length, all: pal.length })
+    : tf('{n} colours', { n: pal.length });
 }
 
 /* the bytes an export would write: the kept head, then the sprite */
@@ -379,8 +383,9 @@ function spriteCheckRoundTrip() {
   const el = $('spriteRt');
   el.className = 'rt ' + (same ? 'ok' : 'changed');
   el.textContent = same
-    ? 'unchanged -- writes back byte-identical (' + out.length + ' bytes)'
-    : 'edited -- ' + out.length + ' bytes, was ' + e.raw.length;
+    ? tf('unchanged -- writes back byte-identical ({n} bytes)', { n: out.length })
+    : tf('edited -- {now} bytes, was {before}',
+         { now: out.length, before: e.raw.length });
   $('bSpriteSave').classList.toggle('primary', !same);
 }
 

@@ -69,7 +69,7 @@ function folderSniff(names) {
 function folderOpen(label, entries) {
   const kind = folderSniff(entries.map(e => e.path));
   if (!kind) {
-    notify('that folder has nothing a character or a bomb skin is made of', 1);
+    notify(t('that folder has nothing a character or a bomb skin is made of'), 1);
     return false;
   }
   folder.kind = kind;
@@ -99,7 +99,7 @@ function folderOpen(label, entries) {
   }
 
   if (!folder.files.size) {
-    notify('nothing in there parsed as a sprite', 1);
+    notify(t('nothing in there parsed as a sprite'), 1);
     folderClose();
     return false;
   }
@@ -112,8 +112,9 @@ function folderOpen(label, entries) {
     : (folderFile('bomb') || folderAny());
   if (first) folderPick(first.name);
   else folderRender();
-  notify(folder.name + ': ' + folder.files.size + ' of ' +
-    (kind === 'character' ? 37 : 12) + ' files');
+  notify(tf('{name}: {have} of {want} files',
+    { name: folder.name, have: folder.files.size,
+      want: kind === 'character' ? 37 : 12 }));
   return true;
 }
 
@@ -142,7 +143,8 @@ function folderClose() {
 function folderPick(name) {
   const rec = folder.files.get(name.toLowerCase());
   if (!rec) return;
-  if (rec.error) { notify(rec.name + ' will not parse: ' + rec.error, 1); return; }
+  if (rec.error) { notify(tf('{name} will not parse: {why}',
+    { name: rec.name, why: rec.error }), 1); return; }
   if (typeof mapClose === 'function') mapClose();
   spriteOpen(rec.name, rec.raw.buffer.slice(
     rec.raw.byteOffset, rec.raw.byteOffset + rec.raw.byteLength));
@@ -166,21 +168,27 @@ function folderProblems() {
   if (folder.kind === 'bomb') {
     const have = BOMB_FILES.filter(b => folder.files.has(b[0])).length;
     if (!folder.files.has('bomb.spr')) {
-      say('bad', 'no bomb.spr. That one is the skin: without it there is ' +
-        'nothing to put on a bomb.');
+      say('bad', t('no bomb.spr. That one is the skin: without it there is ' +
+        'nothing to put on a bomb.'));
     }
     if (have < 12) {
-      say('note', (12 - have) + ' of the twelve ' +
-        (have === 11 ? 'is' : 'are') + ' not here, and that is ' +
-        'normal \u2014 what a skin lacks stays the game\u2019s own. Of the ' +
-        'forty skins the server ships, every one has bomb.spr, thirty-one ' +
-        'have bomb_d.spr, three have the flames and none has bomb_s.spr.');
+      say('note', tf(have === 11
+        ? '{n} of the twelve is not here, and that is normal \u2014 what a ' +
+          'skin lacks stays the game\u2019s own. Of the forty skins the ' +
+          'server ships, every one has bomb.spr, thirty-one have ' +
+          'bomb_d.spr, three have the flames and none has bomb_s.spr.'
+        : '{n} of the twelve are not here, and that is normal \u2014 what a ' +
+          'skin lacks stays the game\u2019s own. Of the forty skins the ' +
+          'server ships, every one has bomb.spr, thirty-one have ' +
+          'bomb_d.spr, three have the flames and none has bomb_s.spr.',
+        { n: 12 - have }));
     }
     const flames = BOMB_FILES.slice(4, 11).filter(b => folder.files.has(b[0])).length;
     if (flames > 0 && flames < 7) {
-      say('odd', 'only ' + flames + ' of the seven flame pieces are here. ' +
-        'The fire is drawn from all seven, so a partial set shows this ' +
-        'skin\u2019s fire in some directions and the game\u2019s in others.');
+      say('odd', tf('only {n} of the seven flame pieces are here. The fire ' +
+        'is drawn from all seven, so a partial set shows this skin\u2019s ' +
+        'fire in some directions and the game\u2019s in others.',
+        { n: flames }));
     }
     return out.concat(folderCommonProblems());
   }
@@ -188,9 +196,9 @@ function folderProblems() {
   /* a character: which of the thirty-seven the loader will not find */
   const missing = CHAR_SHEETS.filter(s => !folderFile(s.file));
   if (missing.length) {
-    say('bad', missing.length + ' of the 37 are missing: ' +
-      missing.map(s => s.file).join(', ') +
-      '. The loader asks for every one by name.');
+    say('bad', tf('{n} of the 37 are missing: {names}. The loader asks for ' +
+      'every one by name.',
+      { n: missing.length, names: missing.map(s => s.file).join(', ') }));
   }
 
   /* the seams a player sees, which no single file can show */
@@ -200,19 +208,20 @@ function folderProblems() {
       st.raw.every((v, i) => v === pv.raw[i]);
     if (!same) {
       const f0 = folderFrameKey(st.gra, 0) === folderFrameKey(pv.gra, 0);
-      say(f0 ? 'odd' : 'bad',
-        'preview is not a copy of st_s' + (f0
-          ? ', though frame 0 matches. Of 41 officials, 41 are an exact copy.'
-          : ', and frame 0 differs too. This is the card in the room, the ' +
-            'profile and the shop \u2014 it should be the stand, exactly.'));
+      say(f0 ? 'odd' : 'bad', t(f0
+        ? 'preview is not a copy of st_s, though frame 0 matches. Of 41 ' +
+          'officials, 41 are an exact copy.'
+        : 'preview is not a copy of st_s, and frame 0 differs too. This is ' +
+          'the card in the room, the profile and the shop \u2014 it should ' +
+          'be the stand, exactly.'));
     }
   }
   const wa = folderFile('wa');
   if (st && wa && st.gra && wa.gra) {
     if (folderFrameKey(wa.gra, 0) !== folderFrameKey(st.gra, 0)) {
-      say('odd', 'wa frame 0 is not st_s frame 0. Every round ends its ' +
+      say('odd', t('wa frame 0 is not st_s frame 0. Every round ends its ' +
         'entrance on wa frame 0 and the next step draws st_s frame 0, so ' +
-        'the difference shows as a jump at the start of every round.');
+        'the difference shows as a jump at the start of every round.'));
     }
   }
 
@@ -223,28 +232,35 @@ function folderCommonProblems() {
   const out = [];
   const say = (level, text) => out.push({ level, text });
 
+  const cut = (list, n) => list.slice(0, n).join(', ') +
+    (list.length > n ? '\u2026' : '');
+
   if (folder.caps.length) {
-    say('bad', folder.caps.length + ' file' +
-      (folder.caps.length === 1 ? ' has' : 's have') + ' a capital in the ' +
-      'name (' + folder.caps.slice(0, 4).join(', ') +
-      (folder.caps.length > 4 ? '\u2026' : '') + '). The server runs on a ' +
-      'filesystem where MO_S.GRA and mo_s.gra are different files, and the ' +
-      'client asks for the lowercase one.');
+    say('bad', tf(folder.caps.length === 1
+      ? '{n} file has a capital in the name ({names}). The server runs on a ' +
+        'filesystem where MO_S.GRA and mo_s.gra are different files, and ' +
+        'the client asks for the lowercase one.'
+      : '{n} files have a capital in the name ({names}). The server runs on ' +
+        'a filesystem where MO_S.GRA and mo_s.gra are different files, and ' +
+        'the client asks for the lowercase one.',
+      { n: folder.caps.length, names: cut(folder.caps, 4) }));
   }
   const broken = [...folder.files.values()].filter(f => f.error);
   if (broken.length) {
-    say('bad', broken.length + ' file' + (broken.length === 1 ? '' : 's') +
-      ' will not parse: ' + broken.map(f => f.name).join(', '));
+    say('bad', tf(broken.length === 1
+      ? '{n} file will not parse: {names}'
+      : '{n} files will not parse: {names}',
+      { n: broken.length, names: broken.map(f => f.name).join(', ') }));
   }
   if (folder.extra.length) {
     const add = folder.extra.filter(n => /^add\./i.test(n));
-    say('note', folder.extra.length + ' file' +
-      (folder.extra.length === 1 ? '' : 's') + ' here the loader never asks ' +
-      'for: ' + folder.extra.slice(0, 6).join(', ') +
-      (folder.extra.length > 6 ? '\u2026' : '') + '.' +
-      (add.length ? ' add.gra is the sleep pose of the 2003 game; this ' +
-        'client has no such state and the 37-file package has no room ' +
-        'for it.' : ''));
+    say('note', tf(folder.extra.length === 1
+      ? '{n} file here the loader never asks for: {names}.'
+      : '{n} files here the loader never asks for: {names}.',
+      { n: folder.extra.length, names: cut(folder.extra, 6) }) +
+      (add.length ? ' ' + t('add.gra is the sleep pose of the 2003 game; ' +
+        'this client has no such state and the 37-file package has no room ' +
+        'for it.') : ''));
   }
 
   /* every sheet's own checks, rolled up: the set view should say that
@@ -257,9 +273,12 @@ function folderCommonProblems() {
       if (p.some(x => x.level === 'bad')) bad.push(rec.name);
     }
     if (bad.length) {
-      say('odd', bad.length + ' sheet' + (bad.length === 1 ? ' has' : 's have') +
-        ' something the game will show wrong: ' + bad.slice(0, 8).join(', ') +
-        (bad.length > 8 ? '\u2026' : '') + '. Open one to see what.');
+      say('odd', tf(bad.length === 1
+        ? '{n} sheet has something the game will show wrong: {names}. Open ' +
+          'it to see what.'
+        : '{n} sheets have something the game will show wrong: {names}. ' +
+          'Open one to see what.',
+        { n: bad.length, names: cut(bad, 8) }));
     }
   }
   return out;
@@ -310,10 +329,12 @@ function folderRender() {
     const pal = folder.report.palette;
     head.innerHTML = '<dl class="what">' +
       '<dt>' + folder.name + '</dt><dd>' +
-      (folder.kind === 'character' ? 'a character' : 'a bomb skin') + '</dd>' +
-      '<dt>files</dt><dd>' + folder.files.size + ' of ' + want + '</dd>' +
-      '<dt>colours</dt><dd>' + pal.total + ' across the set, ' + pal.onlyOne +
-      ' in one file only</dd></dl>';
+      t(folder.kind === 'character' ? 'a character' : 'a bomb skin') + '</dd>' +
+      '<dt>' + t('files') + '</dt><dd>' +
+      tf('{have} of {want}', { have: folder.files.size, want: want }) +
+      '</dd><dt>' + t('colours') + '</dt><dd>' +
+      tf('{all} across the set, {alone} in one file only',
+         { all: pal.total, alone: pal.onlyOne }) + '</dd></dl>';
   }
 
   const list = $('folderList');
@@ -322,13 +343,17 @@ function folderRender() {
     const rows = folder.kind === 'character'
       ? CHAR_SHEETS.map(s => {
           const rec = folderFile(s.file);
+          /* Two words, two keys: "Walk" and "front" each translate on
+             their own, and joining them after is the only way a
+             dictionary keyed by the English string can reach both. */
           return {
-            label: s.file, note: s.label + (s.dir ? ' ' + s.dirName : ''),
+            label: s.file,
+            note: t(s.label) + (s.dir ? ' ' + t(s.dirName) : ''),
             rec, sheet: s, want: s.need != null ? s.need : s.want
           };
         })
       : BOMB_FILES.map(([n, note]) => ({
-          label: n.replace(/\.[^.]+$/, ''), note,
+          label: n.replace(/\.[^.]+$/, ''), note: t(note),
           rec: folder.files.get(n), sheet: null, want: null
         }));
     list.innerHTML = rows.map(r => {
@@ -347,9 +372,10 @@ function folderRender() {
         (r.rec ? ' data-pick="' + r.rec.name + '"' : ' disabled') + '>' +
         '<b>' + r.label + '</b><span>' + r.note + '</span>' +
         '<i class="' + (bad ? 'no' : '') + '">' +
-        (r.rec ? (n == null ? 'unreadable'
-          : n + (bad ? '/' + r.want : '') + (n === 1 ? ' frame' : ' frames'))
-         : 'not here') + '</i></button>';
+        (r.rec ? (n == null ? t('unreadable')
+          : (bad ? tf('{n}/{want} frames', { n: n, want: r.want })
+                 : tf(n === 1 ? '{n} frame' : '{n} frames', { n: n })))
+         : t('not here')) + '</i></button>';
     }).join('');
     list.querySelectorAll('[data-pick]').forEach(b =>
       b.addEventListener('click', () => folderPick(b.dataset.pick)));
@@ -362,8 +388,8 @@ function folderRender() {
       ? probs.map(p => '<p class="note ' +
           (p.level === 'bad' ? 'bad' : p.level === 'odd' ? 'warn' : '') +
           '">' + p.text + '</p>').join('')
-      : '<p class="note good">The set is complete and the files agree ' +
-        'with each other.</p>';
+      : '<p class="note good">' +
+        t('The set is complete and the files agree with each other.') + '</p>';
   }
 }
 
@@ -382,7 +408,7 @@ async function folderFromFileList(files) {
     if (!/\.(gra|spr|eft)$/i.test(f.name)) continue;
     entries.push({ path, buf: await f.arrayBuffer() });
   }
-  if (!entries.length) { notify('no sprites in that folder', 1); return false; }
+  if (!entries.length) { notify(t('no sprites in that folder'), 1); return false; }
   return folderOpen(label || 'folder', entries);
 }
 
@@ -436,9 +462,10 @@ async function zipRead(buf) {
 async function folderFromZip(name, buf) {
   let entries;
   try { entries = await zipRead(buf); }
-  catch (e) { notify('could not read that zip: ' + e.message, 1); return false; }
+  catch (e) { notify(tf('could not read that zip: {why}',
+    { why: e.message }), 1); return false; }
   const keep = entries.filter(e => /\.(gra|spr|eft)$/i.test(e.path));
-  if (!keep.length) { notify('no sprites in that zip', 1); return false; }
+  if (!keep.length) { notify(t('no sprites in that zip'), 1); return false; }
   return folderOpen(name.replace(/\.zip$/i, ''), keep);
 }
 

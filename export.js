@@ -228,8 +228,9 @@ function xpSpriteOutputs() {
   out.push({
     id: 'self', on: true,
     label: 'The sprite itself',
-    note: g.frames.length + ' frames, ' + g.width + ' x ' + g.height +
-      (isEft ? ', an effect' : ''),
+    note: tf(isEft ? '{n} frames, {w} x {h}, an effect'
+                   : '{n} frames, {w} x {h}',
+      { n: g.frames.length, w: g.width, h: g.height }),
     make: async () => [{ name: dir + e.name, data: spriteBytes(e) }]
   });
 
@@ -237,8 +238,8 @@ function xpSpriteOutputs() {
     out.push({
       id: 'twin', on: false,
       label: 'The same bytes as .' + (/\.spr$/i.test(e.name) ? 'gra' : 'spr'),
-      note: 'one format, two extensions \u2014 the loader asks for the ' +
-            'name the folder uses',
+      note: t('one format, two extensions \u2014 the loader asks for ' +
+               'the name the folder uses'),
       make: async () => [{
         name: dir + base + (/\.spr$/i.test(e.name) ? '.gra' : '.spr'),
         data: spriteBytes(e)
@@ -249,7 +250,7 @@ function xpSpriteOutputs() {
   out.push({
     id: 'frames', on: false,
     label: 'Every frame, one PNG each',
-    note: g.frames.length + ' files',
+    note: tf('{n} files', { n: g.frames.length }),
     make: async () => {
       const f = xpFrames(g, e), box = xpBox(f, g.width, g.height);
       const files = [];
@@ -266,7 +267,7 @@ function xpSpriteOutputs() {
   out.push({
     id: 'strip', on: false,
     label: 'One strip, every frame side by side',
-    note: 'drop it back in and it is sliced across the frames again',
+    note: t('drop it back in and it is sliced across the frames again'),
     make: async () => {
       const f = xpFrames(g, e), box = xpBox(f, g.width, g.height);
       const s = Math.max(1, xp.scale | 0);
@@ -284,8 +285,8 @@ function xpSpriteOutputs() {
   out.push({
     id: 'sheet', on: false,
     label: 'A contact sheet',
-    note: 'every frame on a grid, numbered \u2014 for looking at, not for ' +
-          'importing back',
+    note: t('every frame on a grid, numbered \u2014 for looking at, not ' +
+            'for importing back'),
     make: async () => {
       const f = xpFrames(g, e), box = xpBox(f, g.width, g.height);
       const s = Math.max(1, xp.scale | 0);
@@ -317,8 +318,9 @@ function xpSpriteOutputs() {
       id: 'gif', on: false,
       label: 'The animation as a GIF',
       note: xp.clock && ms
-        ? 'at the game\u2019s own timing: ' + ms.reduce((a, b) => a + b, 0) + ' ms a round'
-        : 'at ' + sprite.fps + ' fps, the speed on the slider',
+        ? tf('at the game\u2019s own timing: {ms} ms a round',
+             { ms: ms.reduce((a, b) => a + b, 0) })
+        : tf('at {fps} fps, the speed on the slider', { fps: sprite.fps }),
       make: async () => {
         const f = xpFrames(g, e), box = xpBox(f, g.width, g.height);
         const cut = xpCrop(f, g.width, g.height, box);
@@ -341,7 +343,8 @@ function xpSpriteOutputs() {
     out.push({
       id: 'eftpng', on: false,
       label: 'Composited, one PNG per frame',
-      note: per + ' frames, the eight layers together \u2014 what a player sees',
+      note: tf('{n} frames, the eight layers together \u2014 what a ' +
+                'player sees', { n: per }),
       make: async () => {
         const files = [];
         for (let f = 0; f < per; f++) {
@@ -360,7 +363,7 @@ function xpSpriteOutputs() {
       out.push({
         id: 'eftgif', on: false,
         label: 'Composited, as a GIF',
-        note: 'the effect playing, the way the game draws it',
+        note: t('the effect playing, the way the game draws it'),
         make: async () => {
           const frames = [];
           for (let f = 0; f < per; f++)
@@ -379,8 +382,8 @@ function xpSpriteOutputs() {
   out.push({
     id: 'json', on: false,
     label: 'The numbers, as JSON',
-    note: 'size, frames, the slot it is, the clock, and every frame ' +
-          'measured \u2014 for a script to read',
+    note: t('size, frames, the slot it is, the clock, and every frame ' +
+            'measured \u2014 for a script to read'),
     make: async () => [{
       name: dir + base + '.json',
       data: new TextEncoder().encode(xpSpriteJSON(e))
@@ -460,7 +463,8 @@ function xpMeshOutputs() {
   out.push({
     id: 'bin', on: true,
     label: 'The container itself',
-    note: c.mxw.meshes.length + ' mesh(es), ' + c.mxw.gifs.length + ' texture(s)',
+    note: tf('{m} mesh(es), {t} texture(s)',
+      { m: c.mxw.meshes.length, t: c.mxw.gifs.length }),
     make: async () => [{ name: dir + c.name, data: c.mxw.write() }]
   });
 
@@ -468,8 +472,8 @@ function xpMeshOutputs() {
     out.push({
       id: 'obj', on: false,
       label: 'The geometry as .obj',
-      note: m.nv + ' vertices, ' + m.faces.length + ' faces \u2014 opens in ' +
-            'any modeller, and comes back in',
+      note: tf('{v} vertices, {f} faces \u2014 opens in any modeller, ' +
+               'and comes back in', { v: m.nv, f: m.faces.length }),
       make: async () => [{
         name: dir + base + '.obj',
         data: new TextEncoder().encode(objTextOf(c))
@@ -481,7 +485,8 @@ function xpMeshOutputs() {
     out.push({
       id: 'tex', on: false,
       label: 'Every texture',
-      note: c.mxw.gifs.length + ' file(s), exactly the bytes the container holds',
+      note: tf('{n} file(s), exactly the bytes the container holds',
+        { n: c.mxw.gifs.length }),
       make: async () => c.mxw.gifs.map((gif, i) => ({
         name: dir + base + '_tex' + i + '.gif',
         data: gif.data || gif
@@ -494,8 +499,9 @@ function xpMeshOutputs() {
     out.push({
       id: 'uv', on: false,
       label: 'The UV layout, as a PNG',
-      note: 'texture ' + selectedTex + ', the layout drawn over it \u2014 ' +
-            'the guide for painting a garment in the right place',
+      note: tf('texture {i}, the layout drawn over it \u2014 the guide ' +
+               'for painting a garment in the right place',
+               { i: selectedTex }),
       make: async () => [{
         name: dir + base + '_uv_tex' + selectedTex + '.png',
         data: await xpPNG(uv)
@@ -506,7 +512,8 @@ function xpMeshOutputs() {
   out.push({
     id: 'meshjson', on: false,
     label: 'The numbers, as JSON',
-    note: 'meshes, vertices, faces, bones, textures and the material bindings',
+    note: t('meshes, vertices, faces, bones, textures and the ' +
+            'material bindings'),
     make: async () => [{
       name: dir + base + '.json',
       data: new TextEncoder().encode(JSON.stringify({
@@ -532,7 +539,7 @@ function xpMapOutputs() {
     out.push({
       id: 'mapjson', on: true,
       label: 'The custom map, as the panel takes it',
-      note: map.doc.screens.length + ' screens',
+      note: tf('{n} screens', { n: map.doc.screens.length }),
       make: async () => [{
         name: (map.doc.name || 'map').replace(/[^\w-]+/g, '_') + '.json',
         data: new TextEncoder().encode(mapCustomJSON())
@@ -543,14 +550,14 @@ function xpMapOutputs() {
     out.push({
       id: 'blockspr', on: true,
       label: 'block.spr',
-      note: '46 sets x 100 variants, written back byte for byte',
+      note: t('46 sets x 100 variants, written back byte for byte'),
       make: async () => [{ name: 'block.spr', data: map.blocks }]
     });
     out.push({
       id: 'blockjson', on: false,
       label: 'This set, as JSON',
-      note: 'set ' + map.set + ': every distinct variant as a row of ' +
-            'digits, 0 floor, 1 soft, 2 pillar, 9 wall',
+      note: tf('set {n}: every distinct variant as a row of digits, ' +
+               '0 floor, 1 soft, 2 pillar, 9 wall', { n: map.set }),
       make: async () => [{
         name: 'set_' + String(map.set).padStart(2, '0') + '.json',
         data: new TextEncoder().encode(xpSetJSON())
@@ -563,7 +570,7 @@ function xpMapOutputs() {
     out.push({
       id: 'mapsprjson', on: false,
       label: 'What map.spr says, as JSON',
-      note: 'the spawns, the gimmicks and the item counts, every set',
+      note: t('the spawns, the gimmicks and the item counts, every set'),
       make: async () => [{
         name: 'map_records.json',
         data: new TextEncoder().encode(JSON.stringify(map.records, null, 2))
@@ -622,15 +629,16 @@ function xpFolderOutputs() {
   return [{
     id: 'setfiles', on: true,
     label: 'Every file in the set',
-    note: folder.files.size + ' file(s), exactly as they were opened',
+    note: tf('{n} file(s), exactly as they were opened',
+      { n: folder.files.size }),
     make: async () => [...folder.files.values()].map(f => ({
       name: dir + f.name, data: f.raw
     }))
   }, {
     id: 'setjson', on: false,
     label: 'What the set is, as JSON',
-    note: 'which slots are filled, the frame counts, and what the ' +
-          'cross-file checks found',
+    note: t('which slots are filled, the frame counts, and what the ' +
+            'cross-file checks found'),
     make: async () => [{
       name: dir + 'set.json',
       data: new TextEncoder().encode(xpFolderJSON())
@@ -701,7 +709,7 @@ function xpOpen() {
   const body = $('xpBody');
   if (!body) return;
   if (!groups.length) {
-    notify('nothing is open to export', 1);
+    notify(t('nothing is open to export'), 1);
     return;
   }
   xp.groups = groups;
@@ -807,12 +815,12 @@ async function xpRun() {
     for (const it of picked) files = files.concat(await it.make());
   } catch (err) {
     go.disabled = false; go.textContent = was;
-    notify('export failed: ' + (err && err.message || err), 1);
+    notify(tf('export failed: {why}', { why: (err && err.message) || err }), 1);
     return;
   }
   go.textContent = was;
   go.disabled = false;
-  if (!files.length) { notify('that produced nothing', 1); return; }
+  if (!files.length) { notify(t('that produced nothing'), 1); return; }
 
   if (files.length === 1) {
     const f = files[0];
@@ -829,7 +837,8 @@ async function xpRun() {
   const zip = zipBuild(files);
   xpClose();
   saveFile(name, zip, 'application/zip');
-  notify(files.length + ' files, ' + (zip.length / 1024).toFixed(0) + ' KB');
+  notify(tf('{n} files, {kb} KB',
+    { n: files.length, kb: (zip.length / 1024).toFixed(0) }));
 }
 
 function xpMime(name) {
