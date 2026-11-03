@@ -60,8 +60,11 @@ function libInit() {
           if (typeof saved[k] === 'number') lib.pos[k] = saved[k];
         lib.placed = !!saved.placed;
       }
-      lib.open = !!saved.open;
       lib.noted = !!saved.noted;
+      /* Whether it was open is deliberately not restored. The files do
+         not survive a reload, so restoring it would open an empty
+         window over the corner of a page with nothing in it. The shelf
+         opens when it has something to show, or when it is asked for. */
     }
   } catch (e) { /* a browser that refuses storage still gets a panel */ }
 }
@@ -69,8 +72,7 @@ function libInit() {
 function libSave() {
   try {
     localStorage.setItem(LIB_KEY, JSON.stringify(Object.assign(
-      { v: LIB_PLACE, placed: lib.placed, open: lib.open,
-        noted: !!lib.noted }, lib.pos)));
+      { v: LIB_PLACE, placed: lib.placed, noted: !!lib.noted }, lib.pos)));
   } catch (e) { /* fine */ }
 }
 
@@ -762,6 +764,6 @@ function libWire() {
      while the tree itself has the keyboard. */
   addEventListener('keydown', libKeys);
 
-  if (lib.open) libShow(true);
+  /* It starts closed, every time: see libInit. */
   libRender();
 }
