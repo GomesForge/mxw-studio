@@ -491,9 +491,29 @@
   .iconBtn:hover{color:var(--ink)}
   #bSet{margin-right:6px}
 
-  #set{position:fixed;inset:0;z-index:84;background:rgba(6,9,16,.72);
+  #set,#xp{position:fixed;inset:0;z-index:84;background:rgba(6,9,16,.72);
     display:flex;align-items:center;justify-content:center;padding:22px}
-  #set[hidden]{display:none!important}
+  #set[hidden],#xp[hidden]{display:none!important}
+
+  /* ---------------------------- the export desk ---------------------- */
+  /* Same frame as the settings window, because it is the same kind of
+     thing: a short list of decisions, made once, with a button. */
+  #xpWin{width:min(620px,100%);max-height:min(700px,100%);display:flex;
+    flex-direction:column;background:var(--panel);
+    border:1px solid var(--edgeStrong);border-radius:11px;overflow:hidden;
+    box-shadow:0 26px 70px rgba(0,0,0,.55)}
+  #xpBody{overflow-y:auto;padding:4px 18px 14px;font-size:13px;
+    color:var(--ink2);flex:1 1 auto}
+  #xpBody h4{margin:16px 0 2px;font-size:11px;font-weight:600;
+    color:var(--ink);text-transform:uppercase;letter-spacing:.07em}
+  #xpBody .setRow{cursor:pointer}
+  #xpBody label.setRow:hover{background:var(--btnHover)}
+  #xpBody .setRow .setControl{order:-1}
+  #xpBody input[type=checkbox]{width:auto;margin:0}
+  #xpFoot{flex:0 0 auto;display:flex;align-items:center;gap:14px;
+    padding:11px 18px;border-top:1px solid var(--edge);background:var(--bar)}
+  #xpFoot .hint{margin:0;flex:1 1 auto}
+  #xpGo{height:28px;padding:0 14px}
   #setWin{width:min(560px,100%);max-height:min(640px,100%);display:flex;
     flex-direction:column;background:var(--panel);
     border:1px solid var(--edgeStrong);border-radius:11px;overflow:hidden;
@@ -813,6 +833,7 @@
         <button id="bMapNew">New map</button>
       </div>
     </span>
+    <button id="bExportAll" title="everything that can come out of what is open, in one place">Export&hellip;</button>
     <button id="bClear">Close all</button>
   </span>
 
@@ -1328,6 +1349,21 @@
   </div>
 </div>
 
+<div id="xp" hidden>
+  <div id="xpWin">
+    <div id="setHead">
+      <h2>Export</h2>
+      <span class="sub">tick what you want; several come out as one .zip</span>
+      <button id="xpX">Close</button>
+    </div>
+    <div id="xpBody"></div>
+    <div id="xpFoot">
+      <p class="hint" id="xpNote">Nothing here changes the file. The zip is stored, not compressed, so every tool reads it.</p>
+      <button id="xpGo" class="primary">Export</button>
+    </div>
+  </div>
+</div>
+
 <div id="set" hidden>
   <div id="setWin">
     <div id="setHead">
@@ -1392,10 +1428,11 @@
 <script src="shapes.js?v=20"></script>
 <script src="skin.js?v=21"></script>
 <script src="motions.js?v=20"></script>
-<script src="char.js?v=1"></script>
+<script src="char.js?v=2"></script>
+<script src="export.js?v=1"></script>
 <script src="sprite.js?v=22"></script>
 <script src="map.js?v=1"></script>
-<script src="i18n.js?v=25"></script>
+<script src="i18n.js?v=26"></script>
 <script src="settings.js?v=23"></script>
 <script src="tutorial.js?v=20"></script>
-<script src="app.js?v=23"></script>
+<script src="app.js?v=24"></script>
