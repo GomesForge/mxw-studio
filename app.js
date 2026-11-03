@@ -2337,20 +2337,75 @@ function openBuffer(name, buf, file) {
   addFile(name, buf);
 }
 
+/* One file is one document. Several at once is an import, and those
+   are not the same gesture: thirty-seven sheets dropped together are a
+   character, not thirty-seven things to open one after another, each
+   replacing the last. So a multiple arrival is read as a set, shelved
+   together in one folder, and the shelf is opened on it -- which is
+   the only way the thirty-seventh file is ever seen again. */
 function readFiles(files) {
   const arr = Array.from(files || []);
   if (!arr.length) { notify(t('no files received'), 1); return; }
-  for (const f of arr) {
+  if (arr.length === 1) {
+    const f = arr[0];
     const r = new FileReader();
     r.onerror = () => notify(tf('could not read {name}', { name: f.name }), 1);
     r.onload = () => {
-      /* everything opened goes on the shelf, so a second file does not
-         make the first one disappear from view */
+      /* even one goes on the shelf, so the next file does not make it
+         disappear from view */
       if (typeof libTake === 'function') libTake(f.name, r.result);
       openBuffer(f.name, r.result, f);
     };
     r.readAsArrayBuffer(f);
+    return;
   }
+  openMany(arr);
+}
+
+/* The folder they came from, when the browser says. A drop of loose
+   files carries no path at all, which is why the fallback below names
+   the import after what it turns out to be. */
+function commonFolder(list) {
+  let first = null;
+  for (const r of list) {
+    const parts = r.path.split('/');
+    if (parts.length < 2) return null;
+    if (first === null) first = parts[0];
+    else if (parts[0] !== first) return null;
+  }
+  return first;
+}
+
+async function openMany(files) {
+  let read;
+  try {
+    read = await Promise.all(files.map(async f => ({
+      name: f.name, path: f.webkitRelativePath || f.name,
+      buf: await f.arrayBuffer(), file: f
+    })));
+  } catch (e) {
+    notify(tf('could not read {name}', { name: e.message || '?' }), 1);
+    return;
+  }
+  const sprites = read.filter(r => isSpriteName(r.name));
+  const kind = (sprites.length && typeof folderSniff === 'function')
+    ? folderSniff(sprites.map(r => r.path)) : null;
+  const label = commonFolder(read) ||
+    (kind === 'bomb' ? t('Bomb skin') : kind ? t('Character') : t('Import'));
+
+  if (typeof libTakeMany === 'function')
+    libTakeMany(read.map(r => ({ path: r.path, buf: r.buf })), label);
+
+  /* A character or a bomb skin opens as the set it is; anything else
+     is still a pile of files, so each one opens as it would alone. */
+  if (kind && typeof folderOpen === 'function') {
+    folderOpen(label, sprites.map(r => ({ path: r.path, buf: r.buf })));
+    if (sprites.length < read.length) {
+      for (const r of read) if (!isSpriteName(r.name)) openBuffer(r.name, r.buf, r.file);
+    }
+    return;
+  }
+  for (const r of read) openBuffer(r.name, r.buf, r.file);
 }
 
 /* ----------------------------- wiring ---------------------------- */

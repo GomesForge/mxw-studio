@@ -401,7 +401,12 @@ class GRA {
         return;
       }
     }
-    if (u8.length < 24) throw new Error('too short to be a sprite file');
+    /* 19 bytes of header, then four per frame, and the frame table
+       gets its own check below. This asked for 24, which is one more
+       than the smallest legal file has: one empty frame writes 23, so
+       this editor's own New sprite produced a file it could not read
+       back. */
+    if (u8.length < 19) throw new Error('too short to be a sprite file');
     if (u8[2] !== 1 || u8[3] !== 1)
       throw new Error('bytes 2-3 are ' + u8[2].toString(16) + ' ' +
                       u8[3].toString(16) + ', expected 01 01');

@@ -194,7 +194,15 @@ work is a tree.
 
 **Library** opens a window you can put where you want. Everything you
 open is shelved in it, a folder or a zip keeps the folders it came in,
-and from there it is yours to arrange:
+and from there it is yours to arrange.
+
+Dropping **several files at once** is an import rather than several
+documents: they go into one folder together, the shelf opens on it,
+and if they are a character or a bomb skin the set view opens too. A
+character is thirty-seven sheets; opening them one after another, each
+replacing the last, was never what dropping them meant.
+
+What you can do with what is on the shelf:
 
 - **folders and subfolders**, as deep as you like, named by you
 - **drag a row onto a folder** to move it; a folder cannot be dropped
