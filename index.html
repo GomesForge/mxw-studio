@@ -83,13 +83,35 @@
   .actGroup{display:flex;gap:4px;align-items:center;flex:0 0 auto}
   .actRule{width:1px;height:20px;background:var(--edge);flex:0 0 auto}
   /* Which actions apply depends on what is open, the way a tool's
-     options bar changes with the tool. */
-  #actSprite,#actPaint{display:none}
+     options bar changes with the tool. Every mode group starts hidden
+     and its own mode turns it on: a group that defaults to visible
+     offers a Close for a document nobody opened. */
+  #actSprite,#actPaint,#actMap{display:none}
   body.sprite-mode #actSprite{display:flex}
   body.paint-mode #actPaint{display:flex}
   body.sprite-mode #actMesh,body.paint-mode #actMesh,
   body.paint-mode #actSprite,
   body.sprite-mode #ruleMesh,body.paint-mode #ruleMesh{display:none}
+
+  /* A button that opens a short list instead of doing one thing. The
+     bar scrolls sideways, so the list is positioned from script and
+     fixed to the window -- inside the bar it would be cut off by the
+     scrollport the moment it hung below the row. */
+  .menuWrap{display:flex;flex:0 0 auto}
+  .hasMenu::after{content:"";margin-left:6px;width:0;height:0;
+    border:3.5px solid transparent;border-top-color:currentColor;
+    border-bottom:0;opacity:.55;transform:translateY(1px)}
+  .hasMenu.on{background:var(--btnOn);border-color:var(--edgeStrong)}
+  .actMenu{position:fixed;z-index:60;min-width:176px;padding:4px;
+    background:var(--panel);border:1px solid var(--edgeStrong);
+    border-radius:7px;box-shadow:0 10px 30px rgba(0,0,0,.4);display:none}
+  .actMenu.on{display:block}
+  .actMenu button{display:flex;width:100%;height:auto;min-height:26px;
+    padding:4px 9px;background:none;border:0;border-radius:4px;
+    justify-content:flex-start;text-align:left;font-size:12px}
+  .actMenu button:hover:not(:disabled){background:var(--btnHover)}
+  .actMenu button:disabled{opacity:.38;background:none}
+  .actMenu hr{border:0;border-top:1px solid var(--edge);margin:4px 2px}
 
   /* --------------------------- document tabs ------------------------- */
   #tabs{grid-area:tabs;display:flex;align-items:stretch;gap:0;
@@ -511,6 +533,25 @@
      every other file rather than standing there empty. */
   #eftDock{display:none}
   body.sprite-mode #eftDock.on{display:block}
+
+  /* ------------------------- the character dock ---------------------- */
+  /* Only a sheet the guides apply to turns this on: an effect file and
+     a 40 x 40 portrait have nothing to measure against. */
+  #charDock{display:none}
+  body.sprite-mode #charDock.on{display:block}
+  #charGuides{display:grid;gap:2px;margin:4px 0 2px}
+  #charFrames table{width:100%;border-collapse:collapse;
+    font-family:var(--mono);font-size:10.5px}
+  #charFrames th{text-align:right;font-weight:500;color:var(--dim);
+    padding:2px 5px;border-bottom:1px solid var(--edge);white-space:nowrap}
+  #charFrames td{text-align:right;padding:2px 5px;color:var(--ink);
+    white-space:nowrap}
+  #charFrames th:first-child,#charFrames td:first-child{text-align:left}
+  #charFrames th:last-child,#charFrames td:last-child{text-align:left}
+  #charFrames tr.hot td{background:color-mix(in srgb,var(--cyan) 14%,transparent)}
+  #charFrames td.ok{color:var(--ok)}
+  #charFrames td.meh{color:var(--amber)}
+  #charFrames td.no{color:var(--red)}
   #eftStage{display:flex;align-items:center;justify-content:center;
     padding:8px;border:1px solid var(--edge);border-radius:7px;
     background:repeating-conic-gradient(var(--btnDown) 0% 25%,
@@ -765,30 +806,54 @@
   <span class="actGroup">
     <label id="drop" for="file">Open&hellip;</label>
     <input type="file" id="file" multiple>
-    <button id="bNewSprite">New sprite</button>
-    <button id="bMapNew">New map</button>
+    <span class="menuWrap">
+      <button class="hasMenu" data-menu="mNew" type="button">New</button>
+      <div class="actMenu" id="mNew">
+        <button id="bNewSprite">New sprite</button>
+        <button id="bMapNew">New map</button>
+      </div>
+    </span>
     <button id="bClear">Close all</button>
   </span>
 
   <span class="actRule" id="ruleMesh"></span>
   <span class="actGroup" id="actMesh">
     <button id="bSave">Save .bin</button>
-    <button id="bPaintTex" type="button">Edit texture&hellip;</button>
-    <button id="bTexIn" type="button">Replace texture&hellip;</button>
-    <button id="bTexOut" title="saves whatever the active tab shows: the model, moving if a motion is loaded, or the texture you are editing">Save .GIF</button>
-    <button id="bUV">Save UV .PNG</button>
-    <span class="actRule"></span>
-    <button id="bObj">Export .OBJ</button>
-    <button id="bObjIn" type="button">Import .OBJ&hellip;</button>
+    <span class="menuWrap">
+      <button class="hasMenu" data-menu="mTex" type="button">Texture</button>
+      <div class="actMenu" id="mTex">
+        <button id="bPaintTex" type="button">Edit texture&hellip;</button>
+        <button id="bTexIn" type="button">Replace texture&hellip;</button>
+        <hr>
+        <button id="bUV">Save UV .PNG</button>
+      </div>
+    </span>
+    <span class="menuWrap">
+      <button class="hasMenu" data-menu="mModel" type="button">Model</button>
+      <div class="actMenu" id="mModel">
+        <button id="bObj">Export .OBJ</button>
+        <button id="bObjIn" type="button">Import .OBJ&hellip;</button>
+        <hr>
+        <button id="bTexOut" title="saves whatever the active tab shows: the model, moving if a motion is loaded, or the texture you are editing">Save .GIF</button>
+      </div>
+    </span>
   </span>
 
   <span class="actGroup" id="actSprite">
     <button id="bSpriteSave">Save sprite</button>
     <button id="bPaintFrame">Edit frame&hellip;</button>
     <button id="bSpriteIn" type="button">Import image&hellip;</button>
-    <button id="bSpriteGif" title="the whole animation, with any frame you are part-way through editing included as it stands">Save .GIF</button>
-    <button id="bFrameOut">Save frame .PNG</button>
-    <button id="bStripOut">Save strip .PNG</button>
+    <button id="bCharAlign" title="move the whole sheet onto the axis and the floor, keeping its own motion">Align</button>
+    <span class="menuWrap">
+      <button class="hasMenu" data-menu="mSprite" type="button">Export</button>
+      <div class="actMenu" id="mSprite">
+        <button id="bSpriteGif" title="the whole animation, with any frame you are part-way through editing included as it stands">Save .GIF</button>
+        <hr>
+        <button id="bFrameOut">Save frame .PNG</button>
+        <button id="bStripOut">Save strip .PNG</button>
+        <button id="bCharMould" title="the guides alone, transparent, at sheet size, to draw over anywhere">Save guides .PNG</button>
+      </div>
+    </span>
   </span>
 
   <span class="actGroup" id="actMap">
@@ -923,6 +988,21 @@
   </div>
 
   <div id="spritePanel">
+    <details class="dock" id="charDock" open><summary>Character sheet</summary>
+      <div class="dockBody">
+        <div id="charWho"></div>
+        <div id="charChecks"></div>
+        <h2>Guides</h2>
+        <div id="charGuides"></div>
+        <label class="check"><input type="checkbox" id="charLabels" checked>
+          name the guides on the sheet</label>
+        <label class="check"><input type="checkbox" id="charClock">
+          play at the game&rsquo;s own timing</label>
+        <p class="hint" data-i18n-html="The game stamps the whole 256 x 256 at a fixed place against the board square, so where the drawing sits inside the sheet is the only thing that decides where the character stands. The body belongs on <b>x 128</b> and the sole of the foot on <b>y 195</b>; the rest is what the game draws around you and never adapts.">The game stamps the whole 256 x 256 at a fixed place against the board square, so where the drawing sits inside the sheet is the only thing that decides where the character stands. The body belongs on <b>x 128</b> and the sole of the foot on <b>y 195</b>; the rest is what the game draws around you and never adapts.</p>
+        <h2>Frame by frame</h2>
+        <div id="charFrames"></div>
+      </div>
+    </details>
     <details class="dock" id="eftDock" open><summary>The effect, as the game draws it</summary>
       <div class="dockBody">
         <div id="eftStage"><canvas id="eftView"></canvas></div>
@@ -975,7 +1055,7 @@
           <input type="range" id="shHue" min="-180" max="180" value="0"><b>deg</b></div>
         <div class="slider"><span>sat</span>
           <input type="range" id="shSat" min="-100" max="100" value="0"><b>%</b></div>
-        <div class="slider"><span>light</span>
+        <div class="slider"><span>lum</span>
           <input type="range" id="shVal" min="-100" max="100" value="0"><b>%</b></div>
         <div class="ctrl"><button id="bShift">Shift all colours</button></div>
         <p class="hint">A character's frames are the same artwork in
@@ -1308,13 +1388,14 @@
 <script src="obj.js?v=20"></script>
 <script src="checks.js?v=20"></script>
 <script src="gifenc.js?v=20"></script>
-<script src="paint.js?v=20"></script>
+<script src="paint.js?v=21"></script>
 <script src="shapes.js?v=20"></script>
 <script src="skin.js?v=21"></script>
 <script src="motions.js?v=20"></script>
-<script src="sprite.js?v=21"></script>
+<script src="char.js?v=1"></script>
+<script src="sprite.js?v=22"></script>
 <script src="map.js?v=1"></script>
-<script src="i18n.js?v=24"></script>
+<script src="i18n.js?v=25"></script>
 <script src="settings.js?v=23"></script>
 <script src="tutorial.js?v=20"></script>
-<script src="app.js?v=22"></script>
+<script src="app.js?v=23"></script>

@@ -56,6 +56,7 @@ function spriteOpen(name, buf, headLen) {
   sprite.entry = { name, raw, gra, head };
   sprite.frame = 0;
   sprite.selected = null;
+  if (typeof charSync === 'function') charSync();
   document.body.classList.add('sprite-mode');
   $('empty').style.display = 'none';
   spriteRenderAll();
@@ -65,6 +66,7 @@ function spriteOpen(name, buf, headLen) {
 function spriteClose() {
   spritePause();
   sprite.entry = null;
+  if (typeof charSync === 'function') charSync();
   document.body.classList.remove('sprite-mode');
   /* the status bar is shared, so its sprite half has to be cleared or
      it keeps describing a file that is no longer open */
@@ -93,6 +95,9 @@ function spriteDraw() {
   tmp.getContext('2d').putImageData(
     new ImageData(spriteFrameRGBA(g, f), g.width, g.height), 0, 0);
   ctx.drawImage(tmp, 0, 0, cv.width, cv.height);
+  /* The character guides go over the artwork and never into it: this
+     is the view's own canvas, not the frame's pixels. */
+  if (typeof charPaint === 'function') charPaint(ctx, z, g.width, g.height);
 
   const bb = f.bbox();
   $('spriteStat').textContent = e.name + '  frame ' + (sprite.frame + 1) +
@@ -110,6 +115,11 @@ function spritePlay() {
   $('bPlay').textContent = 'Pause';
   $('bPlay').classList.add('on');
   clearInterval(sprite.timer);
+  /* The game gives each animation its own timing and the file carries
+     none, so a flat frame rate is a guess. When the sheet is one of
+     the 37 and the clock is asked for, play it the way it will play. */
+  if (typeof chr === 'object' && chr.clock &&
+      typeof charClockPlay === 'function' && charClockPlay()) return;
   sprite.timer = setInterval(() => {
     sprite.frame = (sprite.frame + 1) % e.gra.frames.length;
     spriteDraw();
@@ -121,6 +131,7 @@ function spritePause() {
   sprite.playing = false;
   clearInterval(sprite.timer);
   sprite.timer = null;
+  if (typeof charClockStop === 'function') charClockStop();
   const b = $('bPlay');
   if (b) { b.textContent = 'Play'; b.classList.remove('on'); }
 }
@@ -132,6 +143,7 @@ function spriteRenderAll() {
   spriteRenderPalette();
   spriteRenderTint();
   spriteRenderEft();
+  if (typeof charRenderPanel === 'function') charRenderPanel();
   spriteCheckRoundTrip();
 }
 

@@ -1755,7 +1755,56 @@ function menuClose() {
   if (el) el.classList.remove('on');
 }
 
+/* ------------------------ the bar's drop-downs ------------------- */
+/* Seven exports across the top read as seven decisions. Grouping them
+   behind one button each keeps the bar to the handful of things that
+   are actually the next thing to do.
+
+   Placed from script rather than by CSS: the bar scrolls sideways when
+   the actions do not fit, so a list positioned inside it is cut off by
+   the scrollport the moment it hangs below the row. */
+function actMenuClose() {
+  document.querySelectorAll('.actMenu.on, .hasMenu.on')
+    .forEach(el => el.classList.remove('on'));
+}
+
+function actMenuOpen(btn) {
+  const m = $(btn.dataset.menu);
+  if (!m) return;
+  const was = m.classList.contains('on');
+  actMenuClose();
+  if (was) return;                       /* a second click closes it */
+  m.classList.add('on');
+  btn.classList.add('on');
+  const r = btn.getBoundingClientRect();
+  m.style.left =
+    Math.max(4, Math.min(innerWidth - m.offsetWidth - 4, r.left)) + 'px';
+  m.style.top = (r.bottom + 4) + 'px';
+}
+
+function actMenuWire() {
+  document.querySelectorAll('.hasMenu[data-menu]').forEach(b =>
+    b.addEventListener('click', ev => {
+      ev.stopPropagation();
+      actMenuOpen(b);
+    }));
+  document.querySelectorAll('.actMenu').forEach(m =>
+    m.addEventListener('click', ev => {
+      /* an item runs its own handler and then the list goes away; the
+         padding between items is not a choice */
+      if (ev.target.closest('button')) actMenuClose();
+    }));
+  addEventListener('mousedown', ev => {
+    if (!ev.target.closest || ev.target.closest('.actMenu, .hasMenu')) return;
+    actMenuClose();
+  }, true);
+  addEventListener('keydown', ev => { if (ev.key === 'Escape') actMenuClose(); });
+  addEventListener('resize', actMenuClose);
+  addEventListener('wheel', actMenuClose, { passive: true });
+}
+
 function menuWire() {
+  actMenuWire();
   addEventListener('mousedown', e => {
     if (!$('menu').contains(e.target)) menuClose();
   }, true);
@@ -2448,6 +2497,8 @@ menuWire();
 for (const [what, fn] of [['motion panel', poseWire], ['create panel', makeWire],
                           ['map editor',
                            typeof mapWire === 'function' ? mapWire : () => {}],
+                          ['character guides',
+                           typeof charWire === 'function' ? charWire : () => {}],
                           ['settings',
                            typeof settingsWire === 'function' ? settingsWire : () => {}],
                           ['tutorial', typeof tutWire === 'function' ? tutWire : () => {}]]) {

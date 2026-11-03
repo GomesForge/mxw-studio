@@ -94,7 +94,7 @@ const I18N = {
     'hue': 'matiz',
     'deg': 'graus',
     'sat': 'satura\u00e7\u00e3o',
-    'light': 'luz',
+    'lum': 'brilho',
     'Shift all colours': 'Deslocar todas as cores',
     'Sprite': 'Sprite',
     'Team preview': 'Pr\u00e9via de time',
@@ -176,6 +176,28 @@ const I18N = {
 
     'An effect frame is <b>eight layers</b>, each composited at its own transparency. The frame list below shows those layers one by one, which is what you paint; this is the eight of them together, which is what a player sees. The game also doubles the pixels across, so it is softer here than the runs are.':
       'Um quadro de efeito tem <b>oito camadas</b>, cada uma composta na sua pr\u00f3pria transpar\u00eancia. A lista de quadros abaixo mostra essas camadas uma a uma, que \u00e9 o que voc\u00ea pinta; aqui est\u00e3o as oito juntas, que \u00e9 o que o jogador v\u00ea. O jogo tamb\u00e9m dobra os pixels na horizontal, ent\u00e3o aqui fica mais suave do que as corridas s\u00e3o.',
+    /* ---- the drop-downs in the action bar */
+    'New': 'Novo',
+    'Export': 'Exportar',
+
+    /* ---- the character sheet */
+    'Character sheet': 'Folha de personagem',
+    'Align': 'Alinhar',
+    'Save guides .PNG': 'Salvar guias .PNG',
+    'Guides': 'Guias',
+    'Axis and sole': 'Eixo e sola',
+    'The board tile': 'A casa do tabuleiro',
+    'Head box and name band': 'Caixa da cabe\u00e7a e faixa do nome',
+    'Safe area for ground actions': '\u00c1rea segura das a\u00e7\u00f5es de ch\u00e3o',
+    'What the game draws around you': 'O que o jogo desenha em volta',
+    'The block in front covers your feet': 'O bloco da frente cobre o p\u00e9',
+    'name the guides on the sheet': 'nomear as guias na folha',
+    'play at the game\u2019s own timing': 'tocar no tempo do pr\u00f3prio jogo',
+    'Frame by frame': 'Quadro a quadro',
+
+    'The game stamps the whole 256 x 256 at a fixed place against the board square, so where the drawing sits inside the sheet is the only thing that decides where the character stands. The body belongs on <b>x 128</b> and the sole of the foot on <b>y 195</b>; the rest is what the game draws around you and never adapts.':
+      'O jogo carimba os 256 x 256 inteiros num lugar fixo em rela\u00e7\u00e3o \u00e0 casa do tabuleiro, ent\u00e3o onde o desenho fica dentro da folha \u00e9 a \u00fanica coisa que decide onde o personagem aparece. O corpo fica em <b>x 128</b> e a sola do p\u00e9 em <b>y 195</b>; o resto \u00e9 o que o jogo desenha em volta, e ele nunca se adapta a voc\u00ea.',
+
     /* ---- the map editor */
     'New map': 'Novo mapa',
     'Save map': 'Salvar mapa',
@@ -274,13 +296,6 @@ const I18N = {
     'The messages that appear at the bottom.':
       'As mensagens que aparecem embaixo.',
     'settings forgotten': 'configura\u00e7\u00f5es esquecidas',
-
-    /* ---- the longer lines people actually read */
-    'Solid. Never breaks, never hides anything.':
-      'S\u00f3lido. Nunca quebra, nunca esconde nada.',
-    'Breaks. The items are hidden in these.':
-      'Quebra. Os itens ficam escondidos nestes.',
-    'Walkable.': 'D\u00e1 para andar.',
 
   }
 };
