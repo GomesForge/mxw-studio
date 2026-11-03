@@ -38,6 +38,12 @@ open; the drawing tools down the left; the canvas or the 3D view in the
 middle; the panels that describe and change what is open docked on the
 right; and one status line along the bottom.
 
+The top bar carries only what is plausibly the next thing to do.
+Everything else sits behind a short drop-down &mdash; **New**, and one
+menu per kind of file &mdash; rather than as a row of buttons for
+decisions nobody is making yet. A group appears only when a file of
+its kind is open.
+
 - Drop item `.bin`, body `.bin` or `.MXW` files on the page
 - 3D view: drag to orbit, wheel to zoom, ctrl and the left button
   to raise and lower; texture, wireframe, vertex normals, skeleton,
@@ -211,6 +217,49 @@ Drop a `.gra`, `.spr` or `.eft` and the page switches to sprite mode.
   to the box all the frames together occupy &mdash; a figure is about
   45&times;69 of a 256&times;256 sheet
 - Save the sprite back out
+
+### Character sheets
+
+Open one of the 37 files a character is made of &mdash; `st_s.gra`,
+`mo_w.gra`, `dd.gra` &mdash; and the sprite panel gains what the game
+expects of it.
+
+A sheet is a stamp: the game presses the whole 256&times;256 at a
+fixed place against the board square, so **where the drawing sits
+inside the sheet is the only thing that decides where the character
+appears**. Nothing looks wrong in an editor when it is off; it shows
+up in a match, as a character who floats over the block in front or
+walks through walls.
+
+- **Guides drawn over the artwork**, in the sprite view and while
+  painting a frame: the axis at `x 128` and the sole at `y 195`, the
+  board square and its neighbours, the head box the portrait is cut
+  from, the name band, the safe area, and the boxes the game&rsquo;s own
+  shadow, team ring, stars and markers occupy. Each group toggles
+- **Every frame measured** &mdash; sole, top, body centre, foot centre
+  &mdash; next to the median the official sheets hit at that same
+  frame, with the difference called out
+- **The sheet named**: which of the 37 slots it is, what the game
+  shows it for, how many frames it should have, and why some counts
+  are not negotiable. Mounted, the game draws the Louie and the rider
+  on the same frame number, so a walk of ten freezes the Louie
+- **The game&rsquo;s own clock.** The file carries no timing at all: the
+  game decides, per animation, in steps of 20&nbsp;ms. Play a walk at
+  the 60&nbsp;ms it really gets rather than at a flat frame rate
+- **The walk measure.** A character who slides instead of walking is
+  the commonest fault in a first sheet and is invisible frame by
+  frame. The check looks at the legs alone and says how much they
+  change between frames
+- **Align** moves the whole sheet onto the axis and the floor in one
+  offset, so a walk keeps its own rise and fall instead of being
+  flattened onto one line
+- **Save guides .PNG** writes the guides alone, transparent, at sheet
+  size, to draw over in anything else
+
+The numbers come from the community guide v3, which measured 3995
+official sheets against the client&rsquo;s own renderer; this project
+reproduced them before writing them down. See
+[docs/character-sprites.md](docs/character-sprites.md).
 
 ```
 python python/gra.py <file>            inspect

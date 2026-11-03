@@ -1,10 +1,32 @@
 # Roadmap
 
-The goal is one editor for the whole asset set: 3D wearables, 2D
-character sprites, faces, and eventually maps — so somebody can build a
-character end to end, export it, and have it work.
+The goal is **one place to make anything this game is made of** —
+characters, maps, bombs, scenery, the interface itself — so somebody
+can build a thing end to end, export it, and have it work, without
+also having to learn five file formats first.
 
-Ordered by what unblocks the most.
+Ordered by what unblocks the most. A section is only here once the
+format behind it is known; guesses go to *Things that are genuinely
+unknown* at the bottom instead.
+
+## The whole surface
+
+Everything the game loads, what it is, and where this editor stands.
+This is the list the rest of the page is measured against.
+
+| what | the files | here |
+|------|-----------|------|
+| 3D wearables and bodies | `.bin` / `.MXW` | **read, written, round-trip exact**, dressed, posed, textured |
+| character sheets | 37 `.gra` | **read, written, painted**, with the sheet guides and the checks |
+| a whole character | a folder of 37 | the sheets, one at a time — not yet the folder |
+| effects | `.eft` | **read, written, composited** as the game draws them |
+| the board | `block.spr`, `map.spr` | **read, written**; custom maps written for the panel |
+| bomb skins | 12 files, mixed | the files open one by one; nothing knows they are a set |
+| scenery | one PNG, three sizes | nothing |
+| the interface | 59 `UI_*.spr`, 2 `.fnt` | the sprites open; the font does not |
+| outfits | a 52-byte descriptor | the parts dress; the descriptor is not read or written |
+| items and the shop | the item index | **read, written, rebuilt byte for byte** |
+| HD sheets | `hd.json` + PNG/WebP | nothing, and no copy has turned up |
 
 ## Done
 
@@ -43,6 +65,13 @@ Ordered by what unblocks the most.
   one record per set with the spawns, the gimmicks and the item counts.
   A map editor opens the first, reads the second and writes custom maps
   for the server. See [map-format.md](map-format.md)
+- **The character sheet's geometry**: the axis, the sole, the board
+  square, the head box, the name band, the safe area and the game's
+  own effect boxes drawn over the artwork; every frame measured
+  against the officials; the 37 sheets by name with the counts the
+  game enforces; the game's own clock; the walk measure; and one
+  offset that puts a whole sheet on the floor. See
+  [character-sprites.md](character-sprites.md)
 - **Named viewpoints**, and textures classified by the slot the file
   itself names them in, so an image lands on the right material -- the
   body skin is never offered as a face -- without the camera moving
@@ -52,25 +81,70 @@ Ordered by what unblocks the most.
 Playback, colour remapping and an HSV shift across every frame are
 done. What is left:
 
-- **Direction groups**: these files come in sets per facing, and the
-  set is only visible in the file names. Detect them and show the
-  facings side by side rather than one file at a time
 - **Propagate a pixel patch**, not just a colour. Pick a region on one
   frame and paste it into the same place on the others. Colour edits
   generalise for free; a patch needs an anchor, so align by each
   frame's own bounding box rather than by absolute coordinates
-- **Onion skinning** while editing a frame, so a change can be judged
-  against its neighbours
 - **Colour count guard**: a photograph imported into a sprite explodes
   the distinct-colour count and the file with it. Warn, and offer to
   quantise on import
 - The 3 files carrying kind bytes `0x09`, `0x49` and `0x99`, which are
   a variant this reader refuses
 
+Direction groups moved to section 2, where the rest of the character
+work now lives. Onion skinning is done: painting a frame draws the
+frames either side underneath it.
+
 Worth knowing before touching this: the pixels are **direct RGB565**,
 not palette indices. There is no palette to edit, so a recolour is a
 remap of the colours that happen to be present — which is what makes it
 propagate cleanly across frames.
+
+## 2. Characters, end to end
+
+A character is 37 sheets that have to agree with each other, and the
+hard part was never the pixels: it is that nothing in an editor tells
+you a drawing is in the wrong place. It shows up in a match.
+
+**Done.** The sheet geometry is in the editor:
+
+- the axis at `x = 128`, the sole at `y = 195`, the board square, the
+  head box the portrait is cut from, the name band, the safe area and
+  the boxes the game’s own effects occupy, drawn over the artwork
+  in the sprite view **and while painting a frame**
+- every frame measured — sole, top, body centre, foot centre —
+  against the medians the officials actually hit, frame by frame
+- the 37 sheets by name, with the counts the game enforces and why
+- the game’s own clock per animation, to play a walk at the 60 ms
+  it really gets rather than at a flat frame rate
+- the walk measure that catches a character who slides instead of
+  walking, which is the commonest fault in a first sheet
+- **Align**: move the whole sheet onto the axis and the floor in one
+  offset, so an animation keeps its own rise and fall
+- the guides as a transparent PNG, to draw over anywhere else
+
+See [character-sprites.md](character-sprites.md).
+
+**Next**, in the order that helps most:
+
+- **Open a folder as one document.** Name each of the 37 slots, say
+  which are missing, and show the four facings of an action side by
+  side. Everything above is per file today, and the faults that matter
+  most are between files
+- **The seams the player sees.** `preview` has to equal `st_s`, and
+  `wa` frame 0 should equal `st_s` frame 0 or the round’s entrance
+  ends with a jump. Both are cross-file, so only a folder view can
+  check them
+- **Mirror a facing.** The officials never mirror — they were
+  rendered from both sides — but mirroring is how anybody sane
+  works. Mirror `*_e` into `*_w`, and warn about the two things it
+  breaks: lighting from one side, and a prop in one hand
+- **The board preview.** Draw the character where it really stands:
+  the shadow underneath, the block of the row below drawn **over** its
+  feet, the name across the head. That is the game’s false 3D, and
+  it is the fastest way to see an anchor that is off
+- **Write the folder.** The 37 files and a `character.json`, ready to
+  upload, with the checks run first
 
 ## 3. Dress room, improved
 
@@ -100,7 +174,10 @@ Female is the class plus 100. What it needs:
 - Flag conflicts: two items in one slot, or an item whose texture is
   missing
 
-## 4. Character creation, end to end
+## 4. 3D character creation, end to end
+
+This is the 3D side: a body, clothes and a face, assembled as `.bin`
+files. Section 2 is the other kind, the 2D sheets.
 
 - Start from a body, dress it, pick a face, name it
 - Export the whole set: the edited `.bin` files, the textures, and an
@@ -129,7 +206,75 @@ Female is the class plus 100. What it needs:
   `kr/map/` when a server has them. Nothing stops the editor doing the
   same; no copy has turned up to test against
 
-## 5b. What the editor still does not cover
+## 6. Bomb skins
+
+A skin is **twelve files and a partial one is legal** — what it
+leaves out stays the game’s own, which is why most shipped skins
+carry only two. From `game/bombskins.js`: `bomb.spr` resting and
+appearing, `bomb_d.spr` the placing marker, `bomb_s.spr` the shadow,
+`bomb_f.eft` the fuse spark, seven `flame_*.eft` (centre, hor, ver,
+right, left, up, down) and `boom_block.eft`.
+
+- Open a folder as one document, say which of the twelve are present,
+  and make clear that the gaps are legal rather than errors
+- Play the bomb and its flames together, on the clock, which is the
+  only way to judge one. **Nine of the twelve are effects**, and those
+  composite correctly now
+- A new skin from the game’s own as a starting point, so somebody
+  can change the two files that matter and leave the rest
+
+There are 40 real skins in the server backup to test against.
+
+## 7. Scenery
+
+The picture behind the arena. `game/sideart.js` gives the geometry
+exactly: the image is `800 + 2 * side` wide by 600 game pixels, and a
+field’s screen is `[40 * w + 120, 38 * h + 48]` — so 800 x 600,
+960 x 694 and 1120 x 770 for the 17 x 15, 21 x 17 and 25 x 19 fields.
+A design’s slot is `design + 9 * size`; a custom map’s is
+`1000 + its id`.
+
+- A canvas at the exact size with the arena rectangle drawn where it
+  really falls, so the part that will be covered is obvious while
+  painting
+- The limits the panel enforces, checked before export
+
+## 8. The interface: buttons, panels and the font
+
+The least explored corner, and the one the question “can I change
+the buttons” actually lands in. What is known:
+
+- **59 `UI_*.spr`** ship with the client — the panel, the player
+  numbers, the arrows, the belt direction markers, the boss board. They
+  are ordinary sprites this project already reads and writes, so
+  editing them needs no new format work at all: what is missing is
+  knowing **which file is which part of the screen**
+- **The font is a plain bitmap.** `game/fb565.js` reads
+  `font/Font_Eng_6.fnt` as a **192-byte head, then 256 glyphs of 12
+  bytes, one byte a row, the top 6 bits used** — which is exactly
+  the 3264 bytes the file has. `Font_Han_12.fnt` is the wide one
+- **It has no accented letters.** The client composes them at run
+  time: the plain letter, then a mark drawn from a small table, with
+  the cedilla under and a capital’s mark three rows higher. Worth
+  knowing before anybody tries to “add the accents to the font”
+- Each glyph is drawn with a one-pixel outline over a 17-row cell
+
+So the work is: a panel that names the UI sprites by where they
+appear, a glyph grid for the font with a writer, and a screen preview
+that puts the pieces where the game puts them.
+
+## 9. Effects, beyond reading them
+
+The format is settled and composited (see
+[gra-format.md](gra-format.md)). What would make it a tool:
+
+- Paint a layer and watch the composite update beside it
+- **Build an effect from one drawing**: take a single image and
+  generate the eight alpha layers, which is how most of them read
+- The three alpha tables as a preview, since the same file looks
+  different on a player, on an item and on the field
+
+## 10. What the editor still does not cover
 
 [creating-for-the-server.md](creating-for-the-server.md) writes down
 what a costume, a bomb skin, a map and the scenery each have to be
@@ -148,7 +293,7 @@ yet:
 - **Send anything.** Everything stays in the browser and comes out as
   a file. Handing it over is still a person talking to a person
 
-## 5c. What the unbundled client settles, and what to build on it
+## 11. What the unbundled client settles, and what to build on it
 
 The server serves its own client **unbundled** — 58 modules with their
 comments — and several of them state a format outright. Two of those
@@ -157,24 +302,13 @@ written down here so nobody re-derives it.
 
 Each item below names the module it came from. None of it is guessed.
 
-- **A bomb skin is twelve files, and a partial one is legal.**
-  `game/bombskins.js`: `bomb.spr` resting and appearing, `bomb_d.spr`
-  the placing marker, `bomb_s.spr` the shadow, `bomb_f.eft` the fuse
-  spark, seven `flame_*.eft` (centre, hor, ver, right, left, up, down)
-  and `boom_block.eft`. **What a skin lacks stays the game's own**, so
-  most shipped skins carry only `bomb.spr` and `bomb_d.spr`.
-  Worth building: open a folder as one document, say which of the
-  twelve are present, and play the bomb with its flames together. Nine
-  of the twelve are effects, which now composite correctly.
+- **Bomb skins** (`game/bombskins.js`) and **scenery**
+  (`game/sideart.js`) each have a section of their own now — 6 and 7 —
+  where the format and the work for it are written together.
 
-- **Scenery has three exact sizes and a known overlay.**
-  `game/sideart.js`: the picture is `800 + 2 * side` wide by 600 game
-  pixels, and a field's screen is `[40 * w + 120, 38 * h + 48]` — so
-  800 x 600, 960 x 694 and 1120 x 770 for the 17 x 15, 21 x 17 and
-  25 x 19 fields. A design's slot is `design + 9 * size`; a custom
-  map's is `1000 + its id`. Worth building: a canvas at the exact size
-  with the arena rectangle drawn where it really falls, so the part
-  that shows is obvious while painting.
+- **The 6 x 12 font is a plain bitmap**, and the client composes
+  accented letters itself rather than carrying them. `game/fb565.js`;
+  section 8.
 
 - **Draw the map board the way the game does.** `mapmaker.js` maps
   designs 1 to 7 to sprite indices in `map/pp.spr` (breakables) and
@@ -188,11 +322,11 @@ Each item below names the module it came from. None of it is guessed.
   save-and-share-an-outfit item in section 3, with the real format
   rather than an invented one.
 
-- **A character is 37 slots in a fixed order.** `game/characters.js`,
-  already used for sprite work. Worth building: open a whole folder as
-  one document, name each slot and facing, and say what is missing —
-  the direction-groups item in section 1, with a vocabulary instead of
-  a guess at the file names.
+- **A character is 37 slots in a fixed order** (`game/characters.js`),
+  and the geometry around them is settled too. Both are in section 2
+  and written down in
+  [character-sprites.md](character-sprites.md); what is left there is
+  the folder as one document.
 
 - **HD sheets exist and this project knows nothing about them.**
   `game/characters.js` fetches `<base>/hd.json` per character and
@@ -201,7 +335,7 @@ Each item below names the module it came from. None of it is guessed.
   referenced. First step is finding out whether a live server actually
   serves them; the backup captured none.
 
-## 6. Quality of life
+## 12. Quality of life
 
 - Undo and redo across every edit
 - A diff view: what changed against the file as loaded
