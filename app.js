@@ -2344,6 +2344,9 @@ function readFiles(files) {
     const r = new FileReader();
     r.onerror = () => notify(tf('could not read {name}', { name: f.name }), 1);
     r.onload = () => {
+      /* everything opened goes on the shelf, so a second file does not
+         make the first one disappear from view */
+      if (typeof libTake === 'function') libTake(f.name, r.result);
       openBuffer(f.name, r.result, f);
     };
     r.readAsArrayBuffer(f);
@@ -2538,6 +2541,8 @@ for (const [what, fn] of [['motion panel', poseWire], ['create panel', makeWire]
                            typeof xpWire === 'function' ? xpWire : () => {}],
                           ['folder view',
                            typeof folderWire === 'function' ? folderWire : () => {}],
+                          ['library',
+                           typeof libWire === 'function' ? libWire : () => {}],
                           ['settings',
                            typeof settingsWire === 'function' ? settingsWire : () => {}],
                           ['tutorial', typeof tutWire === 'function' ? tutWire : () => {}]]) {
