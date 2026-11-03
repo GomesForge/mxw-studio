@@ -65,6 +65,11 @@ This is the list the rest of the page is measured against.
   one record per set with the spawns, the gimmicks and the item counts.
   A map editor opens the first, reads the second and writes custom maps
   for the server. See [map-format.md](map-format.md)
+- **One export desk**: everything that can come out of whatever is
+  open, listed in one window, ticked, and written as a file or as a
+  zip. Images scale, crop and can carry the guides; an effect exports
+  composited as well as raw; a GIF can run on the game's own clock;
+  and a JSON of the measurements comes out beside the artwork
 - **The character sheet's geometry**: the axis, the sole, the board
   square, the head box, the name band, the safe area and the game's
   own effect boxes drawn over the artwork; every frame measured
@@ -337,6 +342,12 @@ Each item below names the module it came from. None of it is guessed.
 
 ## 12. Quality of life
 
+- **Import the way the desk exports.** A zip of frames should go back
+  in as a sheet, and a folder of 37 should open as a character. The
+  writing half is done; the reading half is still one file at a time
+- **Export without opening.** Drop fifty files on the page and ask for
+  the same thing from all of them -- a PNG of every frame of every
+  sheet in a folder -- without clicking through them one at a time
 - Undo and redo across every edit
 - A diff view: what changed against the file as loaded
 - Batch mode: apply one palette or texture change to many files
