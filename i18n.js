@@ -430,6 +430,9 @@ const I18N = {
 
     /* ---- the library */
     'Library': 'Estante',
+    'Character': 'Personagem',
+    'Bomb skin': 'Skin de bomba',
+    'Import': 'Importados',
     'New folder': 'Nova pasta',
     'New folder inside': 'Nova pasta dentro',
     'File by animation': 'Organizar por anima\u00e7\u00e3o',
