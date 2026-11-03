@@ -180,6 +180,52 @@ const I18N = {
     'New': 'Novo',
     'Export': 'Exportar',
 
+    /* ---- the export desk.
+       The notes under each item count what is open, so they are built
+       at run time and cannot be keyed; they stay in English, the same
+       way the map editor's own findings do. */
+    'Export\u2026': 'Exportar\u2026',
+    'tick what you want; several come out as one .zip':
+      'marque o que quiser; v\u00e1rios saem num .zip s\u00f3',
+    'Nothing here changes the file. The zip is stored, not compressed, so every tool reads it.':
+      'Nada aqui altera o arquivo. O .zip \u00e9 guardado sem compress\u00e3o, ent\u00e3o qualquer ferramenta l\u00ea.',
+    'Nothing ticked': 'Nada marcado',
+    'This sprite': 'Este sprite',
+    'This model': 'Este modelo',
+    'This map': 'Este mapa',
+    'Also open': 'Tamb\u00e9m abertos',
+    'How': 'Como',
+    'Scale': 'Escala',
+    'nearest neighbour, so a pixel stays a square':
+      'vizinho mais pr\u00f3ximo, para o pixel continuar quadrado',
+    'Crop to the drawing': 'Cortar no desenho',
+    'Draw the guides on': 'Desenhar as guias por cima',
+    'GIF at the game\u2019s timing': 'GIF no tempo do jogo',
+    'rather than the speed on the slider': 'em vez da velocidade da barra',
+    'Contact sheet columns': 'Colunas da folha de contato',
+    '0 keeps it square': '0 deixa quadrada',
+    'A folder per file, inside the zip': 'Uma pasta por arquivo, dentro do zip',
+    'off puts everything at the top level':
+      'desligado joga tudo na raiz',
+    'The sprite itself': 'O pr\u00f3prio sprite',
+    'Every frame, one PNG each': 'Cada quadro, um PNG',
+    'One strip, every frame side by side':
+      'Uma tira, os quadros lado a lado',
+    'A contact sheet': 'Uma folha de contato',
+    'The animation as a GIF': 'A anima\u00e7\u00e3o em GIF',
+    'The numbers, as JSON': 'Os n\u00fameros, em JSON',
+    'Composited, one PNG per frame': 'Composto, um PNG por quadro',
+    'Composited, as a GIF': 'Composto, em GIF',
+    'The container itself': 'O pr\u00f3prio arquivo',
+    'The geometry as .obj': 'A geometria em .obj',
+    'Every texture': 'Todas as texturas',
+    'The UV layout, as a PNG': 'O mapa UV, em PNG',
+    'This set, as JSON': 'Este conjunto, em JSON',
+    'What map.spr says, as JSON': 'O que o map.spr diz, em JSON',
+    'The board on screen, as a PNG': 'O tabuleiro da tela, em PNG',
+    'The custom map, as the panel takes it':
+      'O mapa customizado, como o painel aceita',
+
     /* ---- the character sheet */
     'Character sheet': 'Folha de personagem',
     'Align': 'Alinhar',
