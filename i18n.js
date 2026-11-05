@@ -666,6 +666,7 @@ const I18N = {
     'Line bomb': 'Bomba em linha',
     'Pierce bomb': 'Bomba perfurante',
     'Water bomb': 'Bomba d\'\u00e1gua',
+    'Hyper Bomb': 'Hyper Bomb',
     'Warp, to a destination': 'Portal, com destino',
     'Warp': 'Portal',
     'Drift sand': 'Areia movedi\u00e7a',

@@ -216,9 +216,16 @@ files. Section 2 is the other kind, the 2D sheets.
 **Done**, and in the editor — see the Done list and
 [map-format.md](map-format.md). What is left is around the edges:
 
-- **The fourteenth item slot** in a `map.spr` record. The panel names
-  thirteen items and the file carries fourteen counts. Until that is
-  settled the editor reads the file and refuses to write it
+- **Write `map.spr`.** The fourteenth item count was the thing in the
+  way and it is settled: it is the **Hyper Bomb**. Across all 46 sets
+  it is non-zero in exactly seven -- 37 to 43, five each -- and those
+  same seven are the only sets carrying gimmick type 17, the Hyper
+  Bomb goal. Seven of seven, and thirty-nine of thirty-nine the other
+  way. The game's own sprite list gives the name:
+  `item_hyperbomb.spr` is the item and `item_hyperball.spr` is the
+  pieces that orbit a player carrying one, which is why there is no
+  fifteenth count. The editor names it now; writing the file back is
+  what is left
 - **Draw the board the way the game does.** The editor paints flat
   tiles. The game draws them from the theme's own sprites, `map/pp.spr`
   for the breakables and `map/non.spr` for the pillars, at 40 x 38 a
@@ -331,7 +338,9 @@ Each item below names the module it came from. None of it is guessed.
   accented letters itself rather than carrying them. `game/fb565.js`;
   section 8.
 
-- **Draw the map board the way the game does.** `mapmaker.js` maps
+- **Draw the map board the way the game does**, now with the shadows:
+  `pp_sh.spr` and `non_sh.spr` sit under `pp.spr` and `non.spr`, and
+  the gimmicks have real artwork too (section 11b). `mapmaker.js` maps
   designs 1 to 7 to sprite indices in `map/pp.spr` (breakables) and
   `map/non.spr` (pillars), with a cell at `40 + 40c, 28 + 38r` and 40
   wide. Both are ordinary sprites this project already reads, so the
@@ -355,6 +364,59 @@ Each item below names the module it came from. None of it is guessed.
   the page thread in `hd_worker.js`. A `tools/hd_sheets.py` is
   referenced. First step is finding out whether a live server actually
   serves them; the backup captured none.
+
+## 11b. What the unpacked executable lists
+
+The PC client's own `BomberMan.exe` is the one build without a packer,
+and its import table and strings are readable without a decompiler.
+What it names is an inventory of the game: **294 file names** --- 178
+`.spr`, 62 `.gra`, 31 `.wav`, 18 `.eft`, plus one `.cfg`, one `.str`
+and `Bomber.dat`.
+
+- **The eighteen effects, by name and job**: `bomb_f` the fuse,
+  `boom`, `boom_block`, the seven `flame_*`, `createitem`,
+  `item-burn`, `get-item`, `cures`, `star`, `super`, `my` and
+  `my-in`. The editor had eighteen files and no idea which was which.
+
+- **The board has its own artwork, and a shadow for each piece**:
+  `pp.spr` and `pp_sh.spr` for the breakables, `non.spr` and
+  `non_sh.spr` for the pillars, plus `tile.spr`, `Tile01`, `Soft01`,
+  `Hard01`, `Drill01`, `Zone01`, `Warp01`, `WarpTile`, `CountTile`,
+  each with its `_S` companion. The web client's `mapmaker.js` names
+  only the first two; the shadows are what makes a board look drawn
+  rather than tiled.
+
+- **Every gimmick has a sprite**: twelve `UI_cbelt_*` for the belt
+  directions and its two switches, six `UI_driftsand_*`,
+  `UI_crackice`, `UI_tunnel`, `UI_warp`, `UI_haultswitch`,
+  `UI_speedswitch`, `UI_king`. The map editor draws numbered markers
+  for these today.
+
+- **Two sheets the 37 do not include**: `standmsk[e|s|w].gra` and
+  `runmsk[e|s|w].gra`, three facings each and no north. These are the
+  masks that hide a rider behind the Louie, which the character guide
+  describes as a rule the artist has to follow by hand.
+
+- **Four bombs, not one**: `bomb`, `bbomb`, `dbomb` and `pbomb`, each
+  with its `_d` placing marker. A bomb skin as the web client defines
+  it covers the first only.
+
+- **Two whole modes with their own art**: `data/HyperBomb` and
+  `data/PanelPaint`, eight themed folders each.
+
+- `Bomber.dat` in `data/bomb` is 23420 bytes at full entropy --
+  encrypted or compressed, and not in the cache's scheme, since that
+  one is keyed by the file name. Unknown.
+
+The two community tools agree about the formats they touch. `BOgra`
+and `BOimages` both filter on `(*.gra)`, `(*.spr)` and `(*.eft)`, and
+BOgra's own strings give away its single operation --- *"do you
+replace left gra(%d/%d)frame with right bmp?"* --- along with
+`%d pixels are transparent`, which is the choice this editor still
+makes on import.
+
+All of it read statically: imports, sections and strings, no
+decompiler and nothing executed.
 
 ## 12. Quality of life
 
@@ -409,5 +471,7 @@ Listed so nobody burns time rediscovering them:
 - The encrypted texture cache, which uses a different container
 - What the `u32` at `0x07` of a sprite header means. One file in 1422
   carries 71 there; the rest are zero
+- `data/bomb/Bomber.dat` in the PC client: 23420 bytes at full
+  entropy. Not the cache's scheme, which is keyed by the file name
 - `UI_userdraw.spr`: high entropy from the first byte, no readable
   header. Compressed or encrypted
