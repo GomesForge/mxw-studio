@@ -149,6 +149,7 @@ function spriteRenderAll() {
   spriteRenderEft();
   if (typeof charRenderPanel === 'function') charRenderPanel();
   if (typeof folderRender === 'function') folderRender();
+  if (typeof toolsMaybeOpen === 'function') toolsMaybeOpen();
   if (typeof toolsRender === 'function') toolsRender();
   spriteCheckRoundTrip();
 }
