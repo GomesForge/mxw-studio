@@ -1011,6 +1011,15 @@ function paintWire() {
     paint.size = Math.max(1, Math.min(32, +e.target.value || 1));
     paintRenderTools();
   };
+  /* the wheel over the canvas, same range as the slider */
+  if (typeof panelWheelZoom === 'function') {
+    panelWheelZoom($('paintStage'), () => paint.zoom, z => {
+      paint.zoom = z;
+      $('paintZoom').value = z;
+      $('paintZoomOut').textContent = z + 'x';
+      paintDraw();
+    }, 1, 16);
+  }
   $('paintZoom').oninput = e => {
     paint.zoom = Math.max(1, Math.min(16, +e.target.value || 6));
     $('paintZoomOut').textContent = paint.zoom + 'x';
