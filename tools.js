@@ -34,6 +34,7 @@ function toolsLoad() {
       for (const k of ['x', 'y', 'w', 'h'])
         if (typeof s[k] === 'number') tools.pos[k] = s[k];
       tools.placed = !!s.placed;
+      tools.pos.moved = !!s.moved;
       tools.shut = !!s.shut;
       if (s.scope) tools.scope = s.scope;
     }
@@ -43,8 +44,8 @@ function toolsLoad() {
 function toolsSave() {
   try {
     localStorage.setItem(TOOLS_KEY, JSON.stringify(Object.assign(
-      { placed: tools.placed, scope: tools.scope, shut: !!tools.shut },
-      tools.pos)));
+      { placed: tools.placed, scope: tools.scope, shut: !!tools.shut,
+        moved: !!tools.pos.moved }, tools.pos)));
   } catch (e) { /* fine */ }
 }
 
@@ -59,7 +60,11 @@ function toolsShow(on, byUser) {
   const el = $('tools');
   if (!el) return;
   el.hidden = !tools.open;
-  if (!tools.open) { toolsRelease(); return; }
+  if (!tools.open) {
+    toolsRelease();
+    if (typeof panelArrange === 'function') panelArrange();
+    return;
+  }
   toolsAdopt();
   if (!tools.placed) {
     Object.assign(tools.pos, panelCorner('left', 304, 560));
@@ -67,6 +72,7 @@ function toolsShow(on, byUser) {
   }
   panelClamp(tools.pos, { w: 240, W: 520, h: 200 });
   panelApply(el, tools.pos);
+  if (typeof panelArrange === 'function') panelArrange();
   toolsRender();
   toolsSave();
 }
@@ -336,7 +342,7 @@ function toolsWire() {
   if (el) {
     panelWindow({
       el: el, head: $('toolsHead'), grip: $('toolsGrip'),
-      pos: tools.pos, min: { w: 240, W: 520, h: 200 },
+      pos: tools.pos, min: { w: 240, W: 520, h: 200 }, order: 0,
       onDone: toolsSave
     });
   }
