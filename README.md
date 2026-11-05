@@ -272,7 +272,14 @@ What you can do with what is on the shelf:
   the drawing actually has
 - **Save .zip** writes whatever is selected, with its folders intact
 
-It opens in the top right corner of the work area. The near corner
+**The windows arrange themselves.** They live inside the viewport and
+nowhere else, so they never sit over the action bar, the tabs, the
+tool rail, the side panel or the status line &mdash; and when both are
+open they are laid out side by side rather than on top of each other.
+Drag one anywhere you like and it stays put; after that only the
+other one moves around it.
+
+It opens beside the frame tools in the work area. The near corner
 belongs to the frame tools, which are what a hand reaches for while
 drawing; a list of files is read, not reached for. Drag it anywhere
 else and it stays there &mdash; the window remembers where it was and how big, and
@@ -367,6 +374,9 @@ Drop a `.gra`, `.spr` or `.eft` and the page switches to sprite mode.
   is judged against the one before it
 - **Mirror** the brush left/right, top/bottom or both, about the middle
   of the image
+- **The wheel zooms** on any flat view &mdash; a sheet or a frame
+  being painted &mdash; and the point under the cursor stays under the
+  cursor. The 3D viewport keeps the wheel it already had
 - `[` and `]` size the brush, `+` and `&minus;` zoom, **alt** picks a
   colour without leaving the brush, and the colours you have used stay
   one click away

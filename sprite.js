@@ -792,6 +792,15 @@ function spriteWire() {
     $('fpsOut').textContent = sprite.fps + ' fps';
     if (sprite.playing) spritePlay();
   };
+  /* the wheel over the sheet, same range as the slider */
+  if (typeof panelWheelZoom === 'function') {
+    panelWheelZoom($('spriteWrap'), () => sprite.zoom, z => {
+      sprite.zoom = z;
+      $('zoom').value = z;
+      $('zoomOut').textContent = z + 'x';
+      spriteDraw();
+    }, 1, 10);
+  }
   $('zoom').oninput = e => {
     sprite.zoom = Math.max(1, Math.min(10, +e.target.value || 3));
     $('zoomOut').textContent = sprite.zoom + 'x';

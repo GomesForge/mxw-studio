@@ -59,6 +59,7 @@ function libInit() {
         for (const k of ['x', 'y', 'w', 'h'])
           if (typeof saved[k] === 'number') lib.pos[k] = saved[k];
         lib.placed = !!saved.placed;
+        lib.pos.moved = !!saved.moved;
       }
       /* Whether it was open is deliberately not restored. The files do
          not survive a reload, so restoring it would open an empty
@@ -71,7 +72,8 @@ function libInit() {
 function libSave() {
   try {
     localStorage.setItem(LIB_KEY, JSON.stringify(Object.assign(
-      { v: LIB_PLACE, placed: lib.placed }, lib.pos)));
+      { v: LIB_PLACE, placed: lib.placed, moved: !!lib.pos.moved },
+      lib.pos)));
   } catch (e) { /* fine */ }
 }
 
@@ -245,6 +247,8 @@ function libShow(on) {
   if (lib.open) {
     libPlace();
     libRender();
+  } else if (typeof panelArrange === 'function') {
+    panelArrange();
   }
   libSave();
 }
@@ -262,6 +266,7 @@ function libPlace() {
   }
   libClamp();
   panelApply(el, lib.pos);
+  if (typeof panelArrange === 'function') panelArrange();
 }
 
 function libClamp() {
@@ -676,7 +681,7 @@ function libClear() {
 function libWireWindow() {
   panelWindow({
     el: $('lib'), head: $('libHead'), grip: $('libGrip'),
-    pos: lib.pos, min: { w: 220, W: 620, h: 160 },
+    pos: lib.pos, min: { w: 220, W: 620, h: 160 }, order: 1,
     onDone: libSave
   });
 }
