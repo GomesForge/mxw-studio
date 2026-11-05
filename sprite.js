@@ -17,7 +17,8 @@ const sprite = {
   timer: null,
   selected: null,       /* the rgb565 value picked in the palette */
   applyAll: true,
-  team: 'none'          /* preview a team palette over the reserved ramp */
+  team: 'none',         /* preview a team palette over the reserved ramp */
+  dragFrom: null        /* which thumbnail is being dragged, if any */
 };
 
 /* Render a frame to RGBA, optionally substituting a team palette over
@@ -148,6 +149,7 @@ function spriteRenderAll() {
   spriteRenderEft();
   if (typeof charRenderPanel === 'function') charRenderPanel();
   if (typeof folderRender === 'function') folderRender();
+  if (typeof toolsRender === 'function') toolsRender();
   spriteCheckRoundTrip();
 }
 
@@ -303,6 +305,37 @@ function spriteRenderStrip() {
       spriteDraw();
       spriteMarkStrip();
     };
+    /* Dragging a thumbnail onto another one reorders the animation.
+       The order IS the animation -- a walk is eight poses in a
+       particular sequence -- and until now the only way to change it
+       was to redraw every frame one place along. */
+    fig.draggable = true;
+    fig.addEventListener('dragstart', ev => {
+      sprite.dragFrom = i;
+      ev.dataTransfer.effectAllowed = 'move';
+      try { ev.dataTransfer.setData('text/plain', String(i)); }
+      catch (e) { /* some browsers refuse; the index is kept above */ }
+    });
+    fig.addEventListener('dragover', ev => {
+      if (sprite.dragFrom == null || sprite.dragFrom === i) return;
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'move';
+      fig.classList.add(sprite.dragFrom < i ? 'dropR' : 'dropL');
+    });
+    fig.addEventListener('dragleave', () =>
+      fig.classList.remove('dropL', 'dropR'));
+    fig.addEventListener('drop', ev => {
+      fig.classList.remove('dropL', 'dropR');
+      if (sprite.dragFrom == null || sprite.dragFrom === i) return;
+      ev.preventDefault();
+      spriteMoveFrame(sprite.dragFrom, i);
+      sprite.dragFrom = null;
+    });
+    fig.addEventListener('dragend', () => {
+      sprite.dragFrom = null;
+      host.querySelectorAll('figure').forEach(x =>
+        x.classList.remove('dropL', 'dropR'));
+    });
     fig.oncontextmenu = ev => {
       if (typeof menuAt !== 'function') return;
       spritePause();
@@ -650,6 +683,34 @@ function spritePaintFrame() {
       notify('frame ' + (sprite.frame + 1) + ' updated');
     }
   });
+}
+
+/* Move a frame to another place in the order. A frame being painted
+   is pinned to its index, so the edit has to follow it -- otherwise
+   applying it later would land on whatever took its place. */
+function spriteMoveFrame(from, to) {
+  const e = sprite.entry;
+  if (!e) return;
+  const g = e.gra;
+  if (from === to || from < 0 || to < 0 ||
+      from >= g.frames.length || to >= g.frames.length) return;
+  spritePause();
+  const [moved] = g.frames.splice(from, 1);
+  g.frames.splice(to, 0, moved);
+  const track = i => {
+    if (i === from) return to;
+    if (from < to) return (i > from && i <= to) ? i - 1 : i;
+    return (i >= to && i < from) ? i + 1 : i;
+  };
+  sprite.frame = track(sprite.frame);
+  if (typeof paint !== 'undefined' && paint.open && paint.owner &&
+      paint.owner.kind === 'frame' && paint.owner.entry === e) {
+    paint.owner.frame = track(paint.owner.frame);
+  }
+  spriteRenderAll();
+  spriteDraw();
+  notify(tf('frame {from} is now frame {to}',
+    { from: from + 1, to: to + 1 }));
 }
 
 function spriteFrameAdd() {

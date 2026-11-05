@@ -65,6 +65,11 @@ This is the list the rest of the page is measured against.
   one record per set with the spawns, the gimmicks and the item counts.
   A map editor opens the first, reads the second and writes custom maps
   for the server. See [map-format.md](map-format.md)
+- **The frame tools in the near corner**: the frame strip and the
+  colours moved into a window of their own, with the brushes, frames
+  reordered by dragging a thumbnail, and the operations a sprite
+  actually wants -- nudge, centre, quarter turns, outline and inline,
+  drop a colour -- each over this frame or every frame, with an undo
 - **A shelf**: a movable window holding everything opened, in folders
   you make, name, nest, drag between and throw out, with one command
   that files a character's sheets by animation and another that saves
@@ -95,6 +100,11 @@ This is the list the rest of the page is measured against.
 Playback, colour remapping and an HSV shift across every frame are
 done. What is left:
 
+- **A magic wand**: select every pixel of one colour, or the
+  contiguous patch of it, which is the selection a sprite wants and
+  the rectangle is not
+- **More than one undo** for the frame operations. One is enough to
+  take back a mistake and not enough to explore
 - **Propagate a pixel patch**, not just a colour. Pick a region on one
   frame and paste it into the same place on the others. Colour edits
   generalise for free; a patch needs an anchor, so align by each
