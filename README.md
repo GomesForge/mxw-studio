@@ -184,6 +184,52 @@ different figure, one projection, a few dozen pixels tall. When a real
 motion file turns up it plays through the same player, because it is
 the same thing &mdash; a rotation per bone per frame.
 
+## The frame tools
+
+The frame strip and the colours used to sit on the far right, past the
+measurements and the checks, which is a long way from a drawing.
+**Frame** opens a window in the near corner holding them instead,
+along with the brushes and the operations that act on a whole frame at
+once.
+
+The two panels are not copied there, they are **moved**: a second
+frame strip that drifted from the first would be worse than no second
+frame strip at all.
+
+- **The brushes**, one click each &mdash; asking for a tool is also
+  asking to edit, so the first click opens the frame for painting
+- **Drag a thumbnail onto another** to reorder the animation. The
+  order *is* the animation, and until now the only way to change it
+  was to redraw every frame one place along. A frame open for painting
+  follows its own index, so an edit still lands where it was made
+- **Move it**: a pixel at a time, or centred in the sheet. The sheet
+  is a stamp pressed at a fixed place, so a pixel moved here is a
+  pixel moved in the game &mdash; this is the fine adjustment that
+  **Align** does in one go for a whole sheet
+- **Turn it**: quarter and half turns, and only on a square sheet. On
+  an oblong one a turn changes which side is which, and nothing in
+  this format can say that happened
+- **Outline** and **Inline**: a line round the silhouette in the brush
+  colour, outside it or just inside it. Four-way, not eight &mdash;
+  eight rounds the corners off a drawing made of squares
+- **Drop the picked colour**: takes one colour out, which is how a
+  sprite loses a background somebody left behind
+- Each applies to this frame or to every frame, and **Undo that** puts
+  the last one back
+
+These act on the drawing, not on a brush stroke, so they are one undo
+deep and that undo is their own.
+
+### Where this came from
+
+[PhotoCraft](https://github.com/storytold/photocraft) is a Photoshop
+clone with sixty-eight tools, and most of them are about photographs:
+healing brushes, lens blur, twenty-seven blend modes, CMYK. None of
+that survives contact with a forty-pixel character drawn two colours
+at a time. What was worth taking is small and dull &mdash; move it,
+turn it, draw a line round it, take a colour out, and one undo you can
+trust &mdash; and that is what is here.
+
 ## The shelf
 
 Thirty-seven files for one character and twelve for a bomb skin, and
@@ -222,10 +268,10 @@ What you can do with what is on the shelf:
   the drawing actually has
 - **Save .zip** writes whatever is selected, with its folders intact
 
-It opens in the top left corner of the work area, against the edge:
-that corner is empty in every mode, a sheet is drawn from the middle
-out and a list is read from the top. Drag it anywhere else and it
-stays there &mdash; the window remembers where it was and how big, and
+It opens in the top right corner of the work area. The near corner
+belongs to the frame tools, which are what a hand reaches for while
+drawing; a list of files is read, not reached for. Drag it anywhere
+else and it stays there &mdash; the window remembers where it was and how big, and
 whether it was open. The files do not: the shelf lives in this page, so closing the
 tab loses the arrangement, not the files. A shelf whose contents could
 not be rebuilt from the files on your own disk would be a filing

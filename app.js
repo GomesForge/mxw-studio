@@ -2598,6 +2598,8 @@ for (const [what, fn] of [['motion panel', poseWire], ['create panel', makeWire]
                            typeof folderWire === 'function' ? folderWire : () => {}],
                           ['library',
                            typeof libWire === 'function' ? libWire : () => {}],
+                          ['frame tools',
+                           typeof toolsWire === 'function' ? toolsWire : () => {}],
                           ['settings',
                            typeof settingsWire === 'function' ? settingsWire : () => {}],
                           ['tutorial', typeof tutWire === 'function' ? tutWire : () => {}]]) {

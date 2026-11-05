@@ -22,7 +22,7 @@
 const LIB_KEY = 'mxw.library';
 /* Bumped when the default placement changes, so a position saved from
    an older default is replaced once rather than outliving it. */
-const LIB_PLACE = 2;
+const LIB_PLACE = 3;
 
 const lib = {
   root: null,
@@ -60,7 +60,6 @@ function libInit() {
           if (typeof saved[k] === 'number') lib.pos[k] = saved[k];
         lib.placed = !!saved.placed;
       }
-      lib.noted = !!saved.noted;
       /* Whether it was open is deliberately not restored. The files do
          not survive a reload, so restoring it would open an empty
          window over the corner of a page with nothing in it. The shelf
@@ -72,7 +71,7 @@ function libInit() {
 function libSave() {
   try {
     localStorage.setItem(LIB_KEY, JSON.stringify(Object.assign(
-      { v: LIB_PLACE, placed: lib.placed, noted: !!lib.noted }, lib.pos)));
+      { v: LIB_PLACE, placed: lib.placed }, lib.pos)));
   } catch (e) { /* fine */ }
 }
 
@@ -250,36 +249,23 @@ function libShow(on) {
   libSave();
 }
 
-/* First time it opens, it sits in the top left corner of the work
-   area, against the edge: that corner is empty in every mode, a sheet
-   is drawn from the middle out, and a list is read from the top. After
-   that it is wherever it was dragged. */
+/* First time it opens, it sits in the top right corner of the work
+   area. The near corner belongs to the frame tools, which are what a
+   hand reaches for while drawing; a list of files is read, not
+   reached for. After that it is wherever it was dragged. */
 function libPlace() {
   const el = $('lib');
   if (!el) return;
   if (!lib.placed) {
-    const view = $('view');
-    const r = view ? view.getBoundingClientRect() : { left: 0, top: 64 };
-    lib.pos.x = Math.round(r.left);
-    lib.pos.y = Math.round(r.top);
-    lib.pos.w = 280;
-    lib.pos.h = Math.min(505, Math.max(240, innerHeight - lib.pos.y - 40));
+    Object.assign(lib.pos, panelCorner('right', 272, 450, 12));
     lib.placed = true;
   }
   libClamp();
-  el.style.left = lib.pos.x + 'px';
-  el.style.top = lib.pos.y + 'px';
-  el.style.width = lib.pos.w + 'px';
-  el.style.height = lib.pos.h + 'px';
+  panelApply(el, lib.pos);
 }
 
-/* A window dragged off the edge, or left there when the window got
-   smaller, is a window you cannot get back. */
 function libClamp() {
-  lib.pos.w = Math.max(220, Math.min(620, lib.pos.w));
-  lib.pos.h = Math.max(160, Math.min(innerHeight - 40, lib.pos.h));
-  lib.pos.x = Math.max(4, Math.min(innerWidth - 80, lib.pos.x));
-  lib.pos.y = Math.max(4, Math.min(innerHeight - 40, lib.pos.y));
+  panelClamp(lib.pos, { w: 220, W: 620, h: 160 });
 }
 
 function libRender() {
@@ -293,10 +279,6 @@ function libRender() {
   if (b) b.classList.toggle('has', total > 0);
   if (!lib.open) return;
 
-  /* The note explains the gestures once. Keeping it forever would be
-     charging rent on four lines of a small window. */
-  const note = $('libNote');
-  if (note) note.hidden = !!lib.noted;
   /* Where the selection is, which a deep tree stops making obvious. */
   const where = $('libWhere');
   if (where) where.textContent = lib.sel ? libPath(lib.sel) : '';
@@ -690,50 +672,13 @@ function libClear() {
 
 /* --------------------------- moving it --------------------------- */
 
+/* The window itself, which is the same window the frame tools use. */
 function libWireWindow() {
-  const el = $('lib');
-  const head = $('libHead');
-  if (!el || !head) return;
-
-  let from = null;
-  const down = ev => {
-    if (ev.target.closest('button')) return;
-    from = { x: ev.clientX, y: ev.clientY, ox: lib.pos.x, oy: lib.pos.y };
-    ev.preventDefault();
-  };
-  const move = ev => {
-    if (!from) return;
-    lib.pos.x = from.ox + (ev.clientX - from.x);
-    lib.pos.y = from.oy + (ev.clientY - from.y);
-    libClamp();
-    el.style.left = lib.pos.x + 'px';
-    el.style.top = lib.pos.y + 'px';
-  };
-  const up = () => { if (from) { from = null; libSave(); } };
-  head.addEventListener('mousedown', down);
-  addEventListener('mousemove', move);
-  addEventListener('mouseup', up);
-
-  /* the corner grip: the same gesture, against the size */
-  const grip = $('libGrip');
-  let size = null;
-  if (grip) {
-    grip.addEventListener('mousedown', ev => {
-      size = { x: ev.clientX, y: ev.clientY, w: lib.pos.w, h: lib.pos.h };
-      ev.preventDefault();
-      ev.stopPropagation();
-    });
-    addEventListener('mousemove', ev => {
-      if (!size) return;
-      lib.pos.w = size.w + (ev.clientX - size.x);
-      lib.pos.h = size.h + (ev.clientY - size.y);
-      libClamp();
-      el.style.width = lib.pos.w + 'px';
-      el.style.height = lib.pos.h + 'px';
-    });
-    addEventListener('mouseup', () => { if (size) { size = null; libSave(); } });
-  }
-  addEventListener('resize', () => { if (lib.open) libPlace(); });
+  panelWindow({
+    el: $('lib'), head: $('libHead'), grip: $('libGrip'),
+    pos: lib.pos, min: { w: 220, W: 620, h: 160 },
+    onDone: libSave
+  });
 }
 
 function libWire() {
@@ -753,12 +698,6 @@ function libWire() {
   if (zp) zp.addEventListener('click', () => libSaveZip(lib.sel || lib.root.id));
   const cl = $('bLibClear');
   if (cl) cl.addEventListener('click', libClear);
-  const nx = $('libNoteX');
-  if (nx) nx.addEventListener('click', () => {
-    lib.noted = true;
-    libSave();
-    libRender();
-  });
 
   /* The arrows, Enter, Home, End, F2 and Delete, all of them only
      while the tree itself has the keyboard. */

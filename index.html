@@ -340,6 +340,11 @@
     background:var(--bg)}
   #strip figure:hover{border-color:var(--edge)}
   #strip figure.sel{border-color:var(--cyan)}
+  /* which side a dragged frame will land on */
+  #strip figure.dropL{box-shadow:-3px 0 0 var(--cyan)}
+  #strip figure.dropR{box-shadow:3px 0 0 var(--cyan)}
+  #strip figure{cursor:grab}
+  #strip figure:active{cursor:grabbing}
   #strip img{display:block;height:40px;width:auto;image-rendering:pixelated}
   #strip figcaption{font-size:9px;font-family:var(--mono);color:var(--dim)}
 
@@ -495,6 +500,33 @@
     display:flex;align-items:center;justify-content:center;padding:22px}
   #set[hidden],#xp[hidden]{display:none!important}
 
+  /* ---------------------- the frame tools window --------------------- */
+  /* The same frame as the shelf, because they are the same kind of
+     thing: a window over the work, moved where it suits. */
+  #tools{position:fixed;z-index:69;display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid var(--edgeStrong);
+    border-radius:10px;box-shadow:0 18px 50px rgba(0,0,0,.5);overflow:hidden}
+  #tools[hidden]{display:none!important}
+  #toolsHead{display:flex;align-items:center;gap:8px;padding:0 6px 0 11px;
+    height:30px;flex:0 0 auto;background:var(--bar);cursor:move;
+    border-bottom:1px solid var(--edge);user-select:none}
+  #toolsHead b{font-size:12px;font-weight:600}
+  #toolsHead .sub{font-size:10.5px;color:var(--ink3);flex:1 1 auto;
+    overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  #toolsX{height:20px;width:22px;padding:0;font-size:14px;line-height:1;
+    background:none;border:0;color:var(--dim)}
+  #toolsX:hover{color:var(--ink);background:var(--btnHover)}
+  #toolsBody{flex:1 1 auto;overflow:auto}
+  #toolsBody>.hint{padding:12px 12px 0}
+  #toolsBody .dock{border-bottom:1px solid var(--edge)}
+  #toolsBody .dock:last-child{border-bottom:0}
+  #toolsPick{flex-wrap:wrap}
+  #toolsPick button{flex:1 1 auto;min-width:44px}
+  #toolsOps h2{margin:10px 0 4px}
+  #toolsGrip{position:absolute;right:0;bottom:0;width:14px;height:14px;
+    cursor:nwse-resize;
+    background:linear-gradient(135deg,transparent 50%,var(--edgeStrong) 50%)}
+
   /* ------------------------------ the shelf -------------------------- */
   /* A window, not a dock: the work it serves is a tree somebody
      rearranges while looking at something else, so it has to be
@@ -523,8 +555,16 @@
   #libTree:focus-visible,#libTree:focus{box-shadow:inset 0 0 0 1px
     color-mix(in srgb,var(--cyan) 45%,transparent)}
   #libTree:focus .libRow.sel{background:color-mix(in srgb,var(--cyan) 30%,transparent)}
-  #libNote{flex:0 0 auto;margin:0;padding:6px 10px 8px;
-    border-top:1px solid var(--edge)}
+  /* The gestures explained in a drawer rather than in four lines of a
+     small window: shut by default, open when somebody wants it. */
+  #libNote{flex:0 0 auto;border-top:1px solid var(--edge)}
+  #libNote>summary{padding:5px 10px;cursor:pointer;font-size:10.5px;
+    color:var(--dim);list-style:none}
+  #libNote>summary::-webkit-details-marker{display:none}
+  #libNote>summary::before{content:"\25b8 ";font-size:9px}
+  #libNote[open]>summary::before{content:"\25be "}
+  #libNote>summary:hover{color:var(--ink)}
+  #libNote .hint{margin:0;padding:0 10px 9px}
   #libGrip{position:absolute;right:0;bottom:0;width:14px;height:14px;
     cursor:nwse-resize;
     background:linear-gradient(135deg,transparent 50%,var(--edgeStrong) 50%)}
@@ -549,12 +589,6 @@
     background:var(--cyan);color:var(--onAccent);font-family:var(--mono)}
   #libCount:empty{display:none}
 
-  #libNote[hidden]{display:none}
-  #libNote{position:relative}
-  #libNoteX{position:absolute;right:4px;top:3px;height:16px;width:16px;
-    padding:0;font-size:12px;line-height:1;background:none;border:0;
-    color:var(--dim)}
-  #libNoteX:hover{color:var(--ink);background:var(--btnHover)}
 
   /* ---------------------------- the export desk ---------------------- */
   /* Same frame as the settings window, because it is the same kind of
@@ -922,6 +956,7 @@
       </div>
     </span>
     <button id="bExportAll" title="everything that can come out of what is open, in one place">Export&hellip;</button>
+    <button id="bTools" type="button" title="the frame, its colours and the brushes, in the near corner">Frame</button>
     <button id="bLib" type="button" title="the shelf: everything you have opened, in folders you arrange yourself">Library<span id="libCount"></span></button>
     <button id="bClear">Close all</button>
   </span>
@@ -1142,7 +1177,7 @@
         <p class="hint" data-i18n-html="An effect frame is <b>eight layers</b>, each composited at its own transparency. The frame list below shows those layers one by one, which is what you paint; this is the eight of them together, which is what a player sees. The game also doubles the pixels across, so it is softer here than the runs are.">An effect frame is <b>eight layers</b>, each composited at its own transparency. The frame list below shows those layers one by one, which is what you paint; this is the eight of them together, which is what a player sees. The game also doubles the pixels across, so it is softer here than the runs are.</p>
       </div>
     </details>
-    <details class="dock" open><summary>Frames</summary>
+    <details class="dock" id="frameDock" open><summary>Frames</summary>
       <div class="dockBody">
         <div id="strip"></div>
         <div class="ctrl seg" style="margin-top:5px">
@@ -1163,7 +1198,7 @@
         </div>
       </div>
     </details>
-    <details class="dock" open><summary>Colours</summary>
+    <details class="dock" id="colourDock" open><summary>Colours</summary>
       <div class="dockBody">
         <div id="palette"></div>
         <p class="hint" id="palCount"></p>
@@ -1449,6 +1484,69 @@
   </div>
 </div>
 
+<div id="tools" hidden>
+  <div id="toolsHead">
+    <b>Frame</b>
+    <span class="sub" id="toolsWhere"></span>
+    <button id="toolsX" title="close">&times;</button>
+  </div>
+  <div id="toolsBody">
+    <p class="hint" id="toolsEmpty">Open a sheet and its frames, its colours and the brushes arrive here.</p>
+    <div id="toolsDocks" hidden>
+      <details class="dock" id="opsDock" open><summary>Tools</summary>
+        <div class="dockBody">
+          <div id="toolsPick" class="ctrl seg">
+            <button data-pick="brush" title="Brush">Brush</button>
+            <button data-pick="eraser" title="Eraser">Eraser</button>
+            <button data-pick="fill" title="Flood fill">Fill</button>
+            <button data-pick="picker" title="Pick a colour">Pick</button>
+            <button data-pick="line" title="Line">Line</button>
+            <button data-pick="rect" title="Rectangle">Box</button>
+            <button data-pick="select" title="Select">Select</button>
+          </div>
+          <div id="toolsOps">
+            <div class="row" style="margin-top:7px"><span>this applies to</span>
+              <select id="toolsScope">
+                <option value="frame">this frame</option>
+                <option value="all">every frame</option>
+              </select></div>
+            <h2>Move it</h2>
+            <div class="ctrl seg">
+              <button id="bToolLeft" title="one pixel left">&larr;</button>
+              <button id="bToolUp" title="one pixel up">&uarr;</button>
+              <button id="bToolDown" title="one pixel down">&darr;</button>
+              <button id="bToolRight" title="one pixel right">&rarr;</button>
+            </div>
+            <div class="ctrl">
+              <button id="bToolCentreH" title="centre it left to right">Centre across</button>
+              <button id="bToolCentreV" title="centre it top to bottom">Centre down</button>
+            </div>
+            <h2>Turn it</h2>
+            <div class="ctrl seg">
+              <button id="bToolRotL" title="a quarter turn left">90&deg; left</button>
+              <button id="bToolRotR" title="a quarter turn right">90&deg; right</button>
+              <button id="bToolRot2" title="half a turn">180&deg;</button>
+            </div>
+            <h2>Edges and colour</h2>
+            <div class="ctrl">
+              <button id="bToolOutline" title="a line round the outside, in the brush colour">Outline</button>
+              <button id="bToolInline" title="a line round the inside, keeping the silhouette">Inline</button>
+            </div>
+            <div class="ctrl">
+              <button id="bToolDrop" title="take the colour selected in the palette out of the drawing">Drop the picked colour</button>
+            </div>
+            <div class="ctrl" style="margin-top:7px">
+              <button id="bToolUndo">Undo that</button>
+            </div>
+            <p class="hint" data-i18n-html="These act on the drawing itself, not on a brush stroke: <b>Undo that</b> puts back the last one and nothing more. The sheet is a stamp pressed at a fixed place, so a pixel moved here is a pixel moved in the game.">These act on the drawing itself, not on a brush stroke: <b>Undo that</b> puts back the last one and nothing more. The sheet is a stamp pressed at a fixed place, so a pixel moved here is a pixel moved in the game.</p>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+  <div id="toolsGrip" title="resize"></div>
+</div>
+
 <div id="lib" hidden>
   <div id="libHead">
     <b>Library</b>
@@ -1462,7 +1560,7 @@
     <button id="bLibClear" title="empty the shelf; the files stay on your disk">Clear</button>
   </div>
   <div id="libTree" tabindex="0"></div>
-  <p class="hint" id="libNote"><button id="libNoteX" title="hide this">&times;</button><span data-i18n-html="Drag a row onto a folder to move it. <b>One click</b> opens a file and the <b>arrow keys</b> walk the list. Double-click a folder to rename it; right-click for the rest. The shelf lives in this page: closing the tab loses the arrangement, not the files.">Drag a row onto a folder to move it. <b>One click</b> opens a file and the <b>arrow keys</b> walk the list. Double-click a folder to rename it; right-click for the rest. The shelf lives in this page: closing the tab loses the arrangement, not the files.</span></p>
+  <details id="libNote"><summary>How it works</summary><p class="hint" data-i18n-html="Drag a row onto a folder to move it. <b>One click</b> opens a file and the <b>arrow keys</b> walk the list. Double-click a folder to rename it; right-click for the rest. The shelf lives in this page: closing the tab loses the arrangement, not the files.">Drag a row onto a folder to move it. <b>One click</b> opens a file and the <b>arrow keys</b> walk the list. Double-click a folder to rename it; right-click for the rest. The shelf lives in this page: closing the tab loses the arrangement, not the files.</p></p></details>
   <div id="libGrip" title="resize"></div>
 </div>
 
@@ -1547,11 +1645,13 @@
 <script src="motions.js?v=20"></script>
 <script src="char.js?v=4"></script>
 <script src="folder.js?v=3"></script>
-<script src="library.js?v=4"></script>
+<script src="panel.js?v=1"></script>
+<script src="library.js?v=5"></script>
+<script src="tools.js?v=1"></script>
 <script src="export.js?v=3"></script>
-<script src="sprite.js?v=24"></script>
+<script src="sprite.js?v=25"></script>
 <script src="map.js?v=2"></script>
-<script src="i18n.js?v=31"></script>
+<script src="i18n.js?v=32"></script>
 <script src="settings.js?v=23"></script>
 <script src="tutorial.js?v=20"></script>
-<script src="app.js?v=28"></script>
+<script src="app.js?v=29"></script>

@@ -428,6 +428,49 @@ const I18N = {
     'an .obj has to come from a file, not from bytes already open':
       'um .obj tem de vir de um arquivo, n\u00e3o de bytes j\u00e1 abertos',
 
+    /* ---- the frame tools */
+    'Frame': 'Quadro',
+    'Tools': 'Ferramentas',
+    'Eraser': 'Borracha',
+    'Fill': 'Balde',
+    'Pick': 'Conta-gotas',
+    'Line': 'Linha',
+    'Box': 'Caixa',
+    'Select': 'Selecionar',
+    'this applies to': 'isto vale para',
+    'this frame': 'este quadro',
+    'every frame': 'todos os quadros',
+    '90\u00b0 left': '90\u00b0 esquerda',
+    '90\u00b0 right': '90\u00b0 direita',
+    'Move it': 'Mover',
+    'Turn it': 'Girar',
+    'Edges and colour': 'Bordas e cor',
+    'Centre across': 'Centrar na horizontal',
+    'Centre down': 'Centrar na vertical',
+    'Outline': 'Contorno',
+    'Inline': 'Contorno por dentro',
+    'Drop the picked colour': 'Tirar a cor escolhida',
+    'Undo that': 'Desfazer isso',
+    'How it works': 'Como funciona',
+    'Open a sheet and its frames, its colours and the brushes arrive here.':
+      'Abra uma folha e os quadros dela, as cores e os pinc\u00e9is aparecem aqui.',
+    'These act on the drawing itself, not on a brush stroke: <b>Undo that</b> puts back the last one and nothing more. The sheet is a stamp pressed at a fixed place, so a pixel moved here is a pixel moved in the game.':
+      'Estas agem no desenho em si, n\u00e3o numa pincelada: <b>Desfazer isso</b> devolve a \u00faltima e nada al\u00e9m. A folha \u00e9 um carimbo prensado num lugar fixo, ent\u00e3o um pixel movido aqui \u00e9 um pixel movido no jogo.',
+    'open a sheet first': 'abra uma folha primeiro',
+    'put back': 'devolvido',
+    'outlined': 'contornado',
+    'that colour is gone': 'essa cor saiu',
+    'already centred': 'j\u00e1 est\u00e1 centrado',
+    'nothing drawn to centre': 'n\u00e3o h\u00e1 nada desenhado para centrar',
+    'pick a colour in the palette first':
+      'escolha uma cor na paleta primeiro',
+    'moved {dx}, {dy}': 'movido {dx}, {dy}',
+    'turned {n} degrees': 'girado {n} graus',
+    'a {w} x {h} sheet is not square, so a quarter turn would change its size':
+      'uma folha de {w} x {h} n\u00e3o \u00e9 quadrada, ent\u00e3o um quarto de volta mudaria o tamanho dela',
+    'frame {from} is now frame {to}':
+      'o quadro {from} agora \u00e9 o quadro {to}',
+
     /* ---- the library */
     'Library': 'Estante',
     'Character': 'Personagem',
