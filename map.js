@@ -56,6 +56,22 @@ const MAP_ITEMS = ['Fire', 'Speed', 'Bomb', 'Kick', 'Glove', 'Skull', 'Vest',
                    'Full fire', 'Louie', 'Punch', 'Line bomb', 'Pierce bomb',
                    'Water bomb'];
 
+/* A record in map.spr carries fourteen counts and the panel names
+   thirteen, which left the last one unexplained for months. It is the
+   Hyper Bomb, and the file says so itself: across all 46 sets the
+   fourteenth count is non-zero in exactly seven -- 37 to 43 -- and
+   those same seven are the only sets carrying gimmick type 17, the
+   Hyper Bomb goal. Seven of seven, and thirty-nine of thirty-nine the
+   other way. Each of them places five.
+
+   The game's own sprite list confirms the name: item_hyperbomb.spr is
+   the item, and item_hyperball.spr is the pieces that orbit a player
+   carrying one, which is why there is no fifteenth count for it.
+
+   Kept apart from MAP_ITEMS because a custom map's JSON takes the
+   panel's thirteen, not this fourteen. */
+const MAP_RECORD_ITEMS = MAP_ITEMS.concat(['Hyper Bomb']);
+
 const MAP_LIMITS = { name: 20, item: 40 };
 
 /* gimmicks.js, which creates these from map.spr every round. Types the
@@ -670,7 +686,8 @@ function mapPanelBlock(p) {
       counts.forEach((n, i) => {
         if (!n) return;
         const line = mapEl('div', 'mapListRow');
-        line.appendChild(mapEl('b', null, MAP_ITEMS[i] || ('item ' + i)));
+        line.appendChild(mapEl('b', null,
+          t(MAP_RECORD_ITEMS[i]) || ('item ' + i)));
         line.appendChild(mapEl('span', null, String(n)));
         ul.appendChild(line);
       });
