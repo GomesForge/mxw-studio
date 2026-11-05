@@ -34,6 +34,7 @@ function toolsLoad() {
       for (const k of ['x', 'y', 'w', 'h'])
         if (typeof s[k] === 'number') tools.pos[k] = s[k];
       tools.placed = !!s.placed;
+      tools.shut = !!s.shut;
       if (s.scope) tools.scope = s.scope;
     }
   } catch (e) { /* a browser that refuses storage still gets a panel */ }
@@ -42,18 +43,24 @@ function toolsLoad() {
 function toolsSave() {
   try {
     localStorage.setItem(TOOLS_KEY, JSON.stringify(Object.assign(
-      { placed: tools.placed, scope: tools.scope }, tools.pos)));
+      { placed: tools.placed, scope: tools.scope, shut: !!tools.shut },
+      tools.pos)));
   } catch (e) { /* fine */ }
 }
 
 /* --------------------------- the window -------------------------- */
 
-function toolsShow(on) {
+function toolsShow(on, byUser) {
   tools.open = on === undefined ? !tools.open : !!on;
+  if (byUser) {
+    tools.shut = !tools.open;
+    toolsSave();
+  }
   const el = $('tools');
   if (!el) return;
   el.hidden = !tools.open;
-  if (!tools.open) return;
+  if (!tools.open) { toolsRelease(); return; }
+  toolsAdopt();
   if (!tools.placed) {
     Object.assign(tools.pos, panelCorner('left', 304, 560));
     tools.placed = true;
@@ -244,15 +251,52 @@ function hexToRgb(hex) {
 
 /* ---------------------------- the panel -------------------------- */
 
-/* The docks move in rather than being rebuilt, so every listener they
-   already carry keeps working and there is only ever one frame strip. */
+/* The docks move rather than being rebuilt, so every listener they
+   already carry keeps working and there is only ever one frame strip.
+   Moving means they are somewhere, never nowhere: where they came
+   from is remembered, and closing the window puts them back.
+
+   The first version of this did not, and the frames and the colours
+   simply vanished -- the window they had moved into starts closed. A
+   panel that can take something away has to be able to give it back
+   in the same gesture. */
+const TOOLS_HOME = [];
+
+function toolsRemember() {
+  if (TOOLS_HOME.length) return;
+  for (const id of ['frameDock', 'colourDock']) {
+    const dock = $(id);
+    if (dock) TOOLS_HOME.push({ dock: dock, parent: dock.parentNode,
+                                before: dock.nextElementSibling });
+  }
+}
+
 function toolsAdopt() {
   const body = $('toolsDocks');
   if (!body) return;
-  for (const id of ['frameDock', 'colourDock']) {
-    const dock = $(id);
-    if (dock && dock.parentNode !== body) body.appendChild(dock);
+  toolsRemember();
+  for (const h of TOOLS_HOME)
+    if (h.dock.parentNode !== body) body.appendChild(h.dock);
+}
+
+/* Backwards, because each one is put back in front of the one that
+   followed it: the last has to be home before the one before it can
+   aim at it. Forwards, the first lands at the end and the order comes
+   back shuffled. */
+function toolsRelease() {
+  for (let i = TOOLS_HOME.length - 1; i >= 0; i--) {
+    const h = TOOLS_HOME[i];
+    if (!h.parent || h.dock.parentNode === h.parent) continue;
+    h.parent.insertBefore(h.dock,
+      h.before && h.before.parentNode === h.parent ? h.before : null);
   }
+}
+
+/* A sheet arriving opens the window, unless it was closed on purpose.
+   The frames and the colours have to be somewhere the moment there is
+   something to use them on. */
+function toolsMaybeOpen() {
+  if (sprite.entry && !tools.open && !tools.shut) toolsShow(true);
 }
 
 function toolsRender() {
@@ -287,7 +331,7 @@ function toolsPick(name) {
 
 function toolsWire() {
   toolsLoad();
-  toolsAdopt();
+  toolsRemember();
   const el = $('tools');
   if (el) {
     panelWindow({
@@ -297,9 +341,9 @@ function toolsWire() {
     });
   }
   const b = $('bTools');
-  if (b) b.addEventListener('click', () => toolsShow());
+  if (b) b.addEventListener('click', () => toolsShow(!tools.open, true));
   const x = $('toolsX');
-  if (x) x.addEventListener('click', () => toolsShow(false));
+  if (x) x.addEventListener('click', () => toolsShow(false, true));
 
   const pick = $('toolsPick');
   if (pick) pick.addEventListener('click', ev => {

@@ -194,7 +194,11 @@ once.
 
 The two panels are not copied there, they are **moved**: a second
 frame strip that drifted from the first would be worse than no second
-frame strip at all.
+frame strip at all. **Moved means they are somewhere, never nowhere**
+&mdash; close the window and they go back to the side panel, where
+they have always been. The window opens by itself when a sheet does,
+unless you closed it, in which case it stays shut and they stay on the
+right.
 
 - **The brushes**, one click each &mdash; asking for a tool is also
   asking to edit, so the first click opens the frame for painting
