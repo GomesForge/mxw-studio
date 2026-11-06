@@ -325,12 +325,12 @@ function toolsRender() {
    tools down the left only exist while a frame is open for editing,
    so asking for one is also asking to edit. */
 function toolsPick(name) {
-  if (!sprite.entry) { notify(t('open a sheet first'), 1); return; }
-  if (!(typeof paint !== 'undefined' && paint.open && paint.owner &&
-        paint.owner.kind === 'frame' && paint.owner.entry === sprite.entry &&
-        paint.owner.frame === sprite.frame)) {
-    spritePaintFrame();
-  }
+  /* the same door the rail uses, so there is one answer to "what does
+     clicking a brush do when nothing is open" */
+  const mine = typeof paint !== 'undefined' && paint.open && paint.owner &&
+    paint.owner.kind === 'frame' && paint.owner.entry === sprite.entry &&
+    paint.owner.frame === sprite.frame;
+  if (!mine && sprite.entry) spritePaintFrame();
   const b = document.querySelector('#paintTools [data-tool="' + name + '"]');
   if (b) b.click();
 }
@@ -342,7 +342,8 @@ function toolsWire() {
   if (el) {
     panelWindow({
       el: el, head: $('toolsHead'), grip: $('toolsGrip'),
-      pos: tools.pos, min: { w: 240, W: 520, h: 200 }, order: 0,
+      pos: tools.pos, min: { w: 240, W: 560, h: 180 }, order: 0,
+      side: 'left',
       onDone: toolsSave
     });
   }

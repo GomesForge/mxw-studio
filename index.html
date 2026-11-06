@@ -60,12 +60,15 @@
     grid-template-rows:38px 28px 1fr 24px;
     grid-template-areas:"act act act" "tabs tabs tabs"
                         "rail view side" "status status status"}
-  /* Every tool on the rail acts on the pixel canvas, so outside the
-     pixel editor there is nothing for it to do -- it leaves, and the
-     viewport takes the space. Greying it out still left a column of
-     dead buttons on screen. */
-  body:not(.paint-mode) #app{--railW:0px}
-  body:not(.paint-mode) #rail{display:none}
+  /* The rail is always there, column and all. Its tools act on
+     pixels, and a sheet, a frame and a texture are all pixels --
+     asking for a brush is also asking to edit whichever of those is
+     open, so the first click opens it. It used to leave outside the
+     pixel editor, which meant the tools only appeared once you had
+     found another way in; and collapsing the column on the way out
+     laid its buttons off the left edge rather than removing them. */
+  body:not(.paint-mode) #rail button{opacity:.55}
+  body:not(.paint-mode) #rail button:hover{opacity:1}
   @media (max-width:900px){
     #app{grid-template-columns:var(--railW) 1fr;
       grid-template-areas:"act act" "tabs tabs" "rail view" "side side"
@@ -1639,19 +1642,19 @@
 <script src="obj.js?v=20"></script>
 <script src="checks.js?v=20"></script>
 <script src="gifenc.js?v=20"></script>
-<script src="paint.js?v=22"></script>
+<script src="paint.js?v=23"></script>
 <script src="shapes.js?v=20"></script>
 <script src="skin.js?v=21"></script>
 <script src="motions.js?v=20"></script>
 <script src="char.js?v=4"></script>
 <script src="folder.js?v=3"></script>
-<script src="panel.js?v=3"></script>
-<script src="library.js?v=7"></script>
-<script src="tools.js?v=5"></script>
+<script src="panel.js?v=5"></script>
+<script src="library.js?v=8"></script>
+<script src="tools.js?v=6"></script>
 <script src="export.js?v=3"></script>
 <script src="sprite.js?v=27"></script>
 <script src="map.js?v=3"></script>
-<script src="i18n.js?v=33"></script>
+<script src="i18n.js?v=34"></script>
 <script src="settings.js?v=23"></script>
 <script src="tutorial.js?v=20"></script>
-<script src="app.js?v=29"></script>
+<script src="app.js?v=30"></script>

@@ -242,6 +242,25 @@ function paintCloseSession(id) {
 }
 
 /* End every edit -- what closing the file or clearing everything does. */
+/* Open for painting whatever is in front: a sprite frame, or the
+   selected texture of a model. Returns false, having said why, when
+   there is nothing a brush could touch. */
+function paintEnter() {
+  if (paint.open) return true;
+  if (typeof sprite !== 'undefined' && sprite.entry &&
+      typeof spritePaintFrame === 'function') {
+    spritePaintFrame();
+    return paint.open;
+  }
+  if (typeof current !== 'undefined' && current &&
+      current.mxw.gifs.length && typeof paintTexture === 'function') {
+    paintTexture();
+    return paint.open;
+  }
+  notify(t('open a sheet, a frame or a texture before picking a tool'), 1);
+  return false;
+}
+
 function paintClose() {
   const all = paint.sessions.slice();
   paint.sessions.length = 0;
@@ -997,7 +1016,15 @@ function paintWire() {
   });
 
   document.querySelectorAll('#paintTools button[data-tool]').forEach(b =>
-    b.onclick = () => { paint.tool = b.dataset.tool; paintRenderTools(); });
+    b.onclick = () => {
+      /* The rail is always on screen, so a tool can be asked for
+         before anything is open for painting. Asking for a brush is
+         asking to paint: open whatever is in front and then take the
+         tool. */
+      if (!paint.open && !paintEnter()) return;
+      paint.tool = b.dataset.tool;
+      paintRenderTools();
+    });
   $('paintColour').oninput = e => {
     paint.colour = e.target.value;
     paintRenderTint();
