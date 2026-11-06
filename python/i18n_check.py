@@ -12,6 +12,13 @@ Two questions, and they are not the same one:
            usually because the English was reworded or the feature was
            removed. Harmless, but it rots.
 
+  English  the markup says something the dictionary cannot translate:
+           a title, a placeholder, a button's own words. This one is
+           invisible to the other two, which read the scripts. When
+           the frame operations became icons on the rail, a title
+           became the only label those buttons have, and twenty of
+           them shipped in English with both counters reading zero.
+
 The hard part is that a line of prose in this codebase is rarely one
 string literal. It is several, joined with +, often wrapped across
 lines, and often chosen by a ternary for the singular and the plural.
@@ -117,6 +124,47 @@ def asked():
     return out
 
 
+# ------------------------------------------------ what the markup says
+# A title is a label. These are the attributes the page translates, and
+# the elements whose own words are short enough to be one.
+ATTRS = ('title', 'placeholder', 'aria-label')
+WORDS = ('button', 'summary', 'option', 'label', 'h2', 'h3', 'dt', 'legend')
+# Not prose: a hex constant, a number with a unit, a file name, a field
+# of a binary layout. Translating "0x738E -- 256 px" would be wrong.
+SKIP = re.compile(r"""^(?:
+      [\s\W\d]*                              # punctuation and numbers
+    | 0x[0-9A-Fa-f]+.*
+    | [-\w.]*\.(?:gra|spr|bin|eft|obj|png|gif|json|zip|MXW|cfg|str|dat)
+      (?:\s*[\u00b7/,]\s*[-\w.]*\.\w+)*
+    | u(?:8|16|32|int\d*)\b.*
+    | [\w.]+\(\)
+  )$""", re.X)
+
+
+def shown():
+    """Every string index.html will put in front of somebody."""
+    src = read(os.path.join(ROOT, 'index.html'))
+    out = {}
+
+    def take(s, where):
+        s = html.unescape(s).strip()
+        s = re.sub(r'\s+', ' ', s)
+        if len(s) < 2 or not re.search(r'[A-Za-z]{2}', s):
+            return
+        if SKIP.match(s):
+            return
+        out.setdefault(s, set()).add(where)
+
+    for a in ATTRS:
+        for m in re.finditer(a + r'="([^"]*)"', src):
+            take(m.group(1), a)
+    for tag in WORDS:
+        for m in re.finditer(r'<' + tag + r'\b[^>]*>([^<>]*)</' + tag + r'>',
+                             src):
+            take(m.group(1), '<' + tag + '>')
+    return out
+
+
 def present():
     """Every string the interface could show: the markup's own text and
     the attributes, plus every literal in the scripts. A key only has
@@ -138,6 +186,8 @@ def main():
     text = present()
     joined_keys = set(keys)
 
+    shows = shown()
+    english = sorted(s for s in shows if s not in joined_keys)
     missing = sorted(k for k in want if k not in joined_keys)
     orphan = sorted(k for k in keys
                     if k not in want and k not in text)
@@ -153,12 +203,15 @@ def main():
         print('orphan (in, unreachable): %d' % len(orphan))
         for k in orphan:
             print('    %s' % k[:100])
+        print('markup in English only : %d' % len(english))
+        for s in english:
+            print('    [%s] %s' % (','.join(sorted(shows[s])), s[:100]))
         print('duplicated keys        : %d' % len(dup))
         for k in dup:
             print('    %s' % k[:100])
         print('non-ASCII in i18n.js   : %d' % raw)
 
-    return 1 if (missing or dup or raw) else 0
+    return 1 if (missing or english or dup or raw) else 0
 
 
 if __name__ == '__main__':
