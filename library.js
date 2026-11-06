@@ -26,7 +26,8 @@ const lib = {
   open: true,             /* the dock's own open state, mirrored here */
   sel: null,
   drag: null,
-  closed: new Set()       /* folders the user collapsed */
+  closed: new Set(),      /* folders the user collapsed */
+  lang: null              /* the language the rows were written in */
 };
 
 /* A node is a folder or a file. A file carries its bytes, because the
@@ -196,11 +197,12 @@ function libAbout(node) {
     try {
       const g = new GRA(node.raw.buffer.slice(
         node.raw.byteOffset, node.raw.byteOffset + node.raw.byteLength));
+      node.frames = g.eft ? (g.eft.per || g.frames.length) : g.frames.length;
       node.about = g.eft
-        ? tf('{n} frames', { n: g.eft.per || g.frames.length })
-        : tf(g.frames.length === 1 ? '{n} frame' : '{n} frames',
-             { n: g.frames.length });
-    } catch (e) { node.about = t('will not open'); }
+        ? tf('{n} frames', { n: node.frames })
+        : tf(node.frames === 1 ? '{n} frame' : '{n} frames',
+             { n: node.frames });
+    } catch (e) { node.about = t('will not open'); node.frames = null; }
   } else {
     node.about = tf('{n} KB', { n: Math.max(1, Math.round(node.raw.length / 1024)) });
   }
@@ -229,6 +231,14 @@ function libRender() {
   libInit();
   const host = $('libTree');
   if (!host) return;
+  /* The per-file line is cached on the node, because reading it means
+     parsing the file. It is the one cached thing here that is written
+     in a language. */
+  const lang = typeof i18nLang !== 'undefined' ? i18nLang : 'en';
+  if (lib.lang !== lang) {
+    lib.lang = lang;
+    for (const n of lib.nodes.values()) n.about = undefined;
+  }
   const badge = $('libCount');
   const total = libCount(lib.root);
   if (badge) badge.textContent = total ? String(total) : '';
@@ -249,12 +259,77 @@ function libRender() {
     return;
   }
   const rows = [];
-  libRows(lib.root, 0, rows);
+  libRows(lib.root, 0, rows, libSet());
   host.innerHTML = rows.join('');
   libWireRows(host);
 }
 
-function libRows(node, depth, out) {
+/* ------------------------- the set, in the tree ------------------ */
+
+/* A character is 37 files that have to agree with each other, and
+   until now that was a second list in the same panel, a few
+   centimetres under this one, naming the same files. One list: these
+   rows carry what only that one could say -- which animation a file
+   is, whether its frame count is one the game enforces, and the slots
+   nobody has drawn, which a list of what you have cannot show by
+   itself. */
+function libBase(name) {
+  return name.replace(/\.[^.]+$/, '').toLowerCase();
+}
+
+function libSet() {
+  if (typeof folder === 'undefined' || !folder.kind) return null;
+  const slots = new Map();
+  if (folder.kind === 'character' && typeof CHAR_SHEETS !== 'undefined') {
+    for (const s of CHAR_SHEETS)
+      slots.set(s.file.toLowerCase(), {
+        base: s.file,
+        /* Two words, two keys: "Walk" and "front" each translate on
+           their own, and joining them after is the only way a
+           dictionary keyed by the English string can reach both. */
+        note: t(s.label) + (s.dir ? ' ' + t(s.dirName) : ''),
+        need: s.need, want: s.need != null ? s.need : s.want,
+        min: s.min, max: s.max
+      });
+  } else if (typeof BOMB_FILES !== 'undefined') {
+    for (const b of BOMB_FILES)
+      slots.set(libBase(b[0]), { base: b[0].replace(/\.[^.]+$/, ''),
+                                 note: t(b[1]) });
+  }
+  return { slots: slots, host: libSetHost(slots) };
+}
+
+/* Where the slots nobody drew belong: the folder holding most of the
+   set. Anywhere else and the gap would be listed next to files it has
+   nothing to do with. */
+function libSetHost(slots) {
+  let best = null, bestN = -1;
+  const walk = node => {
+    let n = 0;
+    for (const id of node.children) {
+      const c = lib.nodes.get(id);
+      if (!c) continue;
+      if (c.kind === 'folder') walk(c);
+      else if (slots.has(libBase(c.name))) n++;
+    }
+    if (n > bestN) { bestN = n; best = node; }
+  };
+  walk(lib.root);
+  return bestN > 0 ? best : null;
+}
+
+/* A frame count the game enforces has to match; one it merely prefers
+   has a range the officials and the panel both live inside, and
+   marking a legal seven-frame punch red would be a lie. */
+function libCountBad(slot, n) {
+  if (!slot || n == null) return false;
+  if (slot.need != null) return n !== slot.need;
+  if (slot.want == null) return false;
+  return n < (slot.min != null ? slot.min : slot.want) ||
+         n > (slot.max != null ? slot.max : slot.want);
+}
+
+function libRows(node, depth, out, set) {
   const openName = sprite.entry ? sprite.entry.name : null;
   for (const id of node.children) {
     const n = lib.nodes.get(id);
@@ -267,16 +342,39 @@ function libRows(node, depth, out) {
         '" draggable="true" ' + pad + '>' +
         '<span class="tw">' + (shut ? '\u25b8' : '\u25be') + '</span>' +
         '<span class="nm">' + libEsc(n.name) + '</span>' +
+        '<span class="slot"></span>' +
         '<span class="ct">' + libCount(n) + '</span></div>');
-      if (!shut) libRows(n, depth + 1, out);
+      if (!shut) libRows(n, depth + 1, out, set);
     } else {
+      const slot = set ? set.slots.get(libBase(n.name)) : null;
+      const about = libAbout(n) || '';
+      const bad = libCountBad(slot, n.frames);
       out.push('<div class="libRow file' +
         (lib.sel === n.id ? ' sel' : '') +
         (n.name === openName ? ' live' : '') + '" data-id="' + n.id +
-        '" draggable="true" ' + pad + '>' +
+        '" draggable="true"' +
+        (slot ? ' title="' + libEsc(slot.note) + '"' : '') + ' ' + pad + '>' +
         '<span class="tw"></span>' +
         '<span class="nm">' + libEsc(n.name) + '</span>' +
-        '<span class="ct">' + libEsc(libAbout(n) || '') + '</span></div>');
+        '<span class="slot">' + (slot ? libEsc(slot.note) : '') + '</span>' +
+        '<span class="ct' + (bad ? ' no' : '') + '">' +
+        libEsc(bad ? tf('{n}/{want} frames', { n: n.frames, want: slot.want })
+                   : about) + '</span></div>');
+    }
+  }
+  /* and, at the end of the folder the set lives in, the slots that
+     are not here. Not files, so they do nothing; in the list,
+     because the gap is the thing worth seeing. */
+  if (set && set.host === node) {
+    const padG = 'style="padding-left:' + (6 + depth * 13) + 'px"';
+    for (const slot of set.slots.values()) {
+      if (typeof folderFile === 'function' && folderFile(slot.base)) continue;
+      out.push('<div class="libRow ghost" title="' + libEsc(slot.note) +
+        '" ' + padG + '>' +
+        '<span class="tw"></span>' +
+        '<span class="nm">' + libEsc(slot.base) + '</span>' +
+        '<span class="slot">' + libEsc(slot.note) + '</span>' +
+        '<span class="ct">' + t('not here') + '</span></div>');
     }
   }
 }
@@ -302,6 +400,9 @@ function libEsc(s) {
 
 function libWireRows(host) {
   host.querySelectorAll('.libRow').forEach(row => {
+    /* a slot nobody drew is not a file: it has nothing to open,
+       nothing to rename and nothing to drag */
+    if (row.classList.contains('ghost')) return;
     const id = row.dataset.id;
     row.addEventListener('click', ev => {
       lib.sel = id;
