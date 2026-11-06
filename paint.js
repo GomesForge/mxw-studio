@@ -669,6 +669,21 @@ function paintCentre(axis) {
          ' by ' + (dx || dy) + ' px');
 }
 
+/* Centre whatever is the subject. A texture is centred as a layer,
+   because a texture is what the editor is holding; a sheet is centred
+   as frames, because the frames are the file and the editor is only
+   ever looking at one of them. Having had a button for each, in two
+   places, with the same icon, the single question "centre what?" is
+   better answered by looking at what is open. */
+function paintCentreAny(axis) {
+  const onFrame = paint.open && paint.owner && paint.owner.kind === 'frame';
+  if (paint.open && !onFrame) { paintCentre(axis); return; }
+  if (typeof sprite !== 'undefined' && sprite.entry &&
+      typeof toolsCentre === 'function') { toolsCentre(axis); return; }
+  if (paint.open) paintCentre(axis);
+  else notify(t('open a sheet or a texture first'), 1);
+}
+
 /* ------------------------------ pointer -------------------------- */
 function paintDown(ev) {
   if (!paint.open || !paint.shown) return;
@@ -1069,8 +1084,8 @@ function paintWire() {
   };
   $('bFlipH').onclick = () => paintFlip('h');
   $('bFlipV').onclick = () => paintFlip('v');
-  $('bCentreH').onclick = () => paintCentre('h');
-  $('bCentreV').onclick = () => paintCentre('v');
+  $('bCentreH').onclick = () => paintCentreAny('h');
+  $('bCentreV').onclick = () => paintCentreAny('v');
   $('bClearSel').onclick = paintEraseSel;
   $('bPaintApply').onclick = paintApply;
   $('bPaintCancel').onclick = () => {

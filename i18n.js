@@ -437,27 +437,103 @@ const I18N = {
     'Line': 'Linha',
     'Box': 'Caixa',
     'Select': 'Selecionar',
-    'this applies to': 'isto vale para',
     'this frame': 'este quadro',
-    'every frame': 'todos os quadros',
-    '90\u00b0 left': '90\u00b0 esquerda',
-    '90\u00b0 right': '90\u00b0 direita',
-    'Move it': 'Mover',
-    'Turn it': 'Girar',
-    'Edges and colour': 'Bordas e cor',
-    'Centre across': 'Centrar na horizontal',
-    'Centre down': 'Centrar na vertical',
-    'Outline': 'Contorno',
-    'Inline': 'Contorno por dentro',
-    'Drop the picked colour': 'Tirar a cor escolhida',
-    'Undo that': 'Desfazer isso',
     'How it works': 'Como funciona',
-    'Open a sheet and its frames, its colours and the brushes arrive here.':
-      'Abra uma folha e os quadros dela, as cores e os pinc\u00e9is aparecem aqui.',
-    'These act on the drawing itself, not on a brush stroke: <b>Undo that</b> puts back the last one and nothing more. The sheet is a stamp pressed at a fixed place, so a pixel moved here is a pixel moved in the game.':
-      'Estas agem no desenho em si, n\u00e3o numa pincelada: <b>Desfazer isso</b> devolve a \u00faltima e nada al\u00e9m. A folha \u00e9 um carimbo prensado num lugar fixo, ent\u00e3o um pixel movido aqui \u00e9 um pixel movido no jogo.',
+
+    /* The rail. An icon's title is the only label it has, so these are
+       not decoration: untranslated, the whole left edge of the window
+       is in English however the language is set. */
+    'Brush (B)': 'Pincel (B)',
+    'Eraser (E)': 'Borracha (E)',
+    'Flood fill (G)': 'Balde (G)',
+    'Pick a colour (I)': 'Conta-gotas (I)',
+    'Line (L)': 'Linha (L)',
+    'Rectangle (R)': 'Caixa (R)',
+    'Filled rectangle (F)': 'Caixa cheia (F)',
+    'Rectangular select (M)': 'Selecionar uma \u00e1rea (M)',
+    'Move the selection (V)': 'Mover a sele\u00e7\u00e3o (V)',
+    'Undo (ctrl+Z)': 'Desfazer (ctrl+Z)',
+    'Redo (ctrl+shift+Z)': 'Refazer (ctrl+shift+Z)',
+    'Flip horizontally': 'Espelhar na horizontal',
+    'Flip vertically': 'Espelhar na vertical',
+    'Centre horizontally': 'Centrar na horizontal',
+    'Centre vertically': 'Centrar na vertical',
+    'Erase the selection (Delete)': 'Apagar a sele\u00e7\u00e3o (Delete)',
+    'Pixel grid': 'Grade de pixels',
+    'UV layout over the texture': 'Malha UV sobre a textura',
+
+    /* The shelf's own buttons, and the rest of the action bar. */
+    'a new folder, inside whatever is selected':
+      'uma pasta nova, dentro do que estiver selecionado',
+    'put a character\'s sheets into a folder per animation':
+      'p\u00f5e as folhas de um personagem numa pasta por anima\u00e7\u00e3o',
+    'what is selected, as a zip, with its folders':
+      'o que est\u00e1 selecionado, num zip, com as pastas',
+    'empty the shelf; the files stay on your disk':
+      'esvazia a estante; os arquivos continuam no seu disco',
+    'the shelf: everything you have opened, in folders you arrange yourself':
+      'a estante: tudo que voc\u00ea abriu, em pastas que voc\u00ea mesmo organiza',
+    'a character or a bomb skin as one document; a folder dragged onto the page, or a .zip, does the same':
+      'um personagem ou uma skin de bomba como um documento s\u00f3; uma pasta arrastada para a p\u00e1gina, ou um .zip, faz o mesmo',
+    'everything that can come out of what is open, in one place':
+      'tudo que pode sair do que est\u00e1 aberto, num lugar s\u00f3',
+    'how all of this works': 'como tudo isto funciona',
+    'move the whole sheet onto the axis and the floor, keeping its own motion':
+      'move a folha inteira para o eixo e a sola, mantendo o movimento dela',
+    'compare what is in the editor with the file that was opened':
+      'compara o que est\u00e1 no editor com o arquivo que foi aberto',
+    'saves what you are editing: the whole set of textures in this slot, or the whole sprite animation':
+      'salva o que voc\u00ea est\u00e1 editando: o conjunto de texturas deste slot, ou a anima\u00e7\u00e3o inteira do sprite',
+    'saves whatever the active tab shows: the model, moving if a motion is loaded, or the texture you are editing':
+      'salva o que a aba ativa mostra: o modelo, em movimento se houver um carregado, ou a textura que voc\u00ea est\u00e1 editando',
+    'the guides alone, transparent, at sheet size, to draw over anywhere':
+      's\u00f3 as guias, transparentes, no tamanho da folha, para desenhar por cima em qualquer lugar',
+    'the whole animation, with any frame you are part-way through editing included as it stands':
+      'a anima\u00e7\u00e3o inteira, com qualquer quadro que voc\u00ea esteja editando inclu\u00eddo como est\u00e1',
+    'frame the whole model': 'enquadrar o modelo inteiro',
+    'hide this panel': 'esconder este painel',
+    'zoom in': 'aproximar',
+    'zoom out': 'afastar',
+    'MXW Studio, end to end': 'MXW Studio, de ponta a ponta',
+    'Scale \u00d71.1': 'Escala \u00d71.1',
+    'Scale \u00f71.1': 'Escala \u00f71.1',
+    'Open a sheet and its frames and its colours arrive here. The tools are on the rail, immediately to the left.':
+      'Abra uma folha e os quadros dela e as cores aparecem aqui. As ferramentas est\u00e3o na r\u00e9gua, logo \u00e0 esquerda.',
     'open a sheet, a frame or a texture before picking a tool':
       'abra uma folha, um quadro ou uma textura antes de escolher uma ferramenta',
+    'open a sheet or a texture first': 'abra uma folha ou uma textura primeiro',
+
+    /* The frame operations, now icons on the rail. A title is all the
+       label an icon gets, so each one says what it does to what. */
+    'These act on this frame -- click for every frame':
+      'Estas agem neste quadro -- clique para todos os quadros',
+    'These act on every frame -- click for this frame only':
+      'Estas agem em todos os quadros -- clique para s\u00f3 este quadro',
+    'the frame tools now act on this frame':
+      'as ferramentas de quadro agora agem neste quadro',
+    'the frame tools now act on every frame':
+      'as ferramentas de quadro agora agem em todos os quadros',
+    'Undo the last whole-frame change':
+      'Desfazer a \u00faltima mudan\u00e7a no quadro inteiro',
+    'Move it one pixel left': 'Mover um pixel para a esquerda',
+    'Move it one pixel up': 'Mover um pixel para cima',
+    'Move it one pixel down': 'Mover um pixel para baixo',
+    'Move it one pixel right': 'Mover um pixel para a direita',
+    'A quarter turn left': 'Um quarto de volta para a esquerda',
+    'A quarter turn right': 'Um quarto de volta para a direita',
+    'Half a turn': 'Meia volta',
+    'A line round the outside, in the brush colour':
+      'Uma linha por fora, na cor do pincel',
+    'A line round the inside, keeping the silhouette':
+      'Uma linha por dentro, mantendo a silhueta',
+    'Take the picked colour out of the drawing':
+      'Tirar a cor escolhida do desenho',
+    'the frames of this sheet and their colours, in a column beside the rail':
+      'os quadros desta folha e as cores deles, numa coluna ao lado da r\u00e9gua',
+    'close this panel': 'fechar este painel',
+    'drag to widen': 'arraste para alargar',
+    'drag the bottom edge to make this taller':
+      'arraste a borda de baixo para deixar mais alto',
     'put back': 'devolvido',
     'outlined': 'contornado',
     'that colour is gone': 'essa cor saiu',

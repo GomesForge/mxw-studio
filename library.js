@@ -19,21 +19,14 @@
    panel, and this is a panel. Save a folder as a zip and it is a
    folder again. */
 
-const LIB_KEY = 'mxw.library';
-/* Bumped when the default placement changes, so a position saved from
-   an older default is replaced once rather than outliving it. */
-const LIB_PLACE = 4;
-
 const lib = {
   root: null,
   nodes: new Map(),       /* id -> node */
   seq: 1,
-  open: false,
+  open: true,             /* the dock's own open state, mirrored here */
   sel: null,
   drag: null,
-  closed: new Set(),      /* folders the user collapsed */
-  pos: { x: 0, y: 0, w: 300, h: 420 },
-  placed: false
+  closed: new Set()       /* folders the user collapsed */
 };
 
 /* A node is a folder or a file. A file carries its bytes, because the
@@ -52,29 +45,6 @@ function libInit() {
   if (lib.root) return;
   lib.root = libNode('folder', 'Library');
   lib.root.root = true;
-  try {
-    const saved = JSON.parse(localStorage.getItem(LIB_KEY) || 'null');
-    if (saved && typeof saved === 'object') {
-      if (saved.v === LIB_PLACE) {
-        for (const k of ['x', 'y', 'w', 'h'])
-          if (typeof saved[k] === 'number') lib.pos[k] = saved[k];
-        lib.placed = !!saved.placed;
-        lib.pos.moved = !!saved.moved;
-      }
-      /* Whether it was open is deliberately not restored. The files do
-         not survive a reload, so restoring it would open an empty
-         window over the corner of a page with nothing in it. The shelf
-         opens when it has something to show, or when it is asked for. */
-    }
-  } catch (e) { /* a browser that refuses storage still gets a panel */ }
-}
-
-function libSave() {
-  try {
-    localStorage.setItem(LIB_KEY, JSON.stringify(Object.assign(
-      { v: LIB_PLACE, placed: lib.placed, moved: !!lib.pos.moved },
-      lib.pos)));
-  } catch (e) { /* fine */ }
 }
 
 /* ---------------------------- the tree --------------------------- */
@@ -237,40 +207,22 @@ function libAbout(node) {
   return node.about;
 }
 
-/* --------------------------- the panel --------------------------- */
+/* ---------------------------- the dock --------------------------- */
 
+/* The shelf is a dock in the right-hand panel now, so showing it is
+   opening that dock and putting it where it can be seen. There is no
+   position to decide, nothing to clamp and nothing to get in front
+   of -- which is the whole reason it moved. */
 function libShow(on) {
   libInit();
-  lib.open = on === undefined ? !lib.open : !!on;
-  const el = $('lib');
-  if (el) el.hidden = !lib.open;
-  if (lib.open) {
-    libPlace();
-    libRender();
-  } else if (typeof panelArrange === 'function') {
-    panelArrange();
+  const el = $('libDock');
+  lib.open = on === undefined ? !(el && el.open) : !!on;
+  if (el) {
+    el.open = lib.open;
+    if (lib.open && el.scrollIntoView)
+      el.scrollIntoView({ block: 'nearest' });
   }
-  libSave();
-}
-
-/* First time it opens, it sits in the top right corner of the work
-   area. The near corner belongs to the frame tools, which are what a
-   hand reaches for while drawing; a list of files is read, not
-   reached for. After that it is wherever it was dragged. */
-function libPlace() {
-  const el = $('lib');
-  if (!el) return;
-  if (!lib.placed) {
-    Object.assign(lib.pos, panelCorner('right', 300, 520, 8));
-    lib.placed = true;
-  }
-  libClamp();
-  panelApply(el, lib.pos);
-  if (typeof panelArrange === 'function') panelArrange();
-}
-
-function libClamp() {
-  panelClamp(lib.pos, { w: 200, W: 900, h: 120 });
+  if (lib.open) libRender();
 }
 
 function libRender() {
@@ -282,6 +234,8 @@ function libRender() {
   if (badge) badge.textContent = total ? String(total) : '';
   const b = $('bLib');
   if (b) b.classList.toggle('has', total > 0);
+  const dock = $('libDock');
+  lib.open = !dock || dock.open;
   if (!lib.open) return;
 
   /* Where the selection is, which a deep tree stops making obvious. */
@@ -675,25 +629,15 @@ function libClear() {
   for (const id of lib.root.children.slice()) libDrop(id);
 }
 
-/* --------------------------- moving it --------------------------- */
-
-/* The window itself, which is the same window the frame tools use. */
-function libWireWindow() {
-  panelWindow({
-    el: $('lib'), head: $('libHead'), grip: $('libGrip'),
-    pos: lib.pos, min: { w: 200, W: 900, h: 120 }, order: 0,
-    side: 'right',
-    onDone: libSave
-  });
-}
-
 function libWire() {
   libInit();
-  libWireWindow();
+  const dock = $('libDock');
+  if (dock) dock.addEventListener('toggle', () => {
+    lib.open = dock.open;
+    if (lib.open) libRender();
+  });
   const b = $('bLib');
   if (b) b.addEventListener('click', () => libShow());
-  const x = $('libX');
-  if (x) x.addEventListener('click', () => libShow(false));
   const nf = $('bLibFolder');
   if (nf) nf.addEventListener('click', () => libNewFolder(lib.sel));
   const gr = $('bLibGroup');
@@ -709,6 +653,5 @@ function libWire() {
      while the tree itself has the keyboard. */
   addEventListener('keydown', libKeys);
 
-  /* It starts closed, every time: see libInit. */
   libRender();
 }

@@ -1,28 +1,34 @@
-/* The frame tools, in the corner where the work is.
+/* The frames and the colours, in a column against the rail.
 
    The frame strip and the colours were on the far right, past the
    measurements and the checks, which is a long way from a drawing. So
-   they move into a window of their own in the near corner: the frames
-   you can edit, the colours you are using, the brushes, and the
-   handful of operations that act on a whole frame at once.
+   they move next to the rail: the frames you can edit and the colours
+   you are using, immediately beside the brushes that use them.
+
+   It is a grid column, not a window. Every complaint about panels
+   covering buttons had one cause -- something always wanted, floating
+   over something always wanted -- and a column cannot overlap
+   anything. Only its width is draggable, because position is the one
+   decision there is nothing to decide about.
 
    The two docks are not copied here, they are moved. They carry their
    own wiring, and a second frame strip that drifted from the first
    would be worse than no second frame strip at all.
 
-   The operations are the ones a sprite actually wants. A photo editor's
-   tool list is mostly about photographs -- healing, dodging, lens
-   blur, twenty-seven blend modes -- and none of that survives contact
-   with a 40-pixel character drawn two colours at a time. What does
-   survive is small and dull: move it a pixel, turn it, draw a line
-   round it, take a colour out. Those are here. */
+   The whole-frame operations used to be a third dock here. They are
+   on the rail now, as icons: move it a pixel, turn it, draw a line
+   round it, take a colour out. A photo editor's tool list is mostly
+   about photographs -- healing, dodging, lens blur, twenty-seven
+   blend modes -- and none of that survives contact with a 40-pixel
+   character drawn two colours at a time. What survives is small and
+   dull, and small and dull fits on a rail. */
 
 const TOOLS_KEY = 'mxw.tools';
+const TOOLS_MIN = 190, TOOLS_MAX = 460;
 
 const tools = {
   open: false,
-  pos: { x: 0, y: 0, w: 304, h: 560 },
-  placed: false,
+  w: 286,
   undo: [],              /* [{frames:[{i, runs}]}] -- one step is enough */
   scope: 'frame'         /* 'frame' | 'all' */
 };
@@ -31,10 +37,10 @@ function toolsLoad() {
   try {
     const s = JSON.parse(localStorage.getItem(TOOLS_KEY) || 'null');
     if (s && typeof s === 'object') {
-      for (const k of ['x', 'y', 'w', 'h'])
-        if (typeof s[k] === 'number') tools.pos[k] = s[k];
-      tools.placed = !!s.placed;
-      tools.pos.moved = !!s.moved;
+      /* older builds stored a whole window rectangle; its width is the
+         only part of it that still means anything */
+      const w = typeof s.w === 'number' ? s.w : null;
+      if (w) tools.w = Math.max(TOOLS_MIN, Math.min(TOOLS_MAX, w));
       tools.shut = !!s.shut;
       if (s.scope) tools.scope = s.scope;
     }
@@ -43,13 +49,20 @@ function toolsLoad() {
 
 function toolsSave() {
   try {
-    localStorage.setItem(TOOLS_KEY, JSON.stringify(Object.assign(
-      { placed: tools.placed, scope: tools.scope, shut: !!tools.shut,
-        moved: !!tools.pos.moved }, tools.pos)));
+    localStorage.setItem(TOOLS_KEY, JSON.stringify(
+      { w: tools.w, scope: tools.scope, shut: !!tools.shut }));
   } catch (e) { /* fine */ }
 }
 
-/* --------------------------- the window -------------------------- */
+/* --------------------------- the column -------------------------- */
+
+/* The column is a CSS variable on the grid, so opening and closing it
+   is the grid relaying out rather than anything being covered up. */
+function toolsApply() {
+  const app = $('app');
+  if (app) app.style.setProperty('--toolsW',
+    (tools.open ? Math.round(tools.w) : 0) + 'px');
+}
 
 function toolsShow(on, byUser) {
   tools.open = on === undefined ? !tools.open : !!on;
@@ -62,19 +75,36 @@ function toolsShow(on, byUser) {
   el.hidden = !tools.open;
   if (!tools.open) {
     toolsRelease();
-    if (typeof panelArrange === 'function') panelArrange();
+    toolsApply();
     return;
   }
   toolsAdopt();
-  if (!tools.placed) {
-    Object.assign(tools.pos, panelCorner('left', 304, 560));
-    tools.placed = true;
-  }
-  panelClamp(tools.pos, { w: 240, W: 520, h: 200 });
-  panelApply(el, tools.pos);
-  if (typeof panelArrange === 'function') panelArrange();
+  toolsApply();
   toolsRender();
   toolsSave();
+}
+
+/* Drag the right edge. Nothing else about the shape is negotiable. */
+function toolsGripWire() {
+  const grip = $('toolsGrip'), el = $('tools');
+  if (!grip || !el) return;
+  grip.addEventListener('pointerdown', ev => {
+    ev.preventDefault();
+    grip.setPointerCapture(ev.pointerId);
+    const x0 = ev.clientX, w0 = tools.w;
+    const move = e2 => {
+      tools.w = Math.max(TOOLS_MIN,
+        Math.min(TOOLS_MAX, w0 + (e2.clientX - x0)));
+      toolsApply();
+    };
+    const up = () => {
+      grip.removeEventListener('pointermove', move);
+      grip.removeEventListener('pointerup', up);
+      toolsSave();
+    };
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', up);
+  });
 }
 
 /* ------------------------- which frames ------------------------- */
@@ -89,8 +119,7 @@ function toolsTargets() {
 function toolsPush(indices) {
   const g = sprite.entry.gra;
   tools.undo = [{ frames: indices.map(i => ({ i: i, runs: g.frames[i].runs })) }];
-  const b = $('bToolUndo');
-  if (b) b.disabled = false;
+  toolsRailSync();
 }
 
 function toolsUndo() {
@@ -98,11 +127,26 @@ function toolsUndo() {
   if (!step || !sprite.entry) return;
   const g = sprite.entry.gra;
   for (const f of step.frames) if (g.frames[f.i]) g.frames[f.i].runs = f.runs;
-  const b = $('bToolUndo');
-  if (b) b.disabled = true;
+  toolsRailSync();
   spriteRenderAll();
   spriteDraw();
   notify(t('put back'));
+}
+
+/* The pixel editor holds a copy of the frame it opened and writes it
+   back when you apply. An operation on that same frame underneath it
+   would be thrown away by that write, silently -- so land the editor's
+   work first, and open it again on the result. Nothing is lost and the
+   operation means the same thing whether or not the editor is open. */
+function toolsSettle(idx) {
+  if (typeof paint === 'undefined' || !paint.sessions ||
+      typeof paintFind !== 'function') return false;
+  const s = paintFind(x => x.owner && x.owner.kind === 'frame' &&
+    x.owner.entry === sprite.entry && idx.indexOf(x.owner.frame) >= 0);
+  if (!s) return false;
+  if (s.id !== paint.id) paintSelect(s.id);
+  paintApply();
+  return true;
 }
 
 /* Every operation here is the same shape: read the frame as pixels,
@@ -114,6 +158,7 @@ function toolsOn(fn, say) {
   const g = e.gra, w = g.width, h = g.height;
   const idx = toolsTargets();
   if (!idx.length) return;
+  const reopen = toolsSettle(idx);
   toolsPush(idx);
   for (const i of idx) {
     const px = g.frames[i].toRGBA(w, h);
@@ -122,6 +167,7 @@ function toolsOn(fn, say) {
   }
   spriteRenderAll();
   spriteDraw();
+  if (reopen && typeof spritePaintFrame === 'function') spritePaintFrame();
   if (say) notify(say);
 }
 
@@ -235,6 +281,12 @@ function toolsCentre(axis) {
   if (!e) return;
   const g = e.gra;
   const idx = toolsTargets();
+  /* measuring comes after landing the editor's work, or the box is
+     the one from before the last few strokes */
+  const reopen = toolsSettle(idx);
+  const back = () => {
+    if (reopen && typeof spritePaintFrame === 'function') spritePaintFrame();
+  };
   let x0 = g.width, y0 = g.height, x1 = -1, y1 = -1;
   for (const i of idx) {
     const bb = g.frames[i].bbox();
@@ -242,11 +294,12 @@ function toolsCentre(axis) {
     x0 = Math.min(x0, bb[0]); y0 = Math.min(y0, bb[1]);
     x1 = Math.max(x1, bb[2] - 1); y1 = Math.max(y1, bb[3] - 1);
   }
-  if (x1 < x0) { notify(t('nothing drawn to centre'), 1); return; }
+  if (x1 < x0) { notify(t('nothing drawn to centre'), 1); back(); return; }
   const dx = axis === 'v' ? 0 : Math.round((g.width - 1 - x1 - x0) / 2);
   const dy = axis === 'h' ? 0 : Math.round((g.height - 1 - y1 - y0) / 2);
-  if (!dx && !dy) { notify(t('already centred')); return; }
+  if (!dx && !dy) { notify(t('already centred')); back(); return; }
   toolsNudge(dx, dy);
+  back();
 }
 
 function hexToRgb(hex) {
@@ -306,81 +359,74 @@ function toolsMaybeOpen() {
 }
 
 function toolsRender() {
-  const on = !!(sprite.entry && !sprite.entry.gra.eft);
+  toolsRailSync();
   const panel = $('tools');
   if (!panel || panel.hidden) return;
   const empty = $('toolsEmpty');
-  const docks = $('toolsDocks'), ops = $('toolsOps');
+  const docks = $('toolsDocks');
   if (empty) empty.hidden = !!sprite.entry;
   if (docks) docks.hidden = !sprite.entry;
-  if (ops) ops.hidden = !on;
-  const sq = sprite.entry && sprite.entry.gra.width === sprite.entry.gra.height;
-  for (const id of ['bToolRotL', 'bToolRotR', 'bToolRot2']) {
-    const b = $(id);
-    if (b) b.disabled = !sq;
-  }
 }
 
-/* Entering the pixel editor and choosing a tool in one click: the
-   tools down the left only exist while a frame is open for editing,
-   so asking for one is also asking to edit. */
-function toolsPick(name) {
-  /* the same door the rail uses, so there is one answer to "what does
-     clicking a brush do when nothing is open" */
-  const mine = typeof paint !== 'undefined' && paint.open && paint.owner &&
-    paint.owner.kind === 'frame' && paint.owner.entry === sprite.entry &&
-    paint.owner.frame === sprite.frame;
-  if (!mine && sprite.entry) spritePaintFrame();
-  const b = document.querySelector('#paintTools [data-tool="' + name + '"]');
-  if (b) b.click();
+/* The rail's lower half acts on the frames of a sheet, so it is dark
+   until there is a sheet, and the turns are dark unless the frame is
+   square -- a quarter turn of a 40 by 56 frame has nowhere to put the
+   corners. The first button is not an action but a statement of how
+   many frames the rest of them mean. */
+function toolsRailSync() {
+  const e = typeof sprite !== 'undefined' ? sprite.entry : null;
+  const live = !!(e && !e.gra.eft);
+  const sq = !!(live && e.gra.width === e.gra.height);
+  const all = tools.scope === 'all';
+
+  const set = (id, ok) => { const b = $(id); if (b) b.disabled = !ok; };
+  for (const id of ['bRailLeft', 'bRailUp', 'bRailDown', 'bRailRight',
+                    'bRailOutline', 'bRailInline', 'bRailDrop',
+                    'bRailScope']) set(id, live);
+  for (const id of ['bRailRotL', 'bRailRotR', 'bRailRot2']) set(id, sq);
+  set('bRailUndoOp', live && tools.undo.length > 0);
+
+  const sc = $('bRailScope');
+  if (sc) {
+    sc.classList.toggle('on', all);
+    const use = sc.querySelector('use');
+    if (use) use.setAttribute('href', all ? '#i-all' : '#i-one');
+    sc.title = all
+      ? t('These act on every frame -- click for this frame only')
+      : t('These act on this frame -- click for every frame');
+  }
 }
 
 function toolsWire() {
   toolsLoad();
   toolsRemember();
-  const el = $('tools');
-  if (el) {
-    panelWindow({
-      el: el, head: $('toolsHead'), grip: $('toolsGrip'),
-      pos: tools.pos, min: { w: 240, W: 560, h: 180 }, order: 0,
-      side: 'left',
-      onDone: toolsSave
-    });
-  }
+  toolsGripWire();
+  toolsApply();
+
   const b = $('bTools');
   if (b) b.addEventListener('click', () => toolsShow(!tools.open, true));
   const x = $('toolsX');
   if (x) x.addEventListener('click', () => toolsShow(false, true));
 
-  const pick = $('toolsPick');
-  if (pick) pick.addEventListener('click', ev => {
-    const b2 = ev.target.closest('[data-pick]');
-    if (b2) toolsPick(b2.dataset.pick);
-  });
-
-  const scope = $('toolsScope');
-  if (scope) {
-    scope.value = tools.scope;
-    scope.addEventListener('change', () => {
-      tools.scope = scope.value;
-      toolsSave();
-    });
-  }
-
   const on = (id, fn) => { const e2 = $(id); if (e2) e2.addEventListener('click', fn); };
-  on('bToolUp', () => toolsNudge(0, -1));
-  on('bToolDown', () => toolsNudge(0, 1));
-  on('bToolLeft', () => toolsNudge(-1, 0));
-  on('bToolRight', () => toolsNudge(1, 0));
-  on('bToolRotL', () => toolsRotate(3));
-  on('bToolRotR', () => toolsRotate(1));
-  on('bToolRot2', () => toolsRotate(2));
-  on('bToolOutline', () => toolsOutline(true));
-  on('bToolInline', () => toolsOutline(false));
-  on('bToolDrop', toolsDropColour);
-  on('bToolCentreH', () => toolsCentre('h'));
-  on('bToolCentreV', () => toolsCentre('v'));
-  on('bToolUndo', toolsUndo);
-  const u = $('bToolUndo');
-  if (u) u.disabled = true;
+  on('bRailScope', () => {
+    tools.scope = tools.scope === 'all' ? 'frame' : 'all';
+    toolsSave();
+    toolsRailSync();
+    notify(t(tools.scope === 'all'
+      ? 'the frame tools now act on every frame'
+      : 'the frame tools now act on this frame'));
+  });
+  on('bRailUp', () => toolsNudge(0, -1));
+  on('bRailDown', () => toolsNudge(0, 1));
+  on('bRailLeft', () => toolsNudge(-1, 0));
+  on('bRailRight', () => toolsNudge(1, 0));
+  on('bRailRotL', () => toolsRotate(3));
+  on('bRailRotR', () => toolsRotate(1));
+  on('bRailRot2', () => toolsRotate(2));
+  on('bRailOutline', () => toolsOutline(true));
+  on('bRailInline', () => toolsOutline(false));
+  on('bRailDrop', toolsDropColour);
+  on('bRailUndoOp', toolsUndo);
+  toolsRailSync();
 }
