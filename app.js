@@ -2610,6 +2610,8 @@ for (const [name, fn] of [['sprites', () => spriteWire()],
 enableActions();
 menuWire();
 for (const [what, fn] of [['motion panel', poseWire], ['create panel', makeWire],
+                          ['side panel',
+                           typeof panelSideWire === 'function' ? panelSideWire : () => {}],
                           ['map editor',
                            typeof mapWire === 'function' ? mapWire : () => {}],
                           ['character guides',
