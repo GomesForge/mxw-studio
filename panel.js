@@ -124,6 +124,47 @@ function panelApply(el, pos) {
    off the edge, and you spend the zoom scrolling back.
 
    wrap is the scrolling box, get/set read and write the zoom. */
+/* The right-hand panel's width, dragged from its left edge. Kept here
+   rather than in any one dock, because every dock is in it. */
+const SIDE_KEY = 'mxw.sideW';
+const SIDE_MIN = 240, SIDE_MAX = 560;
+
+function panelSideWidth(w) {
+  const app = $('app');
+  if (!app) return;
+  app.style.setProperty('--sideW',
+    Math.round(Math.max(SIDE_MIN, Math.min(SIDE_MAX, w))) + 'px');
+}
+
+function panelSideWire() {
+  const grip = $('sideGrip'), side = $('side');
+  if (!grip || !side) return;
+  let w = 330;
+  try {
+    const s = parseFloat(localStorage.getItem(SIDE_KEY));
+    if (s > 0) w = s;
+  } catch (e) { /* a browser that refuses storage still gets a panel */ }
+  panelSideWidth(w);
+
+  grip.addEventListener('pointerdown', ev => {
+    ev.preventDefault();
+    grip.setPointerCapture(ev.pointerId);
+    const x0 = ev.clientX, w0 = side.getBoundingClientRect().width;
+    const move = e2 => {
+      w = Math.max(SIDE_MIN, Math.min(SIDE_MAX, w0 - (e2.clientX - x0)));
+      panelSideWidth(w);
+    };
+    const up = () => {
+      grip.removeEventListener('pointermove', move);
+      grip.removeEventListener('pointerup', up);
+      try { localStorage.setItem(SIDE_KEY, String(Math.round(w))); }
+      catch (e) { /* fine */ }
+    };
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', up);
+  });
+}
+
 function panelWheelZoom(wrap, get, set, lo, hi) {
   if (!wrap) return;
   wrap.addEventListener('wheel', ev => {

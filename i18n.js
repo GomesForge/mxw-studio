@@ -259,7 +259,6 @@ const I18N = {
     'files': 'arquivos',
     'colours': 'cores',
     'empty': 'vazio',
-    'unreadable': 'ileg\u00edvel',
     'not here': 'n\u00e3o est\u00e1 aqui',
     'no pixels': 'nenhum pixel',
     'vs official': 'vs oficial',
@@ -335,6 +334,10 @@ const I18N = {
     'This frame is {w}x{h}. The original authoring tool\'s manual reports a failure on frames around 60x100, and recommends staying at or under {cw}x{ch}. Files this size that shipped with the set are fine; newly grown ones may not be.':
       'Este quadro \u00e9 {w}x{h}. O manual da ferramenta original relata falha em quadros perto de 60x100, e recomenda ficar em {cw}x{ch} ou abaixo. Arquivos desse tamanho que j\u00e1 vieram com o jogo est\u00e3o bem; os que crescerem agora podem n\u00e3o estar.',
     /* ---- what the set view says */
+    '{n} thing to look at': '{n} coisa para olhar',
+    '{n} things to look at': '{n} coisas para olhar',
+    'Nothing to look at: the set hangs together.':
+      'Nada a apontar: o conjunto bate entre si.',
     'The set is complete and the files agree with each other.':
       'O conjunto est\u00e1 completo e os arquivos concordam entre si.',
     'no bomb.spr. That one is the skin: without it there is nothing to put on a bomb.':
@@ -894,10 +897,16 @@ function i18nSetLang(code) {
   i18nLang = I18N[code] || code === 'en' ? code : 'en';
   document.documentElement.lang = i18nLang === 'pt-BR' ? 'pt-BR' : 'en';
   i18nApply(document.body);
-  /* Text painted onto a canvas is not a node, so the sweep above
-     cannot reach it. The guide labels over a sheet are drawn, not
-     written, and only a redraw puts them in the new language. */
-  for (const fn of ['spriteDraw', 'paintDraw', 'mapDraw'])
+  /* The sweep above matches on the English, so it can only reach text
+     that is still in English. Anything a panel wrote itself through
+     t() is already translated and invisible to it, and anything
+     painted onto a canvas is not a node at all. Both have to be asked
+     again -- every one of these rebuilds from the data, so calling
+     them is free and calling them twice is harmless. */
+  for (const fn of ['libRender', 'folderRender', 'charRenderPanel',
+                    'spriteRenderPalette', 'spriteRenderTint',
+                    'mapRenderPanel', 'mapRenderStatus',
+                    'spriteDraw', 'paintDraw', 'mapDraw'])
     if (typeof window[fn] === 'function') { try { window[fn](); } catch (e) { /* not open */ } }
 }
 

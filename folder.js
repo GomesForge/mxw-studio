@@ -134,8 +134,9 @@ function folderClose() {
   folder.extra = [];
   folder.caps = [];
   folder.report = null;
-  const d = $('folderDock');
-  if (d) d.classList.remove('on');
+  const d = $('libSet');
+  if (d) d.hidden = true;
+  if (typeof libRender === 'function') libRender();
 }
 
 /* Opening one of the set is opening a file, with everything that
@@ -316,11 +317,13 @@ function folderScan() {
   folder.report = { problems: folderProblems(), palette: folderPalette() };
 }
 
+/* The shelf is the list. What is left here is the count, the verdict
+   and the way out -- the three things a tree of file names cannot say
+   about itself. */
 function folderRender() {
-  const dock = $('folderDock');
-  if (!dock) return;
-  dock.classList.toggle('on', !!folder.kind);
-  if (!folder.kind) return;
+  const strip = $('libSet');
+  if (strip) strip.hidden = !folder.kind;
+  if (!folder.kind) { if (typeof libRender === 'function') libRender(); return; }
   if (!folder.report) folderScan();
 
   const head = $('folderHead');
@@ -337,53 +340,9 @@ function folderRender() {
          { all: pal.total, alone: pal.onlyOne }) + '</dd></dl>';
   }
 
-  const list = $('folderList');
-  if (list) {
-    const openName = sprite.entry ? sprite.entry.name.toLowerCase() : '';
-    const rows = folder.kind === 'character'
-      ? CHAR_SHEETS.map(s => {
-          const rec = folderFile(s.file);
-          /* Two words, two keys: "Walk" and "front" each translate on
-             their own, and joining them after is the only way a
-             dictionary keyed by the English string can reach both. */
-          return {
-            label: s.file,
-            note: t(s.label) + (s.dir ? ' ' + t(s.dirName) : ''),
-            rec, sheet: s, want: s.need != null ? s.need : s.want
-          };
-        })
-      : BOMB_FILES.map(([n, note]) => ({
-          label: n.replace(/\.[^.]+$/, ''), note: t(note),
-          rec: folder.files.get(n), sheet: null, want: null
-        }));
-    list.innerHTML = rows.map(r => {
-      const on = r.rec && r.rec.name.toLowerCase() === openName;
-      const n = r.rec && r.rec.gra ? r.rec.gra.frames.length : null;
-      /* A count the game enforces has to match; one it merely prefers
-         has a range the officials and the panel both live inside, and
-         marking a legal seven-frame punch red would be a lie. */
-      const s = r.sheet;
-      const bad = n != null && s && (s.need != null
-        ? n !== s.need
-        : n < (s.min != null ? s.min : s.want) ||
-          n > (s.max != null ? s.max : s.want));
-      return '<button class="fRow' + (on ? ' sel' : '') +
-        (r.rec ? '' : ' gone') + '"' +
-        (r.rec ? ' data-pick="' + r.rec.name + '"' : ' disabled') + '>' +
-        '<b>' + r.label + '</b><span>' + r.note + '</span>' +
-        '<i class="' + (bad ? 'no' : '') + '">' +
-        (r.rec ? (n == null ? t('unreadable')
-          : (bad ? tf('{n}/{want} frames', { n: n, want: r.want })
-                 : tf(n === 1 ? '{n} frame' : '{n} frames', { n: n })))
-         : t('not here')) + '</i></button>';
-    }).join('');
-    list.querySelectorAll('[data-pick]').forEach(b =>
-      b.addEventListener('click', () => folderPick(b.dataset.pick)));
-  }
-
+  const probs = folder.report.problems;
   const checks = $('folderChecks');
   if (checks) {
-    const probs = folder.report.problems;
     checks.innerHTML = probs.length
       ? probs.map(p => '<p class="note ' +
           (p.level === 'bad' ? 'bad' : p.level === 'odd' ? 'warn' : '') +
@@ -391,6 +350,22 @@ function folderRender() {
       : '<p class="note good">' +
         t('The set is complete and the files agree with each other.') + '</p>';
   }
+
+  /* One line for the verdict, with the paragraphs folded behind it.
+     Three boxes of prose at the top of the panel were the loudest
+     thing on screen and said the same as their own first clause. */
+  const sum = $('libFaultsSum');
+  if (sum) {
+    const bad = probs.filter(p => p.level === 'bad').length;
+    sum.className = probs.length ? (bad ? 'bad' : 'warn') : 'good';
+    sum.textContent = probs.length
+      ? tf(probs.length === 1 ? '{n} thing to look at' : '{n} things to look at',
+           { n: probs.length })
+      : t('Nothing to look at: the set hangs together.');
+  }
+
+  /* The rows are the shelf's rows now. */
+  if (typeof libRender === 'function') libRender();
 }
 
 /* ---------------------------- the input -------------------------- */

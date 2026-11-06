@@ -4,6 +4,8 @@
   :root{
     --bg:#eef0f4; --panel:#f7f8fa; --edge:#d3d8e0; --edgeStrong:#b6bec9;
     --ink:#1c222e; --dim:#69717f;
+    --ink2:color-mix(in srgb,var(--ink) 74%,var(--dim));
+    --ink3:color-mix(in srgb,var(--ink) 42%,var(--dim));
     --cyan:#12708a; --amber:#8a5a00; --red:#b3302f; --ok:#1a6b45;
     --onAccent:#ffffff;
     --btn:#fdfdfe; --btnHover:#f0f2f6; --btnDown:#e4e8ef; --btnOn:#dfe5ee;
@@ -18,6 +20,8 @@
     :root:not([data-theme="light"]){
       --bg:#0d1320; --panel:#131b2b; --edge:#243149; --edgeStrong:#35476a;
       --ink:#e3e9f3; --dim:#8794ab;
+      --ink2:color-mix(in srgb,var(--ink) 74%,var(--dim));
+      --ink3:color-mix(in srgb,var(--ink) 42%,var(--dim));
       --cyan:#49c8e0; --amber:#e8b43c; --red:#e2595c; --ok:#4cc98a;
       --onAccent:#07141a;
       --btn:#182134; --btnHover:#1f2a41; --btnDown:#141c2c; --btnOn:#25324c;
@@ -29,6 +33,8 @@
   :root[data-theme="dark"]{
     --bg:#0d1320; --panel:#131b2b; --edge:#243149; --edgeStrong:#35476a;
     --ink:#e3e9f3; --dim:#8794ab;
+    --ink2:color-mix(in srgb,var(--ink) 74%,var(--dim));
+    --ink3:color-mix(in srgb,var(--ink) 42%,var(--dim));
     --cyan:#49c8e0; --amber:#e8b43c; --red:#e2595c; --ok:#4cc98a;
     --onAccent:#07141a;
     --btn:#182134; --btnHover:#1f2a41; --btnDown:#141c2c; --btnOn:#25324c;
@@ -56,7 +62,8 @@
      status line along the bottom. Panels are docked rather than stacked
      in one column so the canvas keeps the middle. ---- */
   #app{display:grid;height:100vh;--railW:max-content;--toolsW:0px;
-    grid-template-columns:var(--railW) var(--toolsW) 1fr 296px;
+    --sideW:330px;
+    grid-template-columns:var(--railW) var(--toolsW) 1fr var(--sideW);
     grid-template-rows:38px 28px 1fr 24px;
     grid-template-areas:"act act act act" "tabs tabs tabs tabs"
                         "rail tools view side"
@@ -245,8 +252,15 @@
     background:color-mix(in srgb,var(--red) 18%,var(--view))}
 
   /* --------------------------- docked panels ------------------------- */
-  #side{grid-area:side;background:var(--panel);border-left:1px solid var(--edge);
+  #side{grid-area:side;position:relative;background:var(--panel);
+    border-left:1px solid var(--edge);
     overflow-y:auto;padding:0 0 30px}
+  /* The whole left edge. Three columns of a set do not fit in the two
+     columns' worth of room this panel used to have. */
+  #sideGrip{position:absolute;left:0;top:0;width:7px;height:100%;
+    cursor:ew-resize;z-index:4}
+  #sideGrip:hover{background:color-mix(in srgb,var(--cyan) 40%,transparent)}
+  @media (max-width:900px){#sideGrip{display:none}}
   .dock{border-bottom:1px solid var(--edge)}
   .dock>summary{cursor:pointer;padding:7px 11px;font-size:11.5px;
     color:var(--ink);font-weight:550;list-style:none;display:flex;
@@ -573,18 +587,35 @@
   #libNote>summary:hover{color:var(--ink)}
   #libNote .hint{margin:0;padding:0 1px 4px}
 
-  .libRow{display:grid;grid-template-columns:12px 1fr auto;gap:6px;
+  .libRow{display:grid;grid-template-columns:12px auto minmax(0,1fr) auto;
+    gap:6px;
     align-items:center;min-height:19px;padding-right:7px;border-radius:4px;
     cursor:pointer;white-space:nowrap}
   .libRow:hover{background:var(--btnHover)}
   .libRow.sel{background:color-mix(in srgb,var(--cyan) 20%,transparent)}
   .libRow.into{box-shadow:inset 0 0 0 1px var(--cyan)}
   .libRow .tw{color:var(--dim);text-align:center;font-size:9px}
-  .libRow .nm{overflow:hidden;text-overflow:ellipsis}
+  .libRow .nm{overflow:hidden;text-overflow:ellipsis;min-width:0}
   .libRow.folder .nm{color:var(--ink);font-weight:600}
   .libRow.file .nm{color:var(--ink2)}
   .libRow.live .nm{color:var(--cyan)}
   .libRow .ct{color:var(--dim);font-size:10px}
+  /* Which animation this file is. Blank for anything that is not part
+     of a set, which is why it is a column of its own and not part of
+     the name. Not called .note: that class is the boxed finding
+     above, and a second meaning of one name is how a one-word label
+     ends up wearing a tinted chip. */
+  .libRow .slot{color:var(--ink3);font-size:10px;overflow:hidden;
+    text-overflow:ellipsis;text-align:right;min-width:0}
+  /* A slot nobody has drawn. It is in the list because the gap is the
+     thing worth seeing, and it is not a file, so it does nothing. */
+  .libRow.ghost{cursor:default}
+  .libRow.ghost .nm{color:var(--dim)}
+  .libRow.ghost .slot{color:var(--ink3)}
+  .libRow.ghost .ct{color:var(--amber)}
+  .libRow.ghost:hover{background:none}
+  /* A frame count the game will not accept. */
+  .libRow .ct.no{color:var(--red)}
   .libName{height:18px;padding:0 4px;font-family:var(--mono);font-size:11px;
     background:var(--view);color:var(--ink);border:1px solid var(--cyan);
     border-radius:3px;width:100%}
@@ -653,30 +684,23 @@
   #eftDock{display:none}
   body.sprite-mode #eftDock.on{display:block}
 
-  /* ---------------------------- the set dock ------------------------- */
-  /* A table of contents, not a second editor: each row is the slot the
-     loader will ask for, and clicking it opens that file the usual
-     way. A row for a file that is not there stays in the list, because
-     the gap is the thing worth seeing. */
-  #folderDock{display:none}
-  body.sprite-mode #folderDock.on{display:block}
-  #folderList{display:grid;gap:1px;margin-top:8px}
-  .fRow{display:grid;grid-template-columns:72px 1fr auto;gap:8px;
-    align-items:baseline;width:100%;height:auto;min-height:22px;
-    padding:3px 7px;background:none;border:0;border-radius:4px;
-    text-align:left;justify-content:start;font-size:11px;cursor:pointer}
-  .fRow:hover:not(:disabled){background:var(--btnHover)}
-  .fRow.sel{background:color-mix(in srgb,var(--cyan) 18%,transparent)}
-  .fRow.gone{cursor:default}
-  .fRow b{font-family:var(--mono);font-size:11px;color:var(--ink);
-    font-weight:500}
-  .fRow.gone b{color:var(--dim)}
-  .fRow span{color:var(--dim);font-size:10.5px;overflow:hidden;
-    white-space:nowrap;text-overflow:ellipsis}
-  .fRow i{font-style:normal;font-family:var(--mono);font-size:10px;
-    color:var(--dim)}
-  .fRow.gone i{color:var(--amber)}
-  .fRow i.no{color:var(--red)}
+  /* --------------------------- the set, in the shelf ----------------- */
+  /* The count and the verdict. The list of slots is the shelf's own
+     tree, because two lists of one folder in one panel is one list
+     too many; the verdict is a line, and the three paragraphs behind
+     it open only when somebody wants them. */
+  #libSet{margin-bottom:6px}
+  #libSet[hidden]{display:none}
+  #libFaults>summary{cursor:pointer;font-size:10.5px;list-style:none;
+    padding:3px 1px;color:var(--dim)}
+  #libFaults>summary::-webkit-details-marker{display:none}
+  #libFaults>summary::before{content:"\25b8 ";font-size:9px}
+  #libFaults[open]>summary::before{content:"\25be "}
+  #libFaults>summary:hover{color:var(--ink)}
+  #libFaults>summary.bad{color:var(--red)}
+  #libFaults>summary.warn{color:var(--amber)}
+  #libFaults>summary.good{color:var(--green,var(--cyan))}
+  #libFaults .hint{margin:4px 0 0;padding:0 1px}
 
   /* ------------------------- the character dock ---------------------- */
   /* Only a sheet the guides apply to turns this on: an effect file and
@@ -1158,6 +1182,7 @@
 </div>
 
 <div id="side">
+  <div id="sideGrip" title="drag to widen"></div>
 
   <!-- The shelf, first thing in the panel: it is the list of what you
        have open, so it is the thing you come back to between jobs. -->
@@ -1169,6 +1194,20 @@
         <button id="bLibGroup" title="put a character's sheets into a folder per animation">File by animation</button>
         <button id="bLibZip" title="what is selected, as a zip, with its folders">Save .zip</button>
         <button id="bLibClear" title="empty the shelf; the files stay on your disk">Clear</button>
+      </div>
+      <!-- What the set dock used to be. The rows of it are the tree's
+           rows now; what is left is the count, the verdict, and the
+           way out. -->
+      <div id="libSet" hidden>
+        <div id="folderHead"></div>
+        <details id="libFaults">
+          <summary id="libFaultsSum"></summary>
+          <div id="folderChecks"></div>
+          <p class="hint" data-i18n-html="A character is 37 files that have to agree with each other, and a bomb skin is 12 of which most are meant to be absent. The faults that matter live <b>between</b> files: the slot nobody drew, the preview that drifted from the stand it copies, the name saved in capitals onto a server that cares.">A character is 37 files that have to agree with each other, and a bomb skin is 12 of which most are meant to be absent. The faults that matter live <b>between</b> files: the slot nobody drew, the preview that drifted from the stand it copies, the name saved in capitals onto a server that cares.</p>
+        </details>
+        <div class="ctrl" style="margin:0 0 7px">
+          <button id="bFolderClose">Close the set</button>
+        </div>
       </div>
       <div id="libWhere"></div>
       <div id="libTree" tabindex="0" title="drag the bottom edge to make this taller"></div>
@@ -1229,17 +1268,6 @@
   </div>
 
   <div id="spritePanel">
-    <details class="dock" id="folderDock" open><summary>The whole set</summary>
-      <div class="dockBody">
-        <div id="folderHead"></div>
-        <div id="folderChecks"></div>
-        <div id="folderList"></div>
-        <div class="ctrl" style="margin-top:6px">
-          <button id="bFolderClose">Close the set</button>
-        </div>
-        <p class="hint" data-i18n-html="A character is 37 files that have to agree with each other, and a bomb skin is 12 of which most are meant to be absent. The faults that matter live <b>between</b> files: the slot nobody drew, the preview that drifted from the stand it copies, the name saved in capitals onto a server that cares.">A character is 37 files that have to agree with each other, and a bomb skin is 12 of which most are meant to be absent. The faults that matter live <b>between</b> files: the slot nobody drew, the preview that drifted from the stand it copies, the name saved in capitals onto a server that cares.</p>
-      </div>
-    </details>
     <details class="dock" id="charDock" open><summary>Character sheet</summary>
       <div class="dockBody">
         <div id="charWho"></div>
@@ -1660,14 +1688,14 @@
 <script src="skin.js?v=21"></script>
 <script src="motions.js?v=20"></script>
 <script src="char.js?v=4"></script>
-<script src="folder.js?v=3"></script>
-<script src="panel.js?v=6"></script>
-<script src="library.js?v=9"></script>
+<script src="folder.js?v=4"></script>
+<script src="panel.js?v=7"></script>
+<script src="library.js?v=13"></script>
 <script src="tools.js?v=8"></script>
 <script src="export.js?v=3"></script>
 <script src="sprite.js?v=27"></script>
 <script src="map.js?v=3"></script>
-<script src="i18n.js?v=37"></script>
+<script src="i18n.js?v=39"></script>
 <script src="settings.js?v=23"></script>
 <script src="tutorial.js?v=20"></script>
-<script src="app.js?v=30"></script>
+<script src="app.js?v=31"></script>
