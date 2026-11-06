@@ -365,6 +365,43 @@ Each item below names the module it came from. None of it is guessed.
   referenced. First step is finding out whether a live server actually
   serves them; the backup captured none.
 
+## 11a. UI_userdraw.spr is not a sprite
+
+It sat in *Things that are genuinely unknown* for months: high entropy
+from the first byte, no readable header, in `data/UI` with a `.spr`
+extension among fifty-eight real sprites. It is **the client's
+anti-cheat blacklist**, and it is not a sprite at all.
+
+The body is XOR'd with a **256-byte repeating key**. That is what gave
+it away: bytes 256 apart match 27% of the time against 0.4% by
+chance, and every distance between repeated 16-byte blocks is a
+multiple of 256. A key that repeats cancels when you difference the
+file against itself, and the key itself falls out of the padding --
+the name fields are zero-filled, so the ciphertext there *is* the key.
+
+Underneath:
+
+```
+16  header   "MGAMEHTI", 01 00, 01 00, u32 record count (26)
+    26 x 112-byte records
+      +0x00  32  the program's .exe name
+      +0x20  32  its window or class name
+      +0x40  16  the PE section to look in (.text, .data, DATA, UPX1)
+      +0x50  ..  addresses and expected bytes inside that section
+ 4  trailing
+```
+
+The twenty-six are memory editors (MEMEDIT2 and 6, UsaMimi in five
+versions, Neko57, CEP), debuggers (OllyDbg, TRW2000), a packet editor
+(WPE Pro in three versions), a hex editor (Stirling), windowing hooks
+(D3DWindower, dxwnd), and two tools written for this game in
+particular: **BOStorm and BOTool**.
+
+Why it matters here: the editor should know it is **not** a sprite, so
+it stops being offered as one and stops being counted among the UI
+artwork. Nothing else in this project has any use for it, and nothing
+here will help anybody get past it.
+
 ## 11b. What the unpacked executable lists
 
 The PC client's own `BomberMan.exe` is the one build without a packer,
@@ -444,6 +481,9 @@ decompiler and nothing executed.
 
 ## Solved since this list was written
 
+- **`UI_userdraw.spr`**, which was never a sprite: the client's
+  anti-cheat blacklist, XOR'd with a 256-byte repeating key, holding
+  twenty-six memory editors, debuggers and packet editors. Section 11a
 - **The effect format, fully.** Not eight groups of frames: **N frames
   of eight layers**, and a layer is an alpha level, composited from a
   table of eight weights on a 0..32 scale. The reach-of-the-blast guess
@@ -472,6 +512,6 @@ Listed so nobody burns time rediscovering them:
 - What the `u32` at `0x07` of a sprite header means. One file in 1422
   carries 71 there; the rest are zero
 - `data/bomb/Bomber.dat` in the PC client: 23420 bytes at full
-  entropy. Not the cache's scheme, which is keyed by the file name
-- `UI_userdraw.spr`: high entropy from the first byte, no readable
-  header. Compressed or encrypted
+  entropy. Not the cache's scheme, which is keyed by the file name,
+  and not a repeating-key XOR either -- unlike UI_userdraw.spr, no
+  shift correlates above chance, so there is no period to attack
