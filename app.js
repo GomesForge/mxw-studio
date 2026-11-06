@@ -1978,51 +1978,73 @@ function mvSet(on) {
   if (on) {
     $('mvTitle').textContent = current ? current.name : 'Model';
     mvClamp();
+  } else if (typeof panelArrange === 'function') {
+    panelArrange();
   }
   requestAnimationFrame(fitRenderer);
 }
 
-/* Keep the panel on screen. Its resting place is measured from the
-   right edge to clear the docked panels, which on a narrow window puts
-   it off the left edge instead. */
+/* Keep the panel inside the viewport, and let the arranger put it in
+   its column. It used to measure from the right edge of the browser
+   window, which is how it ended up over the side panel. */
 function mvClamp() {
   const pop = $('mv');
   if (!pop || pop.hidden) return;
-  const r = pop.getBoundingClientRect();
-  if (r.left >= 0 && r.top >= 0 &&
-      r.right <= innerWidth && r.bottom <= innerHeight) return;
-  const w = Math.min(r.width || 300, innerWidth - 16);
-  const h = Math.min(r.height || 330, innerHeight - 16);
-  pop.style.right = 'auto';
-  pop.style.bottom = 'auto';
-  pop.style.width = w + 'px';
-  pop.style.height = h + 'px';
-  pop.style.left = Math.max(8, innerWidth - w - 8) + 'px';
-  pop.style.top = Math.max(8, innerHeight - h - 40) + 'px';
+  if (typeof panelArrange !== 'function') return;
+  if (!mvPos.moved) {
+    const r = pop.getBoundingClientRect();
+    mvPos.w = r.width || 300;
+    mvPos.h = r.height || 330;
+    pop.style.right = 'auto';
+    pop.style.bottom = 'auto';
+  }
+  panelClamp(mvPos, MV_MIN);
+  panelApply(pop, mvPos);
+  panelArrange();
 }
+
+
+/* Where the model window sits. It used to place itself with CSS
+   right/bottom and drag itself against the browser window, which is
+   how it ended up over the side panel: the other floating windows are
+   kept inside the viewport and it was not one of them. */
+const mvPos = { x: 0, y: 0, w: 300, h: 330, moved: false };
+const MV_MIN = { w: 180, W: 640, h: 180 };
 
 function mvWire() {
   const pop = $('mv'), bar = $('mvBar');
   if (!pop || !bar) return;
 
-  /* dragged by its bar, anywhere in the window, and kept on screen */
+  /* dragged by its bar, and kept inside the viewport like the rest */
   let from = null;
   bar.addEventListener('mousedown', e => {
     if (e.target.tagName === 'BUTTON') return;
     const r = pop.getBoundingClientRect();
-    from = { dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, h: r.height };
+    mvPos.w = r.width; mvPos.h = r.height;
+    from = { dx: e.clientX - r.left, dy: e.clientY - r.top };
     pop.style.right = 'auto';
     pop.style.bottom = 'auto';
     e.preventDefault();
   });
   addEventListener('mousemove', e => {
     if (!from) return;
-    const x = Math.max(0, Math.min(innerWidth - from.w, e.clientX - from.dx));
-    const y = Math.max(0, Math.min(innerHeight - from.h, e.clientY - from.dy));
-    pop.style.left = x + 'px';
-    pop.style.top = y + 'px';
+    mvPos.x = e.clientX - from.dx;
+    mvPos.y = e.clientY - from.dy;
+    if (typeof panelClamp === 'function') panelClamp(mvPos, MV_MIN);
+    pop.style.left = mvPos.x + 'px';
+    pop.style.top = mvPos.y + 'px';
   });
-  addEventListener('mouseup', () => { from = null; });
+  addEventListener('mouseup', () => {
+    if (from) { from = null; mvPos.moved = true; }
+  });
+
+  /* it joins the arrangement, under the shelf on the right */
+  if (typeof panelRegister === 'function') {
+    panelRegister({
+      el: pop, pos: mvPos, min: MV_MIN, order: 1, side: 'right',
+      isOpen: () => !pop.hidden
+    });
+  }
 
   /* zoom is the camera's distance, the same thing the wheel moves */
   const zoomBy = f => { radius = Math.max(0.15, Math.min(40, radius * f)); };

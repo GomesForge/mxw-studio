@@ -22,7 +22,7 @@
 const LIB_KEY = 'mxw.library';
 /* Bumped when the default placement changes, so a position saved from
    an older default is replaced once rather than outliving it. */
-const LIB_PLACE = 3;
+const LIB_PLACE = 4;
 
 const lib = {
   root: null,
@@ -261,7 +261,7 @@ function libPlace() {
   const el = $('lib');
   if (!el) return;
   if (!lib.placed) {
-    Object.assign(lib.pos, panelCorner('right', 272, 450, 12));
+    Object.assign(lib.pos, panelCorner('right', 300, 520, 8));
     lib.placed = true;
   }
   libClamp();
@@ -270,7 +270,7 @@ function libPlace() {
 }
 
 function libClamp() {
-  panelClamp(lib.pos, { w: 220, W: 620, h: 160 });
+  panelClamp(lib.pos, { w: 200, W: 900, h: 120 });
 }
 
 function libRender() {
@@ -681,7 +681,8 @@ function libClear() {
 function libWireWindow() {
   panelWindow({
     el: $('lib'), head: $('libHead'), grip: $('libGrip'),
-    pos: lib.pos, min: { w: 220, W: 620, h: 160 }, order: 1,
+    pos: lib.pos, min: { w: 200, W: 900, h: 120 }, order: 0,
+    side: 'right',
     onDone: libSave
   });
 }

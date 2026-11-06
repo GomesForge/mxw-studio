@@ -41,38 +41,52 @@ function panelRegister(p) {
   return p;
 }
 
-/* Lay out the open windows so they do not cover each other. One that
-   has been dragged keeps where it was put -- moving somebody's window
-   because another one opened is its own kind of rude -- so only the
-   ones still where they were placed automatically get arranged.
+/* Lay out the open windows so they do not cover each other.
 
-   Two windows side by side in the viewport, left to right in the
-   order they were registered. If they will not both fit at their own
-   widths, they share what there is. */
+   Each one belongs to a side of the viewport and a place in that
+   side's column. Windows on the same side stack down it, and if the
+   column is taller than the viewport they share the height. Nothing
+   is ever placed outside, so nothing is ever over the action bar, the
+   tabs, the tool rail, the side panel or the status line -- those are
+   all outside the viewport, and the viewport is all these windows
+   get.
+
+   A window that has been dragged keeps where it was put. Moving
+   somebody's window because another one opened is its own kind of
+   rude, so only the ones still in their automatic places are
+   arranged; a dragged one is merely kept on screen. */
 function panelArrange() {
   const a = panelArea();
-  /* By their own order, not by which script happened to load first:
-     the frame tools belong in the near corner and the shelf beside
-     them, and that should not depend on a script tag. */
+  const pad = 8, gap = 10;
   const live = PANELS.filter(p => p.isOpen() && !p.pos.moved)
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
+    .sort((x, y) => (x.order || 0) - (y.order || 0));
   if (!live.length) return;
-  const gap = 10, pad = 8;
-  const room = (a.right - a.left) - pad * 2 - gap * (live.length - 1);
-  let want = live.reduce((n, p) => n + p.pos.w, 0);
-  const scale = want > room ? room / want : 1;
-  let x = a.left + pad;
-  for (const p of live) {
-    if (scale < 1) p.pos.w = Math.max(p.min && p.min.w || 200,
-                                      Math.floor(p.pos.w * scale));
-    p.pos.x = Math.round(x);
-    p.pos.y = Math.round(a.top + pad);
-    p.pos.h = Math.min(p.pos.h, (a.bottom - a.top) - pad * 2);
-    panelClamp(p.pos, p.min);
-    panelApply(p.el, p.pos);
-    x = p.pos.x + p.pos.w + gap;
+
+  for (const side of ['left', 'right']) {
+    const col = live.filter(p => (p.side || 'left') === side);
+    if (!col.length) continue;
+    const room = (a.bottom - a.top) - pad * 2 - gap * (col.length - 1);
+    const want = col.reduce((n, p) => n + p.pos.h, 0);
+    const scale = want > room ? room / want : 1;
+    let y = a.top + pad;
+    for (const p of col) {
+      const min = p.min || {};
+      if (scale < 1)
+        p.pos.h = Math.max(min.h || 140, Math.floor(p.pos.h * scale));
+      p.pos.w = Math.min(p.pos.w, (a.right - a.left) - pad * 2);
+      p.pos.x = Math.round(side === 'right'
+        ? a.right - p.pos.w - pad : a.left + pad);
+      p.pos.y = Math.round(y);
+      panelClamp(p.pos, min);
+      /* clamping may have pushed it back; the side still decides x */
+      p.pos.x = Math.round(side === 'right'
+        ? Math.max(a.left, a.right - p.pos.w - pad) : a.left + pad);
+      panelApply(p.el, p.pos);
+      y = p.pos.y + p.pos.h + gap;
+    }
   }
 }
+
 
 function panelApply(el, pos) {
   if (!el) return;
@@ -150,6 +164,7 @@ function panelWindow(opts) {
 
   panelRegister({
     el: el, pos: pos, min: opts.min, order: opts.order || 0,
+    side: opts.side || 'left',
     isOpen: () => !el.hidden
   });
 
@@ -160,6 +175,19 @@ function panelWindow(opts) {
     panelArrange();
   });
 }
+
+/* ------------------------- the wheel, as zoom -------------------- */
+
+/* On a flat view the wheel zooms, which is what every drawing program
+   does and what a hand expects. The 3D viewport is left alone: there
+   the wheel already means dolly, and taking it over would break the
+   one view where it was already doing something.
+
+   The point under the cursor stays under the cursor. Without that,
+   zooming into a 256-pixel sheet walks the thing you were looking at
+   off the edge, and you spend the zoom scrolling back.
+
+   wrap is the scrolling box, get/set read and write the zoom. */
 
 /* ------------------------- the wheel, as zoom -------------------- */
 

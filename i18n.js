@@ -456,7 +456,8 @@ const I18N = {
       'Abra uma folha e os quadros dela, as cores e os pinc\u00e9is aparecem aqui.',
     'These act on the drawing itself, not on a brush stroke: <b>Undo that</b> puts back the last one and nothing more. The sheet is a stamp pressed at a fixed place, so a pixel moved here is a pixel moved in the game.':
       'Estas agem no desenho em si, n\u00e3o numa pincelada: <b>Desfazer isso</b> devolve a \u00faltima e nada al\u00e9m. A folha \u00e9 um carimbo prensado num lugar fixo, ent\u00e3o um pixel movido aqui \u00e9 um pixel movido no jogo.',
-    'open a sheet first': 'abra uma folha primeiro',
+    'open a sheet, a frame or a texture before picking a tool':
+      'abra uma folha, um quadro ou uma textura antes de escolher uma ferramenta',
     'put back': 'devolvido',
     'outlined': 'contornado',
     'that colour is gone': 'essa cor saiu',

@@ -201,7 +201,9 @@ unless you closed it, in which case it stays shut and they stay on the
 right.
 
 - **The brushes**, one click each &mdash; asking for a tool is also
-  asking to edit, so the first click opens the frame for painting
+  asking to edit, so the first click opens the frame for painting.
+  The tool rail down the left is always there and does the same for
+  whatever is in front: a sheet, a frame, or a model's texture
 - **Drag a thumbnail onto another** to reorder the animation. The
   order *is* the animation, and until now the only way to change it
   was to redraw every frame one place along. A frame open for painting
@@ -274,10 +276,11 @@ What you can do with what is on the shelf:
 
 **The windows arrange themselves.** They live inside the viewport and
 nowhere else, so they never sit over the action bar, the tabs, the
-tool rail, the side panel or the status line &mdash; and when both are
-open they are laid out side by side rather than on top of each other.
-Drag one anywhere you like and it stays put; after that only the
-other one moves around it.
+tool rail, the side panel or the status line. Each belongs to a side
+&mdash; the frame tools on the left, the shelf and the model on the
+right &mdash; and windows sharing a side stack down it, sharing the
+height when the column runs out. Drag one anywhere you like and it
+stays put; after that only the others move around it.
 
 It opens beside the frame tools in the work area. The near corner
 belongs to the frame tools, which are what a hand reaches for while
